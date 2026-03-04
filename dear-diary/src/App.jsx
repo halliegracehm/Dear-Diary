@@ -18,7 +18,7 @@ const TAG_COLORS = {
 const PLANS = {
   free:  { name:"Free",  price:"$0/mo",  color:"#94a3b8", features:["10 entries/mo","Basic moods & tags","Daily AI prompt"] },
   plus:  { name:"Plus",  price:"$6/mo",  color:"#c8895a", features:["Unlimited entries","AI insights","PDF export","Community feed"] },
-  group: { name:"Group", price:"$12/mo", color:"#7a8c6e", features:["Everything in Plus","Group workspace","Shared prompts","5 seats included"] },
+  group: { name:"Group", price:"$12/mo", color:"#7a8c6e", features:["Everything in Plus","Group workspace","Shared prompts"] },
 };
 
 function getTodayStr() { return new Date().toISOString().split("T")[0]; }
@@ -62,7 +62,7 @@ function exportToPDF(entries, username) {
     .tag{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;margin:3px 2px;background:#f0e0c8;color:#8a5020}
     @media print{body{margin:20px}.entry{break-inside:avoid}}
   </style></head><body>
-  <h1>🕯️ ${username}'s Journal</h1>
+  <h1>🌿 ${username}'s Journal</h1>
   <p class="sub">Exported on ${new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}</p>
   ${entries.map(e => `
     <div class="entry">
@@ -117,7 +117,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(false);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("deardiaryuser");
+    const saved = sessionStorage.getItem("myinnerminduser");
     if (saved) { setCurrentUser(JSON.parse(saved)); setScreen("app"); }
     else setTimeout(() => setScreen("auth"), 1800);
   }, []);
@@ -129,26 +129,26 @@ export default function App() {
       if (authMode === "register") {
         if (!authForm.username || !authForm.email || !authForm.password) { setAuthError("All fields are required."); return; }
         if (authForm.password.length < 6) { setAuthError("Password must be at least 6 characters."); return; }
-        const existing = lsGet(`deardiaryuser:${authForm.email}`);
+        const existing = lsGet(`myinnerminduser:${authForm.email}`);
         if (existing) { setAuthError("An account with that email already exists."); return; }
         const user = { username: authForm.username, email: authForm.email, passwordHash: hashStr(authForm.password), plan: "free", createdAt: Date.now() };
-        lsSet(`deardiaryuser:${authForm.email}`, JSON.stringify(user));
-        sessionStorage.setItem("deardiaryuser", JSON.stringify(user));
+        lsSet(`myinnerminduser:${authForm.email}`, JSON.stringify(user));
+        sessionStorage.setItem("myinnerminduser", JSON.stringify(user));
         setCurrentUser(user); setScreen("app");
       } else {
         if (!authForm.email || !authForm.password) { setAuthError("Email and password are required."); return; }
-        const raw = lsGet(`deardiaryuser:${authForm.email}`);
+        const raw = lsGet(`myinnerminduser:${authForm.email}`);
         if (!raw) { setAuthError("No account found with that email."); return; }
         const user = JSON.parse(raw);
         if (user.passwordHash !== hashStr(authForm.password)) { setAuthError("Incorrect password."); return; }
-        sessionStorage.setItem("deardiaryuser", JSON.stringify(user));
+        sessionStorage.setItem("myinnerminduser", JSON.stringify(user));
         setCurrentUser(user); setScreen("app");
       }
     } finally { setAuthLoading(false); }
   }
 
   function handleLogout() {
-    sessionStorage.removeItem("deardiaryuser");
+    sessionStorage.removeItem("myinnerminduser");
     setCurrentUser(null); setScreen("auth");
     setAuthForm({ username: "", email: "", password: "" });
   }
@@ -156,8 +156,8 @@ export default function App() {
   function upgradePlan(plan) {
     if (!currentUser) return;
     const updated = { ...currentUser, plan };
-    lsSet(`deardiaryuser:${currentUser.email}`, JSON.stringify(updated));
-    sessionStorage.setItem("deardiaryuser", JSON.stringify(updated));
+    lsSet(`myinnerminduser:${currentUser.email}`, JSON.stringify(updated));
+    sessionStorage.setItem("myinnerminduser", JSON.stringify(updated));
     setCurrentUser(updated);
   }
 
@@ -176,9 +176,9 @@ function Splash() {
   return (
     <div style={{ ...S.page, justifyContent: "center", alignItems: "center", flexDirection: "column", gap: 14 }}>
       <div style={S.texture} />
-      <div style={{ fontSize: 64, animation: "float 2.5s ease-in-out infinite" }}>🕯️</div>
-      <div style={{ fontFamily: "'Lora',serif", fontSize: 38, color: "#7a4a1e", fontWeight: 600 }}>Dear Diary</div>
-      <div style={{ color: "#b08060", fontSize: 15, fontStyle: "italic" }}>Your cozy corner of the internet</div>
+      <div style={{ fontSize: 64, animation: "float 2.5s ease-in-out infinite" }}>🌿</div>
+      <div style={{ fontFamily: "'Lora',serif", fontSize: 38, color: "#7a4a1e", fontWeight: 600 }}>My Inner Mind</div>
+      <div style={{ color: "#b08060", fontSize: 15, fontStyle: "italic" }}>Reflections & Growth</div>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Nunito:wght@400;500;600;700&display=swap');
         @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
@@ -196,10 +196,10 @@ function AuthScreen({ mode, form, error, loading, onChange, onSubmit, onToggle }
       <GlobalStyles />
       <div style={S.authCard}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ fontSize: 44, marginBottom: 10 }}>🕯️</div>
-          <div style={{ fontFamily: "'Lora',serif", fontSize: 28, color: "#7a4a1e", fontWeight: 600 }}>Dear Diary</div>
+          <div style={{ fontSize: 44, marginBottom: 10 }}>🌿</div>
+          <div style={{ fontFamily: "'Lora',serif", fontSize: 28, color: "#7a4a1e", fontWeight: 600 }}>My Inner Mind</div>
           <div style={{ color: "#b08060", fontSize: 13, marginTop: 5, fontStyle: "italic" }}>
-            {mode === "login" ? "Welcome back, dear one" : "Start your journaling journey"}
+            {mode === "login" ? "Welcome back" : "Begin your journey inward"}
           </div>
         </div>
         {mode === "register" && (
@@ -248,20 +248,20 @@ function JournalApp({ user, onLogout, onUpgradePlan }) {
   useEffect(() => { loadEntries(); loadPrompt(); }, []);
 
   function loadEntries() {
-    const keys = lsKeys(`deardiaryentry:${user.email}:`);
+    const keys = lsKeys(`myinnermindentry:${user.email}:`);
     const loaded = keys.map(k => { try { return JSON.parse(lsGet(k)); } catch { return null; } })
       .filter(Boolean).sort((a, b) => new Date(b.date) - new Date(a.date));
     setEntries(loaded);
   }
 
   async function loadPrompt() {
-    const cached = sessionStorage.getItem("deardiaryPrompt_" + getTodayStr());
+    const cached = sessionStorage.getItem("myinnermindPrompt_" + getTodayStr());
     if (cached) { setDailyPrompt(cached); return; }
     setPromptLoading(true);
     try {
       const p = await getDailyPrompt();
       setDailyPrompt(p);
-      sessionStorage.setItem("deardiaryPrompt_" + getTodayStr(), p);
+      sessionStorage.setItem("myinnermindPrompt_" + getTodayStr(), p);
     } catch { setDailyPrompt("What is one small thing that brought you comfort today?"); }
     finally { setPromptLoading(false); }
   }
@@ -269,19 +269,19 @@ function JournalApp({ user, onLogout, onUpgradePlan }) {
   function saveEntry() {
     if (!form.title.trim() && !form.content.trim()) return;
     const entry = { ...form, id: form.id || `${user.email}_${Date.now()}`, updatedAt: Date.now() };
-    lsSet(`deardiaryentry:${user.email}:${entry.id}`, JSON.stringify(entry));
+    lsSet(`myinnermindentry:${user.email}:${entry.id}`, JSON.stringify(entry));
     if (entry.shared) {
-      lsSet(`deardiarycommunity:${entry.id}`, JSON.stringify({ ...entry, authorName: user.username }));
+      lsSet(`myinnermindcommunity:${entry.id}`, JSON.stringify({ ...entry, authorName: user.username }));
     } else {
-      lsDel(`deardiarycommunity:${entry.id}`);
+      lsDel(`myinnermindcommunity:${entry.id}`);
     }
     loadEntries();
     setView("list");
   }
 
   function deleteEntry(entry) {
-    lsDel(`deardiaryentry:${user.email}:${entry.id}`);
-    lsDel(`deardiarycommunity:${entry.id}`);
+    lsDel(`myinnermindentry:${user.email}:${entry.id}`);
+    lsDel(`myinnermindcommunity:${entry.id}`);
     loadEntries();
     setView("list");
   }
@@ -316,8 +316,8 @@ function JournalApp({ user, onLogout, onUpgradePlan }) {
       <header style={S.header}>
         <div style={S.headerInner}>
           <button onClick={() => { setTab("journal"); setView("list"); }} style={S.logoBtn}>
-            <span style={{ fontSize: 22 }}>🕯️</span>
-            <span style={S.logoText}>Dear Diary</span>
+            <span style={{ fontSize: 22 }}>🌿</span>
+            <span style={S.logoText}>My Inner Mind</span>
           </button>
           <nav style={{ display: "flex", gap: 4 }}>
             {[["journal","📖 Journal"],["community","🌿 Community"],["pricing","💎 Plans"]].map(([t, label]) => (
@@ -517,7 +517,7 @@ function CommunityTab({ currentUser, isPro, onUpgrade }) {
 
   useEffect(() => {
     if (!isPro) return;
-    const keys = lsKeys("deardiarycommunity:");
+    const keys = lsKeys("myinnermindcommunity:");
     const loaded = keys.map(k => { try { return JSON.parse(lsGet(k)); } catch { return null; } })
       .filter(Boolean).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     setPosts(loaded);
@@ -538,7 +538,7 @@ function CommunityTab({ currentUser, isPro, onUpgrade }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div>
         <h2 style={{ fontFamily: "'Lora',serif", fontSize: 26, color: "#5a2e0e" }}>🌿 Community Feed</h2>
-        <p style={{ color: "#b08060", fontSize: 13, marginTop: 5 }}>Entries shared by Dear Diary members</p>
+        <p style={{ color: "#b08060", fontSize: 13, marginTop: 5 }}>Entries shared by My Inner Mind members</p>
       </div>
       {posts.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
