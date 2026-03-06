@@ -37,7 +37,7 @@ const TAG_COLORS = { personal:"#c8895a",work:"#7a8c6e",gratitude:"#c4956a",dream
 const PLANS = {
   free:  { name:"Free",  price:"$0/mo",  color:"#94a3b8", features:["10 entries/mo","Basic moods & tags","Daily AI prompt"] },
   plus:  { name:"Plus",  price:"$6/mo",  color:"#c8895a", features:["Unlimited entries","AI insights","PDF export","Community feed"] },
-  group: { name:"Group", price:"$12/mo", color:"#7a8c6e", features:["Everything in Plus","Group workspace","Shared prompts"] },
+  group: { name:"Group", price:"$20/mo", color:"#7a8c6e", features:["Everything in Plus","Group workspace","Shared prompts","5 seats included"] },
 };
 
 function getTodayStr() { return new Date().toISOString().split("T")[0]; }
