@@ -2,12 +2,44 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dear Diary — Your Cozy Journal</title>
-    <meta name="description" content="A warm, personal journaling app with daily AI prompts, mood tracking, and a supportive community." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- ── PWA Meta Tags ── -->
+    <title>My Inner Mind</title>
+    <meta name="description" content="Your personal journaling & mindset app by Hallie — reflect, grow, and connect." />
+    <meta name="theme-color" content="#c8895a" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- ── Apple / iOS PWA Tags ── -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="My Inner Mind" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <!-- ── Open Graph (for sharing links) ── -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="My Inner Mind" />
+    <meta property="og:description" content="Journal, reflect, and grow — a mindset app by Hallie." />
+    <meta property="og:image" content="/icon-512.png" />
+    <meta property="og:url" content="https://myinnermind.vercel.app" />
+
+    <!-- ── Favicon ── -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icon-192.png" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- ── Register Service Worker ── -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/sw.js")
+            .then((reg) => console.log("SW registered:", reg.scope))
+            .catch((err) => console.log("SW failed:", err));
+        });
+      }
+    </script>
   </body>
 </html>
