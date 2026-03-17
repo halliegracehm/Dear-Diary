@@ -5,8 +5,8 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const STRIPE_PUBLISHABLE_KEY = "pk_live_YOUR_STRIPE_KEY_HERE";
 const STRIPE_PRICES = {
-  plus:  "price_YOUR_PLUS_PRICE_ID",
-  group: "price_YOUR_GROUP_PRICE_ID",
+  plus:  "price_1TBmxqDC5IHfzeBkFuxyZPfX",
+  group: "price_1TBmzNDC5IHfzeBk8PwoLtDH",
 };
 
 // ── Hallie's Weekly Prompts ──────────────────────────────────────────────
