@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 const SUPABASE_URL = "https://xwhpyslvwnnbvyydimmg.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3aHB5c2x2d25uYnZ5eWRpbW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NTkwOTIsImV4cCI6MjA4ODIzNTA5Mn0.bdxjpBNI6qEBFjSrRjBVCKqUU8oPBUL-8LzXKgxxJ4A";
 
-const STRIPE_PUBLISHABLE_KEY = "pk_live_YOUR_STRIPE_KEY_HERE";
+const STRIPE_PUBLISHABLE_KEY = "pk_live_51TBmTBDC5IHfzeBkp5DgUYOdkSUiMYebP36KU3wa4hMHRKvaD3VeivtmyVgBFcwVNPxHp2qfD1vbAOCynlhMGIpu00rME400j2";
 const STRIPE_PRICES = {
   plus:  "price_1TBmxqDC5IHfzeBkFuxyZPfX",
   group: "price_1TBmzNDC5IHfzeBk8PwoLtDH",
