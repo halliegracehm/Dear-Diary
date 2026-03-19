@@ -159,9 +159,27 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const justUpgraded = params.get("upgraded") === "true";
     const saved = sessionStorage.getItem("myinnerminduser");
-    if (saved) { setCurrentUser(JSON.parse(saved)); setScreen("app"); }
-    else setTimeout(() => setScreen("auth"), 1800);
+    if (saved) {
+      const user = JSON.parse(saved);
+      if (justUpgraded) {
+        sbGet("users", `email=eq.${encodeURIComponent(user.email)}`).then(result => {
+          if (result?.length) {
+            const fresh = result[0];
+            sessionStorage.setItem("myinnerminduser", JSON.stringify(fresh));
+            setCurrentUser(fresh);
+          } else {
+            setCurrentUser(user);
+          }
+          setScreen("app");
+          window.history.replaceState({}, "", "/");
+        });
+      } else {
+        setCurrentUser(user); setScreen("app");
+      }
+    } else setTimeout(() => setScreen("auth"), 1800);
   }, []);
 
   async function handleAuth() {
