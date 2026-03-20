@@ -9,9 +9,6 @@ const STRIPE_PRICES = {
   group: "price_1TBmzNDC5IHfzeBk8PwoLtDH",
 };
 
-// ── Hallie's Weekly Prompts ──────────────────────────────────────────────
-// Update this list whenever you want — one prompt per week.
-// They cycle automatically. Add as many as you like.
 const HALLIE_PROMPTS = [
   { week: 1,  prompt: "What's one thing you've been carrying lately that you're ready to set down?", note: "From Hallie 🌿" },
   { week: 2,  prompt: "Where in your life are you being too hard on yourself right now?", note: "From Hallie 🌿" },
@@ -28,12 +25,10 @@ const HALLIE_PROMPTS = [
 ];
 
 function getWeeklyHalliePrompt() {
-  // Rotates based on week number of the year — same prompt all week for everyone
   const weekOfYear = Math.ceil((new Date() - new Date(new Date().getFullYear(), 0, 1)) / (7 * 24 * 60 * 60 * 1000));
   return HALLIE_PROMPTS[weekOfYear % HALLIE_PROMPTS.length];
 }
 
-// ── Supabase helpers ─────────────────────────────────────────────────────
 async function sbQuery(path, options = {}) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     headers: {
@@ -75,7 +70,6 @@ function getTodayStr() { return new Date().toISOString().split("T")[0]; }
 function formatDate(d) { return new Date(d).toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"}); }
 function hashStr(s) { let h=0; for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;} return String(h); }
 
-// ── Streak calculation ────────────────────────────────────────────────────
 function calcStreak(entries) {
   if (!entries?.length) return 0;
   const dates = [...new Set(entries.map(e => e.date))].sort().reverse();
@@ -139,9 +133,6 @@ async function startStripeCheckout(priceId, userEmail) {
   await stripe.redirectToCheckout({ sessionId });
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-//  ROOT
-// ══════════════════════════════════════════════════════════════════════════
 export default function App() {
   const [screen, setScreen]         = useState("splash");
   const [currentUser, setCurrentUser] = useState(null);
@@ -149,9 +140,8 @@ export default function App() {
   const [authForm, setAuthForm]     = useState({username:"",email:"",password:""});
   const [authError, setAuthError]   = useState("");
   const [authLoading, setAuthLoading] = useState(false);
-  const [pwaPrompt, setPwaPrompt]   = useState(null); // deferred install prompt
+  const [pwaPrompt, setPwaPrompt]   = useState(null);
 
-  // Capture the PWA install prompt event
   useEffect(() => {
     const handler = (e) => { e.preventDefault(); setPwaPrompt(e); };
     window.addEventListener("beforeinstallprompt", handler);
@@ -184,21 +174,22 @@ export default function App() {
 
   async function handleAuth() {
     setAuthError(""); setAuthLoading(true);
+    const email = authForm.email.toLowerCase().trim();
     try {
       if (authMode === "register") {
-        if (!authForm.username||!authForm.email||!authForm.password) { setAuthError("All fields are required."); return; }
+        if (!authForm.username||!email||!authForm.password) { setAuthError("All fields are required."); return; }
         if (authForm.password.length < 6) { setAuthError("Password must be at least 6 characters."); return; }
-        const existing = await sbGet("users", `email=eq.${encodeURIComponent(authForm.email)}`);
+        const existing = await sbGet("users", `email=eq.${encodeURIComponent(email)}`);
         if (existing?.length > 0) { setAuthError("An account with that email already exists."); return; }
-        const result = await sbInsert("users", {email:authForm.email, username:authForm.username, password_hash:hashStr(authForm.password), plan:"free"});
+        const result = await sbInsert("users", {email:email, username:authForm.username, password_hash:hashStr(authForm.password), plan:"free"});
         if (result?.length > 0) {
           const u = result[0];
           sessionStorage.setItem("myinnerminduser", JSON.stringify(u));
           setCurrentUser(u); setScreen("app");
         } else setAuthError("Something went wrong. Please try again.");
       } else {
-        if (!authForm.email||!authForm.password) { setAuthError("Email and password are required."); return; }
-        const result = await sbGet("users", `email=eq.${encodeURIComponent(authForm.email)}`);
+        if (!email||!authForm.password) { setAuthError("Email and password are required."); return; }
+        const result = await sbGet("users", `email=eq.${encodeURIComponent(email)}`);
         if (!result?.length) { setAuthError("No account found with that email."); return; }
         const user = result[0];
         if (user.password_hash !== hashStr(authForm.password)) { setAuthError("Incorrect password."); return; }
@@ -244,7 +235,6 @@ export default function App() {
   );
 }
 
-// ── Splash ────────────────────────────────────────────────────────────────
 function Splash() {
   return (
     <div style={{...S.page,justifyContent:"center",alignItems:"center",flexDirection:"column",gap:14}}>
@@ -257,7 +247,6 @@ function Splash() {
   );
 }
 
-// ── PWA Install Banner ────────────────────────────────────────────────────
 function PWABanner({ prompt, onDismiss }) {
   const [installing, setInstalling] = useState(false);
   if (!prompt) return null;
@@ -298,7 +287,6 @@ function PWABanner({ prompt, onDismiss }) {
   );
 }
 
-// ── Auth Screen ───────────────────────────────────────────────────────────
 function AuthScreen({mode, form, error, loading, pwaPrompt, onChange, onSubmit, onToggle}) {
   const [showForgot, setShowForgot] = useState(false);
   const [pwaDismissed, setPwaDismissed] = useState(false);
@@ -352,7 +340,6 @@ function AuthScreen({mode, form, error, loading, pwaPrompt, onChange, onSubmit, 
   );
 }
 
-// ── Forgot Password ───────────────────────────────────────────────────────
 function ForgotPasswordScreen({ onBack }) {
   const [step, setStep]                 = useState("email");
   const [email, setEmail]               = useState("");
@@ -366,13 +353,14 @@ function ForgotPasswordScreen({ onBack }) {
 
   async function handleSendCode() {
     setError(""); setLoading(true);
+    const normalizedEmail = email.toLowerCase().trim();
     try {
-      const result = await sbGet("users", `email=eq.${encodeURIComponent(email)}`);
+      const result = await sbGet("users", `email=eq.${encodeURIComponent(normalizedEmail)}`);
       if (!result?.length) { setError("No account found with that email address."); return; }
       const resetCode = String(Math.floor(100000 + Math.random() * 900000));
       const expiry = Date.now() + 15 * 60 * 1000;
-      await sbUpdate("users", `email=eq.${encodeURIComponent(email)}`, { reset_code: resetCode, reset_expiry: expiry });
-      setGeneratedCode(resetCode); setSentTo(email); setStep("verify");
+      await sbUpdate("users", `email=eq.${encodeURIComponent(normalizedEmail)}`, { reset_code: resetCode, reset_expiry: expiry });
+      setGeneratedCode(resetCode); setSentTo(normalizedEmail); setStep("verify");
     } catch { setError("Something went wrong. Please try again."); }
     finally { setLoading(false); }
   }
@@ -445,7 +433,6 @@ function ForgotPasswordScreen({ onBack }) {
   );
 }
 
-// ── Journal App ───────────────────────────────────────────────────────────
 function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) {
   const [tab, setTab]               = useState("journal");
   const [view, setView]             = useState("list");
@@ -543,12 +530,10 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
               <button key={t} onClick={()=>{setTab(t);setView("list");}}
                 style={{...S.navBtn,...(tab===t?S.navBtnActive:{}),padding:"6px 10px"}}>
                 <span style={{fontSize:16}}>{icon}</span>
-                <span style={{fontSize:12,marginLeft:4,display:"none"}}>{t}</span>
               </button>
             ))}
           </nav>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            {/* Streak badge */}
             {streak > 0 && (
               <div style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",background:"rgba(245,158,11,0.12)",borderRadius:16,border:"1px solid rgba(245,158,11,0.3)"}}>
                 <span style={{fontSize:14}}>🔥</span>
@@ -565,12 +550,8 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
       </header>
 
       <main style={S.main}>
-
-        {/* ── Journal List ── */}
         {tab==="journal"&&view==="list"&&(
           <div style={{display:"flex",flexDirection:"column",gap:20}}>
-
-            {/* Streak reward banner */}
             {reward && (
               <div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.12),rgba(200,137,90,0.08))",border:"1px solid rgba(245,158,11,0.3)",borderRadius:16,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}>
                 <span style={{fontSize:32}}>🔥</span>
@@ -580,21 +561,15 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
                 </div>
               </div>
             )}
-
-            {/* Hallie's Weekly Prompt */}
             <div style={{...S.promptCard,background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.18)"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                 <span style={{fontSize:18}}>💌</span>
                 <span style={{fontWeight:700,color:"#7a4a1e",fontSize:12,textTransform:"uppercase",letterSpacing:"0.6px"}}>Hallie's Prompt This Week</span>
               </div>
-              <p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.7,marginBottom:6}}>
-                "{halliePrompt.prompt}"
-              </p>
+              <p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.7,marginBottom:6}}>"{halliePrompt.prompt}"</p>
               <div style={{fontSize:12,color:"#b08060",marginBottom:12}}>{halliePrompt.note}</div>
               <button onClick={()=>startNew(halliePrompt.prompt)} style={S.softBtn}>Write to this →</button>
             </div>
-
-            {/* AI Prompt */}
             <div style={S.promptCard}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                 <span style={{fontSize:18}}>✨</span>
@@ -605,7 +580,6 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
               </p>
               <button onClick={()=>startNew(aiPrompt)} style={S.softBtn}>Write to this →</button>
             </div>
-
             <div style={{display:"flex",gap:10,alignItems:"center"}}>
               <div style={{flex:1,position:"relative"}}>
                 <span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",opacity:0.35,fontSize:15}}>🔍</span>
@@ -615,12 +589,10 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
               {isPro&&<button onClick={()=>exportToPDF(entries,user.username)} style={S.ghostBtn}>📄 PDF</button>}
               <button onClick={()=>startNew()} style={S.newBtn}>+ New</button>
             </div>
-
             <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
               <Chip active={!filterTag} onClick={()=>setFilterTag(null)}>All</Chip>
               {TAG_OPTIONS.map(t=><Chip key={t} active={filterTag===t} activeColor={TAG_COLORS[t]} onClick={()=>setFilterTag(filterTag===t?null:t)}>{t}</Chip>)}
             </div>
-
             {loading ? (
               <div style={{textAlign:"center",padding:"70px 0",color:"#b08060",fontStyle:"italic"}}>Loading your journal...</div>
             ) : filtered.length===0 ? (
@@ -637,7 +609,6 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
           </div>
         )}
 
-        {/* ── Write Entry ── */}
         {tab==="journal"&&view==="write"&&(
           <div style={S.writeCard}>
             <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}
@@ -667,16 +638,12 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
             </div>
             <textarea style={S.textarea} rows={12} placeholder="What's on your mind? Write freely..."
               value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))}/>
-
-            {/* Community share */}
             {isPro&&(
               <label style={{display:"flex",alignItems:"center",gap:9,cursor:"pointer",fontSize:14,color:"#8a6040"}}>
                 <input type="checkbox" checked={form.shared} onChange={e=>setForm(f=>({...f,shared:e.target.checked}))} style={{accentColor:"#c8895a",width:16,height:16}}/>
                 Share to Community Feed 🌿
               </label>
             )}
-
-            {/* Submit to Story of the Month */}
             <label style={{display:"flex",alignItems:"center",gap:9,cursor:"pointer",fontSize:14,color:"#7a4a1e",background:"rgba(200,137,90,0.06)",padding:"10px 14px",borderRadius:12,border:"1px solid rgba(200,137,90,0.18)"}}>
               <input type="checkbox" checked={form.submitToFeature} onChange={e=>setForm(f=>({...f,submitToFeature:e.target.checked}))} style={{accentColor:"#c8895a",width:16,height:16}}/>
               <div>
@@ -684,7 +651,6 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
                 <div style={{fontSize:11,color:"#b08060",marginTop:1}}>Hallie may feature this on the podcast — anonymously unless you say otherwise</div>
               </div>
             </label>
-
             <div style={{display:"flex",justifyContent:"space-between",marginTop:8}}>
               <button onClick={()=>setView("list")} style={S.ghostBtn}>Discard</button>
               <button onClick={saveEntry} style={S.saveBtn}>{editMode?"Save Changes ✓":"Save Entry ✨"}</button>
@@ -692,7 +658,6 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
           </div>
         )}
 
-        {/* ── Read Entry ── */}
         {tab==="journal"&&view==="read"&&selectedEntry&&(
           <div style={S.readCard}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
@@ -729,13 +694,11 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
         {tab==="pricing"&&<PricingTab currentPlan={user.plan} userEmail={user.email} onUpgrade={onUpgradePlan}/>}
       </main>
 
-      {/* PWA banner */}
       {!pwaDismissed && <PWABanner prompt={pwaPrompt} onDismiss={()=>{setPwaDismissed(true);onPwaInstalled();}}/>}
     </div>
   );
 }
 
-// ── Community Tab ─────────────────────────────────────────────────────────
 function CommunityTab({currentUser, isPro, onUpgrade}) {
   const [posts, setPosts]   = useState([]);
   const [featured, setFeatured] = useState(null);
@@ -748,7 +711,6 @@ function CommunityTab({currentUser, isPro, onUpgrade}) {
     try {
       const data = await sbGet("entries","shared=eq.true&order=updated_at.desc");
       const all = Array.isArray(data) ? data : [];
-      // Featured = most recently submitted story this month
       const thisMonth = new Date().toISOString().slice(0,7);
       const feat = all.find(e => e.submit_to_feature && e.date?.startsWith(thisMonth));
       setFeatured(feat || null);
@@ -777,8 +739,6 @@ function CommunityTab({currentUser, isPro, onUpgrade}) {
         </div>
         <button onClick={loadPosts} style={S.ghostBtn}>↻ Refresh</button>
       </div>
-
-      {/* Story of the Month */}
       {featured && (
         <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.1),rgba(200,137,90,0.07))",border:"2px solid rgba(122,74,30,0.2)",borderRadius:20,padding:"22px 26px"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
@@ -791,23 +751,16 @@ function CommunityTab({currentUser, isPro, onUpgrade}) {
             {(featured.content||"").slice(0,300)}{(featured.content||"").length>300?"…":""}
           </p>
           <div style={{fontSize:12,color:"#b08060"}}>Shared by {featured.author_name} · {formatDate(featured.date)}</div>
-          <div style={{marginTop:12,fontSize:13,color:"#9a7050",fontStyle:"italic"}}>
-            💌 This story may be featured on the My Sister's Closet podcast
-          </div>
+          <div style={{marginTop:12,fontSize:13,color:"#9a7050",fontStyle:"italic"}}>💌 This story may be featured on the My Sister's Closet podcast</div>
         </div>
       )}
-
-      {/* No story of the month yet */}
       {!featured && (
         <div style={{background:"rgba(200,137,90,0.05)",border:"1px dashed rgba(200,137,90,0.3)",borderRadius:16,padding:"20px 24px",textAlign:"center"}}>
           <div style={{fontSize:32,marginBottom:8}}>🎙️</div>
           <div style={{fontWeight:700,color:"#7a4a1e",fontSize:14,marginBottom:6}}>Story of the Month</div>
-          <div style={{fontSize:13,color:"#b08060",lineHeight:1.6}}>
-            No story featured yet this month. When you write an entry, tick "Submit for Story of the Month" — Hallie may feature it on the podcast! 🌿
-          </div>
+          <div style={{fontSize:13,color:"#b08060",lineHeight:1.6}}>No story featured yet this month. When you write an entry, tick "Submit for Story of the Month" — Hallie may feature it on the podcast! 🌿</div>
         </div>
       )}
-
       {loading ? (
         <div style={{textAlign:"center",padding:"60px 0",color:"#b08060",fontStyle:"italic"}}>Loading...</div>
       ) : posts.length===0 ? (
@@ -822,7 +775,6 @@ function CommunityTab({currentUser, isPro, onUpgrade}) {
   );
 }
 
-// ── Pricing Tab ───────────────────────────────────────────────────────────
 function PricingTab({currentPlan, userEmail, onUpgrade}) {
   const [checkoutLoading, setCheckoutLoading] = useState(null);
   const [checkoutError, setCheckoutError]     = useState("");
@@ -879,7 +831,6 @@ function PricingTab({currentPlan, userEmail, onUpgrade}) {
   );
 }
 
-// ── Shared Components ─────────────────────────────────────────────────────
 function EntryCard({entry, onClick, showAuthor}) {
   const [hovered, setHovered] = useState(false);
   return (
@@ -940,28 +891,3 @@ const S = {
   newBtn:{background:"#c8895a",color:"#fff",border:"none",borderRadius:20,padding:"10px 20px",fontSize:14,fontWeight:700,fontFamily:"'Nunito',sans-serif",cursor:"pointer",boxShadow:"0 2px 10px rgba(200,137,90,0.35)",whiteSpace:"nowrap"},
   deleteBtn:{background:"none",border:"1px solid rgba(200,80,60,0.3)",borderRadius:18,padding:"9px 20px",color:"#c05040",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:600,cursor:"pointer"},
 };
-
-/*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  SETUP CHECKLIST
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. SUPABASE — run in your SQL editor:
-   ALTER TABLE users ADD COLUMN reset_code text;
-   ALTER TABLE users ADD COLUMN reset_expiry bigint;
-   ALTER TABLE entries ADD COLUMN submit_to_feature boolean DEFAULT false;
-
-2. PWA FILES — add these to your repo root (public folder):
-   • manifest.json  (provided)
-   • sw.js          (provided)
-   • index.html     (replace existing, provided)
-   • icon-192.png   (your app icon, 192×192px)
-   • icon-512.png   (your app icon, 512×512px)
-
-3. STRIPE — add your keys at the top of this file
-
-4. HALLIE'S PROMPTS — edit the HALLIE_PROMPTS array at the top
-   anytime you want to update your weekly prompts!
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-*/
