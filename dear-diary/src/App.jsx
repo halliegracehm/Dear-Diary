@@ -455,13 +455,27 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
   const [insight, setInsight]       = useState("");
   const [insightLoading, setInsightLoading] = useState(false);
   const [pwaDismissed, setPwaDismissed] = useState(false);
+  const [showRecap, setShowRecap] = useState(false);
   const isPro = user.plan==="community" || user.plan==="offtherecord";
   const isOTR = user.plan==="offtherecord";
   const streak = calcStreak(entries);
   const reward = isPro ? streakReward(streak) : null;
   const halliePrompt = getWeeklyHalliePrompt();
 
-  useEffect(() => { loadEntries(); loadAiPrompt(); }, []);
+  useEffect(() => {
+    loadEntries();
+    loadAiPrompt();
+    // Show monthly recap if new month
+    const recapKey = `myinnermind_recap_${new Date().toISOString().slice(0,7)}`;
+    const lastRecap = sessionStorage.getItem(`myinnermind_lastrecap_${user.email}`);
+    if (lastRecap !== recapKey) {
+      const now = new Date();
+      if (now.getDate() <= 3) {
+        setShowRecap(true);
+        sessionStorage.setItem(`myinnermind_lastrecap_${user.email}`, recapKey);
+      }
+    }
+  }, []);
 
   async function loadEntries() {
     setLoading(true);
@@ -534,7 +548,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
             <span style={S.logoText}>My Inner Mind</span>
           </button>
           <nav style={{display:"flex",gap:4}}>
-            {[["journal","📖"],["community","🌿"],["pricing","💎"],...(user.email===ADMIN_EMAIL?[["admin","🔐"]]:[])].map(([t,icon])=>(
+            {[["journal","📖"],["journey","🌱"],["community","🌿"],["pricing","💎"],...(user.email===ADMIN_EMAIL?[["admin","🔐"]]:[])].map(([t,icon])=>(
               <button key={t} onClick={()=>{setTab(t);setView("list");}}
                 style={{...S.navBtn,...(tab===t?S.navBtnActive:{}),padding:"6px 10px"}}>
                 <span style={{fontSize:16}}>{icon}</span>
@@ -699,6 +713,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
         )}
 
         {tab==="admin"&&user.email===ADMIN_EMAIL&&<AdminTab/>}
+        {tab==="journey"&&<JourneyTab entries={entries} user={user}/>}
         {tab==="community"&&<CommunityTab currentUser={user} isPro={isPro} onUpgrade={()=>setTab("pricing")}/>}
         {tab==="pricing"&&<PricingTab currentPlan={user.plan} userEmail={user.email} onUpgrade={onUpgradePlan}/>}
       </main>
@@ -824,11 +839,14 @@ function PricingTab({currentPlan, userEmail, onUpgrade}) {
           </div>
         ))}
       </div>
-      <div style={{background:"rgba(255,252,246,0.85)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:22,padding:"28px 32px"}}>
-        <h3 style={{fontFamily:"'Lora',serif",fontSize:20,color:"#5a2e0e",marginBottom:18}}>💡 Ways to Monetize with a Group</h3>
+      <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.09),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.18)",borderRadius:22,padding:"28px 32px"}}>
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:8}}>Off the Record</div>
+          <p style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.6}}>"Some thoughts aren't meant for the surface."</p>
+        </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:14}}>
-          {[{icon:"🧘",title:"Wellness Cohorts",desc:"Therapists or coaches assign journaling to clients"},{icon:"📚",title:"Writing Circles",desc:"Book clubs share reflections together"},{icon:"🏢",title:"Team Wellness",desc:"Companies buy Group seats for employees"},{icon:"🎓",title:"Education",desc:"Classrooms use shared prompts for reflection"}].map(item=>(
-            <div key={item.title} style={{padding:"14px 16px",background:"rgba(200,137,90,0.06)",borderRadius:14}}>
+          {[{icon:"🎙️",title:"For the thoughts you don't say out loud",desc:"Deeper prompts that actually go somewhere — no surface-level stuff."},{icon:"🔥",title:"Challenges that call you out",desc:"Monthly challenges designed to unpack what's really going on."},{icon:"✨",title:"AI reflections",desc:"A warm, honest insight on every entry — like journaling with someone who gets it."},{icon:"🔒",title:"A more intentional space",desc:"Private. Unfiltered. Just you being real with yourself."}].map(item=>(
+            <div key={item.title} style={{padding:"14px 16px",background:"rgba(122,74,30,0.06)",borderRadius:14}}>
               <div style={{fontSize:24,marginBottom:6}}>{item.icon}</div>
               <div style={{fontWeight:700,color:"#7a4a1e",fontSize:14,marginBottom:4}}>{item.title}</div>
               <div style={{fontSize:13,color:"#9a7050",lineHeight:1.55}}>{item.desc}</div>
@@ -857,6 +875,39 @@ function EntryCard({entry, onClick, showAuthor}) {
       <h3 style={{fontFamily:"'Lora',serif",fontSize:17,color:"#5a2e0e",fontWeight:600,marginBottom:8,lineHeight:1.3}}>{entry.title||"Untitled"}</h3>
       <p style={{fontSize:14,color:"#8a6040",lineHeight:1.65,fontStyle:"italic",fontFamily:"'Lora',serif"}}>{(entry.content||"").slice(0,110)}{(entry.content||"").length>110?"…":""}</p>
       {entry.tags?.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:10}}>{entry.tags.map(t=><TagPill key={t} tag={t}/>)}</div>}
+      {showAuthor&&<ReactionBar entryId={entry.id}/>}
+    </div>
+  );
+}
+function ReactionBar({entryId}) {
+  const REACTIONS = [
+    {emoji:"🌿",label:"Felt this"},
+    {emoji:"🔥",label:"Needed this"},
+    {emoji:"💛",label:"Thank you for sharing"},
+  ];
+  const key = `reactions_${entryId}`;
+  const [picked, setPicked] = useState(()=>sessionStorage.getItem(key)||null);
+  const [counts, setCounts] = useState(()=>{
+    try { return JSON.parse(sessionStorage.getItem(key+"_counts")||"{}"); } catch { return {}; }
+  });
+  function react(label) {
+    const newCounts = {...counts};
+    if (picked) newCounts[picked] = Math.max(0,(newCounts[picked]||1)-1);
+    if (picked !== label) { newCounts[label]=(newCounts[label]||0)+1; setPicked(label); sessionStorage.setItem(key,label); }
+    else { setPicked(null); sessionStorage.removeItem(key); }
+    setCounts(newCounts);
+    sessionStorage.setItem(key+"_counts", JSON.stringify(newCounts));
+  }
+  return (
+    <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
+      {REACTIONS.map(r=>(
+        <button key={r.label} onClick={e=>{e.stopPropagation();react(r.label);}}
+          style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:12,border:`1px solid ${picked===r.label?"rgba(200,137,90,0.5)":"rgba(200,137,90,0.2)"}`,background:picked===r.label?"rgba(200,137,90,0.12)":"transparent",cursor:"pointer",fontSize:12,color:"#9a7050",fontFamily:"'Nunito',sans-serif",fontWeight:600}}>
+          <span>{r.emoji}</span>
+          <span>{r.label}</span>
+          {counts[r.label]>0&&<span style={{fontSize:11,color:"#c8895a",fontWeight:700}}>{counts[r.label]}</span>}
+        </button>
+      ))}
     </div>
   );
 }
@@ -1131,6 +1182,229 @@ function AdminTab() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────
+const BADGES = [
+  { id:"first_entry",    icon:"🌱", label:"First Entry",           desc:"You wrote your first entry",          check:(entries,user)=>entries.length>=1 },
+  { id:"ten_entries",    icon:"📖", label:"10 Entries",            desc:"You've written 10 journal entries",   check:(entries,user)=>entries.length>=10 },
+  { id:"streak_7",       icon:"🔥", label:"7-Day Streak",          desc:"You journaled 7 days in a row",       check:(entries,user)=>calcStreak(entries)>=7 },
+  { id:"streak_30",      icon:"🏆", label:"30-Day Streak",         desc:"You journaled 30 days in a row",      check:(entries,user)=>calcStreak(entries)>=30 },
+  { id:"community_share",icon:"🌿", label:"Community Sharer",      desc:"You shared your first entry",         check:(entries,user)=>entries.some(e=>e.shared) },
+  { id:"off_the_record", icon:"✨", label:"Off the Record",         desc:"You went deeper",                     check:(entries,user)=>user.plan==="offtherecord" },
+];
+
+function BadgesSection({ entries, user }) {
+  const earned = BADGES.filter(b => b.check(entries, user));
+  const unearned = BADGES.filter(b => !b.check(entries, user));
+  if (earned.length === 0 && unearned.length === 0) return null;
+  return (
+    <div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px"}}>
+      <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:14}}>Your Badges</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+        {earned.map(b=>(
+          <div key={b.id} title={b.desc} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"10px 14px",background:"linear-gradient(135deg,rgba(200,137,90,0.12),rgba(122,74,30,0.08))",border:"1px solid rgba(200,137,90,0.3)",borderRadius:14,minWidth:70}}>
+            <span style={{fontSize:28}}>{b.icon}</span>
+            <span style={{fontSize:10,fontWeight:700,color:"#7a4a1e",textAlign:"center",lineHeight:1.3}}>{b.label}</span>
+          </div>
+        ))}
+        {unearned.map(b=>(
+          <div key={b.id} title={`Locked: ${b.desc}`} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"10px 14px",background:"rgba(200,200,200,0.08)",border:"1px solid rgba(200,200,200,0.2)",borderRadius:14,minWidth:70,opacity:0.4,filter:"grayscale(1)"}}>
+            <span style={{fontSize:28}}>{b.icon}</span>
+            <span style={{fontSize:10,fontWeight:700,color:"#9a9a9a",textAlign:"center",lineHeight:1.3}}>{b.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Mood Chart ────────────────────────────────────────────────────────────
+function MoodChart({ entries }) {
+  const last14 = entries.filter(e=>e.mood).slice(0,14).reverse();
+  if (last14.length < 2) return null;
+  const moodScore = { Radiant:7,Happy:6,Calm:5,Neutral:4,Low:3,Sad:2,Frustrated:1 };
+  const points = last14.map((e,i)=>({ x:i, y:moodScore[e.mood?.label]||4, mood:e.mood, date:e.date }));
+  const w=280, h=80, pad=10;
+  const xs = points.map((_,i)=>pad+i*(w-2*pad)/(points.length-1));
+  const ys = points.map(p=>h-pad-(p.y-1)*(h-2*pad)/6);
+  const path = points.map((p,i)=>`${i===0?"M":"L"}${xs[i]},${ys[i]}`).join(" ");
+  return (
+    <div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px"}}>
+      <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>Mood This Month</div>
+      <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%",height:80}}>
+        <defs>
+          <linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#c8895a" stopOpacity="0.3"/>
+            <stop offset="100%" stopColor="#c8895a" stopOpacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d={`${path} L${xs[xs.length-1]},${h} L${xs[0]},${h} Z`} fill="url(#moodGrad)"/>
+        <path d={path} fill="none" stroke="#c8895a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        {points.map((p,i)=>(
+          <circle key={i} cx={xs[i]} cy={ys[i]} r="3" fill={p.mood?.color||"#c8895a"} stroke="#fff" strokeWidth="1.5"/>
+        ))}
+      </svg>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#b08060",marginTop:4}}>
+        <span>😢 Low</span><span>😌 Calm</span><span>🌟 Radiant</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Monthly Recap Modal ───────────────────────────────────────────────────
+function MonthlyRecap({ entries, user, onDismiss }) {
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const monthStr = lastMonth.toISOString().slice(0,7);
+  const monthName = lastMonth.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+  const monthEntries = entries.filter(e=>e.date?.startsWith(monthStr));
+  const streak = calcStreak(entries);
+  const topMood = (() => {
+    const counts = {};
+    monthEntries.forEach(e=>{ if(e.mood?.label) counts[e.mood.label]=(counts[e.mood.label]||0)+1; });
+    return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+  })();
+  const topTag = (() => {
+    const counts = {};
+    monthEntries.forEach(e=>e.tags?.forEach(t=>{ counts[t]=(counts[t]||0)+1; }));
+    return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+  })();
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(90,46,14,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onDismiss}>
+      <div style={{background:"#fffdf8",borderRadius:28,padding:"36px 32px",maxWidth:400,width:"100%",boxShadow:"0 20px 60px rgba(90,46,14,0.3)",position:"relative"}} onClick={e=>e.stopPropagation()}>
+        <div style={{textAlign:"center",marginBottom:24}}>
+          <div style={{fontSize:48,marginBottom:8}}>🌿</div>
+          <h2 style={{fontFamily:"'Lora',serif",fontSize:24,color:"#5a2e0e",marginBottom:4,fontWeight:600}}>{monthName} Recap</h2>
+          <p style={{fontSize:13,color:"#b08060",fontStyle:"italic"}}>Look how far you've come</p>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+          {[
+            {label:"Entries Written",value:monthEntries.length,icon:"📖"},
+            {label:"Current Streak",value:`${streak} days`,icon:"🔥"},
+            {label:"Top Mood",value:topMood?`${MOODS.find(m=>m.label===topMood[0])?.emoji} ${topMood[0]}`:"—",icon:"💭"},
+            {label:"Top Tag",value:topTag?`#${topTag[0]}`:"—",icon:"🏷️"},
+          ].map(s=>(
+            <div key={s.label} style={{background:"rgba(200,137,90,0.07)",borderRadius:16,padding:"14px",textAlign:"center"}}>
+              <div style={{fontSize:22,marginBottom:4}}>{s.icon}</div>
+              <div style={{fontSize:20,fontWeight:800,color:"#7a4a1e",fontFamily:"'Lora',serif"}}>{s.value}</div>
+              <div style={{fontSize:11,color:"#b08060",marginTop:2}}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+        <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",fontStyle:"italic",textAlign:"center",lineHeight:1.7,marginBottom:20}}>
+          {monthEntries.length===0 ? "A new month is a fresh page. Start writing yours. 🌱" :
+           monthEntries.length<5 ? "Every entry matters. Keep showing up for yourself. 🌿" :
+           "You showed up for yourself this month. That's everything. ✨"}
+        </p>
+        <button onClick={onDismiss} style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"12px",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+          Keep Going →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Intention Setting ─────────────────────────────────────────────────────
+function IntentionBanner({ user, onWrite }) {
+  const weekKey = `intention_${user.email}_${Math.ceil((new Date() - new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000))}`;
+  const [intention, setIntention] = useState(()=>sessionStorage.getItem(weekKey)||"");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  function save() {
+    sessionStorage.setItem(weekKey, draft);
+    setIntention(draft);
+    setEditing(false);
+  }
+
+  if (editing) return (
+    <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:20,padding:"20px 24px"}}>
+      <div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🎯 This Week's Intention</div>
+      <input style={{width:"100%",padding:"10px 14px",borderRadius:12,border:"1px solid rgba(155,126,184,0.3)",background:"rgba(255,255,255,0.8)",fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",outline:"none",marginBottom:12,boxSizing:"border-box"}}
+        placeholder="I intend to..." value={draft} onChange={e=>setDraft(e.target.value)} autoFocus onKeyDown={e=>e.key==="Enter"&&save()}/>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={()=>setEditing(false)} style={{background:"none",border:"1px solid rgba(155,126,184,0.3)",borderRadius:14,padding:"7px 16px",color:"#9b7eb8",fontFamily:"'Nunito',sans-serif",fontSize:13,cursor:"pointer"}}>Cancel</button>
+        <button onClick={save} style={{background:"#9b7eb8",border:"none",borderRadius:14,padding:"7px 20px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Set Intention ✓</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:20,padding:"18px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+      <div style={{flex:1}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:4}}>🎯 This Week's Intention</div>
+        {intention ? (
+          <p style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",fontStyle:"italic"}}>{intention}</p>
+        ) : (
+          <p style={{fontSize:13,color:"#b08060"}}>Set an intention for this week — something to come back to.</p>
+        )}
+      </div>
+      <button onClick={()=>{setDraft(intention);setEditing(true);}} style={{background:"rgba(155,126,184,0.15)",border:"1px solid rgba(155,126,184,0.3)",borderRadius:14,padding:"7px 14px",color:"#9b7eb8",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+        {intention ? "Edit" : "Set →"}
+      </button>
+    </div>
+  );
+}
+
+// ── Journey Tab ───────────────────────────────────────────────────────────
+function JourneyTab({ entries, user }) {
+  const streak = calcStreak(entries);
+  const thisMonth = new Date().toISOString().slice(0,7);
+  const monthEntries = entries.filter(e=>e.date?.startsWith(thisMonth));
+  const topMood = (() => {
+    const counts = {};
+    entries.forEach(e=>{ if(e.mood?.label) counts[e.mood.label]=(counts[e.mood.label]||0)+1; });
+    const top = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+    return top ? MOODS.find(m=>m.label===top[0]) : null;
+  })();
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+      <div>
+        <h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🌱 My Journey</h2>
+        <p style={{color:"#b08060",fontSize:13,marginTop:4}}>Your growth, all in one place</p>
+      </div>
+
+      {/* Stats row */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:14}}>
+        {[
+          {icon:"📖",label:"Total Entries",value:entries.length},
+          {icon:"🔥",label:"Current Streak",value:`${streak}d`},
+          {icon:"📅",label:"This Month",value:monthEntries.length},
+          {icon:"💭",label:"Top Mood",value:topMood?`${topMood.emoji} ${topMood.label}`:"—"},
+        ].map(s=>(
+          <div key={s.label} style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:18,padding:"18px",textAlign:"center"}}>
+            <div style={{fontSize:26,marginBottom:6}}>{s.icon}</div>
+            <div style={{fontSize:22,fontWeight:800,color:"#7a4a1e",fontFamily:"'Lora',serif"}}>{s.value}</div>
+            <div style={{fontSize:11,color:"#b08060",marginTop:3,textTransform:"uppercase",letterSpacing:"0.4px"}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <MoodChart entries={entries}/>
+      <BadgesSection entries={entries} user={user}/>
+
+      {/* Monthly recap */}
+      <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:20,padding:"20px 24px"}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>This Month at a Glance</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+          {(() => {
+            const tagCounts = {};
+            monthEntries.forEach(e=>e.tags?.forEach(t=>{tagCounts[t]=(tagCounts[t]||0)+1;}));
+            return Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([tag,count])=>(
+              <div key={tag} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:TAG_COLORS[tag]+"22",border:`1px solid ${TAG_COLORS[tag]}44`,borderRadius:12}}>
+                <span style={{fontSize:12,fontWeight:700,color:TAG_COLORS[tag]}}>{tag}</span>
+                <span style={{fontSize:11,color:"#b08060"}}>×{count}</span>
+              </div>
+            ));
+          })()}
+          {monthEntries.length===0&&<p style={{fontSize:13,color:"#b08060",fontStyle:"italic"}}>No entries yet this month — start writing! 🌱</p>}
+        </div>
+      </div>
     </div>
   );
 }
