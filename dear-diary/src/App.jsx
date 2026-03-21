@@ -5,8 +5,8 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const STRIPE_PUBLISHABLE_KEY = "pk_live_51TBmTBDC5IHfzeBkp5DgUYOdkSUiMYebP36KU3wa4hMHRKvaD3VeivtmyVgBFcwVNPxHp2qfD1vbAOCynlhMGIpu00rME400j2";
 const STRIPE_PRICES = {
-  plus:  "price_1TBmxqDC5IHfzeBkFuxyZPfX",
-  group: "price_1TBmzNDC5IHfzeBk8PwoLtDH",
+  community: "price_1TBmxqDC5IHfzeBkFuxyZPfX",
+  offtherecord: "price_1TDFaiDC5IHfzeBkH1kqn47G",
 };
 
 const HALLIE_PROMPTS = [
@@ -61,9 +61,9 @@ const MOODS = [
 const TAG_OPTIONS = ["personal","work","gratitude","dreams","health","family","travel","ideas"];
 const TAG_COLORS  = { personal:"#c8895a",work:"#7a8c6e",gratitude:"#c4956a",dreams:"#9b7eb8",health:"#6b9e78",family:"#c07060",travel:"#5b8fa8",ideas:"#b8955a" };
 const PLANS = {
-  free:  { name:"Free",  price:"$0/mo",  color:"#94a3b8", features:["10 entries/mo","Basic moods & tags","Weekly Hallie prompt"] },
-  plus:  { name:"Plus",  price:"$6/mo",  color:"#c8895a", features:["Unlimited entries","AI insights","PDF export","Community feed","Streak rewards"] },
-  group: { name:"Group", price:"$20/mo", color:"#7a8c6e", features:["Everything in Plus","Group workspace","Shared prompts","5 seats included"] },
+  free:        { name:"Free",            price:"$0/mo",  color:"#94a3b8", features:["10 entries/mo","Basic moods & tags","1 Hallie prompt/mo","Intro journaling experience"] },
+  community:   { name:"Community",       price:"$6/mo",  color:"#c8895a", features:["Unlimited entries","Full community feed","All Hallie prompts","Streak rewards","Story of the Month"] },
+  offtherecord:{ name:"Off the Record",  price:"$12/mo", color:"#7a4a1e", features:["Everything in Community","AI reflections","PDF export","Deeper guided prompts","Challenge access","Private intentional space"] },
 };
 
 function getTodayStr() { return new Date().toISOString().split("T")[0]; }
@@ -169,7 +169,7 @@ export default function App() {
       } else {
         setCurrentUser(user); setScreen("app");
       }
-    } else setTimeout(() => setScreen("auth"), 1800);
+    } else setTimeout(() => setScreen("landing"), 1800);
   }, []);
 
   async function handleAuth() {
@@ -185,7 +185,7 @@ export default function App() {
         if (result?.length > 0) {
           const u = result[0];
           sessionStorage.setItem("myinnerminduser", JSON.stringify(u));
-          setCurrentUser(u); setScreen("app");
+          setCurrentUser(u); setScreen("onboarding");
         } else setAuthError("Something went wrong. Please try again.");
       } else {
         if (!email||!authForm.password) { setAuthError("Email and password are required."); return; }
@@ -202,7 +202,7 @@ export default function App() {
 
   function handleLogout() {
     sessionStorage.removeItem("myinnerminduser");
-    setCurrentUser(null); setScreen("auth");
+    setCurrentUser(null); setScreen("landing");
     setAuthForm({username:"",email:"",password:""});
   }
 
@@ -215,6 +215,8 @@ export default function App() {
   }
 
   if (screen === "splash") return <Splash />;
+  if (screen === "landing") return <LandingScreen onGetStarted={()=>{setAuthMode("register");setScreen("auth");}} onSignIn={()=>{setAuthMode("login");setScreen("auth");}} />;
+  if (screen === "onboarding") return <OnboardingScreen user={currentUser} onDone={()=>setScreen("app")} />;
   if (screen === "auth")   return (
     <AuthScreen
       mode={authMode} form={authForm} error={authError} loading={authLoading}
@@ -453,7 +455,8 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
   const [insight, setInsight]       = useState("");
   const [insightLoading, setInsightLoading] = useState(false);
   const [pwaDismissed, setPwaDismissed] = useState(false);
-  const isPro = user.plan==="plus" || user.plan==="group";
+  const isPro = user.plan==="community" || user.plan==="offtherecord";
+  const isOTR = user.plan==="offtherecord";
   const streak = calcStreak(entries);
   const reward = isPro ? streakReward(streak) : null;
   const halliePrompt = getWeeklyHalliePrompt();
@@ -499,7 +502,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
   }
 
   async function fetchInsight(entry) {
-    if (!isPro) return;
+    if (!isOTR) return;
     setInsight(""); setInsightLoading(true);
     try { setInsight(await getAIInsight(entry)); }
     catch { setInsight("Couldn't load insight right now."); }
@@ -531,7 +534,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
             <span style={S.logoText}>My Inner Mind</span>
           </button>
           <nav style={{display:"flex",gap:4}}>
-            {[["journal","📖"],["community","🌿"],["pricing","💎"]].map(([t,icon])=>(
+            {[["journal","📖"],["community","🌿"],["pricing","💎"],...(user.email===ADMIN_EMAIL?[["admin","🔐"]]:[])].map(([t,icon])=>(
               <button key={t} onClick={()=>{setTab(t);setView("list");}}
                 style={{...S.navBtn,...(tab===t?S.navBtnActive:{}),padding:"6px 10px"}}>
                 <span style={{fontSize:16}}>{icon}</span>
@@ -591,7 +594,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
                 <input style={{...S.input,paddingLeft:38,width:"100%"}} placeholder="Search your entries..."
                   value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}/>
               </div>
-              {isPro&&<button onClick={()=>exportToPDF(entries,user.username)} style={S.ghostBtn}>📄 PDF</button>}
+              {isOTR&&<button onClick={()=>exportToPDF(entries,user.username)} style={S.ghostBtn}>📄 PDF</button>}
               <button onClick={()=>startNew()} style={S.newBtn}>+ New</button>
             </div>
             <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
@@ -677,7 +680,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
             {selectedEntry.tags?.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:18}}>{selectedEntry.tags.map(t=><TagPill key={t} tag={t}/>)}</div>}
             <div style={{height:1,background:"linear-gradient(90deg,rgba(200,137,90,0.3),transparent)",marginBottom:24}}/>
             <p style={{fontFamily:"'Lora',serif",fontSize:16,lineHeight:1.9,color:"#6a4020",fontStyle:"italic",whiteSpace:"pre-wrap",marginBottom:32}}>{selectedEntry.content}</p>
-            {isPro&&(
+            {isOTR&&(
               <div style={S.insightBox}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:insight?12:0}}>
                   <span style={{fontWeight:700,color:"#7a4a1e",fontSize:12,textTransform:"uppercase",letterSpacing:"0.5px"}}>✨ AI Reflection</span>
@@ -687,7 +690,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
                 {insight&&<p style={{fontFamily:"'Lora',serif",fontSize:15,lineHeight:1.75,color:"#6a4020",fontStyle:"italic"}}>{insight}</p>}
               </div>
             )}
-            {!isPro&&<div style={{...S.insightBox,textAlign:"center",padding:"16px"}}><span style={{fontSize:13,color:"#9a7050"}}>✨ Upgrade to Plus to unlock AI Reflections</span></div>}
+            {!isOTR&&<div style={{...S.insightBox,textAlign:"center",padding:"16px"}}><span style={{fontSize:13,color:"#9a7050"}}>✨ Upgrade to Off the Record to unlock AI Reflections</span></div>}
             <div style={{display:"flex",justifyContent:"space-between",marginTop:24}}>
               <button onClick={()=>deleteEntry(selectedEntry)} style={S.deleteBtn}>🗑 Delete</button>
               <button onClick={()=>startEdit(selectedEntry)} style={S.saveBtn}>✏️ Edit</button>
@@ -695,6 +698,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
           </div>
         )}
 
+        {tab==="admin"&&user.email===ADMIN_EMAIL&&<AdminTab/>}
         {tab==="community"&&<CommunityTab currentUser={user} isPro={isPro} onUpgrade={()=>setTab("pricing")}/>}
         {tab==="pricing"&&<PricingTab currentPlan={user.plan} userEmail={user.email} onUpgrade={onUpgradePlan}/>}
       </main>
@@ -729,7 +733,7 @@ function CommunityTab({currentUser, isPro, onUpgrade}) {
       <div style={{fontSize:54,marginBottom:16}}>🌿</div>
       <h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e",marginBottom:12}}>Community Feed</h2>
       <p style={{color:"#b08060",fontSize:16,maxWidth:400,margin:"0 auto 28px",lineHeight:1.7,fontStyle:"italic",fontFamily:"'Lora',serif"}}>
-        Connect with others through shared reflections. Upgrade to Plus or Group to join.
+        Connect with others through shared reflections. Upgrade to Community or Off the Record to join.
       </p>
       <button onClick={onUpgrade} style={S.saveBtn}>See Plans →</button>
     </div>
@@ -790,7 +794,7 @@ function PricingTab({currentPlan, userEmail, onUpgrade}) {
     try {
       await startStripeCheckout(STRIPE_PRICES[key], userEmail);
     } catch {
-      setCheckoutError("Stripe checkout coming soon! Email hello@halliewho.com to upgrade.");
+      setCheckoutError("Checkout issue — email hello@halliewho.com to upgrade.");
       onUpgrade(key);
     } finally { setCheckoutLoading(null); }
   }
@@ -799,7 +803,7 @@ function PricingTab({currentPlan, userEmail, onUpgrade}) {
     <div>
       <div style={{textAlign:"center",marginBottom:36}}>
         <h2 style={{fontFamily:"'Lora',serif",fontSize:30,color:"#5a2e0e",marginBottom:8}}>Choose Your Plan</h2>
-        <p style={{color:"#b08060",fontSize:15,fontStyle:"italic"}}>Grow your practice, together</p>
+        <p style={{color:"#b08060",fontSize:15,fontStyle:"italic"}}>Some thoughts aren't meant for the surface.</p>
       </div>
       {checkoutError&&<div style={{...S.errorBox,marginBottom:20,textAlign:"center"}}>{checkoutError}</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:20,marginBottom:40}}>
@@ -814,7 +818,7 @@ function PricingTab({currentPlan, userEmail, onUpgrade}) {
             {currentPlan!==key&&(
               <button onClick={()=>handleUpgrade(key)} disabled={checkoutLoading===key}
                 style={{...S.saveBtn,width:"100%",background:`linear-gradient(135deg,${plan.color}cc,${plan.color})`,boxShadow:`0 3px 14px ${plan.color}55`}}>
-                {checkoutLoading===key ? "Opening checkout..." : key==="free" ? "Downgrade" : `Upgrade to ${plan.name} →`}
+                {checkoutLoading===key ? "Opening checkout..." : key==="free" ? "Downgrade" : key==="offtherecord" ? "Enter Off the Record →" : `Join ${plan.name} →`}
               </button>
             )}
           </div>
@@ -896,3 +900,237 @@ const S = {
   newBtn:{background:"#c8895a",color:"#fff",border:"none",borderRadius:20,padding:"10px 20px",fontSize:14,fontWeight:700,fontFamily:"'Nunito',sans-serif",cursor:"pointer",boxShadow:"0 2px 10px rgba(200,137,90,0.35)",whiteSpace:"nowrap"},
   deleteBtn:{background:"none",border:"1px solid rgba(200,80,60,0.3)",borderRadius:18,padding:"9px 20px",color:"#c05040",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:600,cursor:"pointer"},
 };
+
+// ── Landing Screen ────────────────────────────────────────────────────────
+function LandingScreen({ onGetStarted, onSignIn }) {
+  return (
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#fdf6ec 0%,#f5e8d3 50%,#ede0cc 100%)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",position:"relative",overflowX:"hidden"}}>
+      <div style={{position:"fixed",inset:0,backgroundImage:`url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8895a' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,pointerEvents:"none",zIndex:0}}/>
+      <GlobalStyles/>
+      {/* Nav */}
+      <nav style={{position:"relative",zIndex:1,display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",maxWidth:960,margin:"0 auto",width:"100%"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:24}}>🌿</span>
+          <span style={{fontFamily:"'Lora',serif",fontSize:18,fontWeight:600,color:"#7a4a1e"}}>My Inner Mind</span>
+        </div>
+        <button onClick={onSignIn} style={{background:"none",border:"1px solid rgba(200,137,90,0.4)",borderRadius:20,padding:"8px 20px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Sign In</button>
+      </nav>
+
+      {/* Hero */}
+      <div style={{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",padding:"60px 24px 40px",width:"100%",textAlign:"center"}}>
+        <div style={{display:"inline-block",background:"rgba(200,137,90,0.12)",border:"1px solid rgba(200,137,90,0.3)",borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:24}}>
+          ✨ A space built with you in mind
+        </div>
+        <h1 style={{fontFamily:"'Lora',serif",fontSize:"clamp(32px,6vw,58px)",color:"#5a2e0e",fontWeight:600,lineHeight:1.15,marginBottom:20}}>
+          Journal together.<br/>
+          <span style={{color:"#c8895a",fontStyle:"italic"}}>Grow together.</span>
+        </h1>
+        <p style={{fontSize:"clamp(15px,2vw,18px)",color:"#9a7050",lineHeight:1.75,maxWidth:560,margin:"0 auto 36px",fontFamily:"'Lora',serif",fontStyle:"italic"}}>
+          My Inner Mind is a journaling community where your words are witnessed, your growth is celebrated, and you never have to reflect alone.
+        </p>
+        <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap"}}>
+          <button onClick={onGetStarted} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:24,padding:"14px 32px",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(200,137,90,0.45)"}}>
+            Start Journaling Free →
+          </button>
+          <button onClick={onSignIn} style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(200,137,90,0.3)",borderRadius:24,padding:"14px 28px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:600,cursor:"pointer"}}>
+            I have an account
+          </button>
+        </div>
+      </div>
+
+      {/* Features */}
+      <div style={{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",padding:"20px 24px 60px",width:"100%"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:20,marginBottom:48}}>
+          {[
+            {icon:"💌",title:"Hallie's Weekly Prompts",desc:"Every week, a personal prompt from Hallie to guide your reflection — like a letter from a friend who gets it."},
+            {icon:"🌿",title:"Community Feed",desc:"Share entries with the My Inner Mind community. Be seen, be heard, and witness others doing the same."},
+            {icon:"🎙️",title:"Story of the Month",desc:"Submit your entry and Hallie may feature your story on the My Sister's Closet podcast."},
+            {icon:"✨",title:"AI Reflections",desc:"Get a warm, thoughtful insight on any entry — like journaling with a wise companion who reads between the lines."},
+          ].map(f=>(
+            <div key={f.title} style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"24px"}}>
+              <div style={{fontSize:32,marginBottom:12}}>{f.icon}</div>
+              <div style={{fontFamily:"'Lora',serif",fontSize:17,fontWeight:600,color:"#5a2e0e",marginBottom:8}}>{f.title}</div>
+              <div style={{fontSize:14,color:"#9a7050",lineHeight:1.65}}>{f.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Hallie quote */}
+        <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.09),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.18)",borderRadius:24,padding:"36px",textAlign:"center",marginBottom:48}}>
+          <div style={{fontSize:36,marginBottom:16}}>🌿</div>
+          <p style={{fontFamily:"'Lora',serif",fontSize:"clamp(16px,2.5vw,20px)",color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,maxWidth:600,margin:"0 auto 20px"}}>
+            "I built this because I needed it. A place to be honest, to grow, and to feel less alone in the process. I hope it becomes that for you too."
+          </p>
+          <div style={{fontSize:13,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.5px"}}>— Hallie, My Sister's Closet</div>
+        </div>
+
+        {/* CTA */}
+        <div style={{textAlign:"center"}}>
+          <button onClick={onGetStarted} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:24,padding:"16px 40px",fontFamily:"'Nunito',sans-serif",fontSize:16,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(200,137,90,0.4)"}}>
+            Join the Community →
+          </button>
+          <div style={{fontSize:13,color:"#b08060",marginTop:12}}>Free to start · No credit card required</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Onboarding Screen ─────────────────────────────────────────────────────
+function OnboardingScreen({ user, onDone }) {
+  const [step, setStep] = useState(0);
+  const [answer, setAnswer] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const welcomePrompt = "What brought you here today? There's no right answer — just write what's true.";
+
+  async function handleFinish() {
+    setSaving(true);
+    if (answer.trim()) {
+      const entry = {
+        id: `${user.email}_onboarding`,
+        user_email: user.email,
+        date: new Date().toISOString().split("T")[0],
+        title: "My first entry 🌿",
+        content: answer,
+        mood: null,
+        tags: ["personal"],
+        shared: false,
+        submit_to_feature: false,
+        author_name: user.username,
+        updated_at: Date.now(),
+      };
+      await sbUpsert("entries", entry).catch(()=>{});
+    }
+    setSaving(false);
+    onDone();
+  }
+
+  return (
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#fdf6ec 0%,#f5e8d3 50%,#ede0cc 100%)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",position:"relative"}}>
+      <div style={{position:"fixed",inset:0,backgroundImage:`url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8895a' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,pointerEvents:"none",zIndex:0}}/>
+      <GlobalStyles/>
+      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:540}}>
+        {step === 0 && (
+          <div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:28,padding:"44px 40px",textAlign:"center",boxShadow:"0 8px 40px rgba(160,100,50,0.12)"}}>
+            <div style={{fontSize:56,marginBottom:16}}>🌿</div>
+            <h2 style={{fontFamily:"'Lora',serif",fontSize:28,color:"#5a2e0e",marginBottom:12,fontWeight:600}}>Welcome, {user.username}!</h2>
+            <p style={{fontSize:15,color:"#9a7050",lineHeight:1.7,marginBottom:28,fontFamily:"'Lora',serif",fontStyle:"italic"}}>
+              You've found your space to think, feel, and grow. My Inner Mind is a community — and you're now part of it.
+            </p>
+            <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:28}}>
+              {[{icon:"💌",text:"Weekly prompts from Hallie"},{icon:"🌿",text:"A community who gets it"},{icon:"✨",text:"AI reflections on your entries"}].map(i=>(
+                <div key={i.text} style={{display:"flex",alignItems:"center",gap:12,background:"rgba(200,137,90,0.06)",borderRadius:14,padding:"12px 16px",textAlign:"left"}}>
+                  <span style={{fontSize:20}}>{i.icon}</span>
+                  <span style={{fontSize:14,color:"#7a5030",fontWeight:600}}>{i.text}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={()=>setStep(1)} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"13px 32px",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(200,137,90,0.4)",width:"100%"}}>
+              Let's write something →
+            </button>
+          </div>
+        )}
+        {step === 1 && (
+          <div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:28,padding:"40px",boxShadow:"0 8px 40px rgba(160,100,50,0.12)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
+              <span style={{fontSize:20}}>💌</span>
+              <span style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.8px"}}>A welcome prompt from Hallie</span>
+            </div>
+            <p style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.7,marginBottom:24}}>
+              "{welcomePrompt}"
+            </p>
+            <textarea
+              style={{width:"100%",minHeight:180,fontFamily:"'Lora',serif",fontSize:15,lineHeight:1.85,color:"#5a3a1a",background:"rgba(253,248,242,0.85)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:16,padding:"16px 20px",outline:"none",fontStyle:"italic",resize:"none",boxSizing:"border-box"}}
+              placeholder="Write freely — this is just for you..."
+              value={answer}
+              onChange={e=>setAnswer(e.target.value)}
+              autoFocus
+            />
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:20,gap:12}}>
+              <button onClick={onDone} style={{background:"none",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"10px 20px",color:"#b08060",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                Skip for now
+              </button>
+              <button onClick={handleFinish} disabled={saving} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"10px 28px",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(200,137,90,0.4)"}}>
+                {saving ? "Saving..." : "Save & Enter →"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Admin Tab ─────────────────────────────────────────────────────────────
+const ADMIN_EMAIL = "halliegracehm@gmail.com";
+
+function AdminTab() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => { loadUsers(); }, []);
+
+  async function loadUsers() {
+    setLoading(true);
+    try {
+      const data = await sbGet("users", "order=id.desc");
+      setUsers(Array.isArray(data) ? data : []);
+    } catch { setUsers([]); }
+    finally { setLoading(false); }
+  }
+
+  const filtered = users.filter(u =>
+    u.email?.toLowerCase().includes(search.toLowerCase()) ||
+    u.username?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const counts = { free: 0, community: 0, offtherecord: 0 };
+  users.forEach(u => { if (counts[u.plan] !== undefined) counts[u.plan]++; });
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+      <div>
+        <h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🔐 Admin Dashboard</h2>
+        <p style={{color:"#b08060",fontSize:13,marginTop:4}}>Only visible to you</p>
+      </div>
+
+      {/* Stats */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:14}}>
+        {[{label:"Total Members",value:users.length,color:"#7a4a1e"},{label:"Free",value:counts.free,color:"#94a3b8"},{label:"Community",value:counts.community,color:"#c8895a"},{label:"Off the Record",value:counts.offtherecord,color:"#7a4a1e"}].map(s=>(
+          <div key={s.label} style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:18,padding:"20px",textAlign:"center"}}>
+            <div style={{fontSize:28,fontWeight:800,color:s.color,fontFamily:"'Lora',serif"}}>{s.value}</div>
+            <div style={{fontSize:12,color:"#b08060",fontWeight:700,marginTop:4,textTransform:"uppercase",letterSpacing:"0.4px"}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div style={{position:"relative"}}>
+        <span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",opacity:0.35,fontSize:15}}>🔍</span>
+        <input style={{width:"100%",padding:"11px 15px 11px 38px",borderRadius:13,border:"1px solid rgba(200,137,90,0.25)",background:"rgba(255,255,255,0.75)",fontFamily:"'Nunito',sans-serif",fontSize:14,color:"#5a3a1a",outline:"none",boxSizing:"border-box"}}
+          placeholder="Search by name or email..." value={search} onChange={e=>setSearch(e.target.value)}/>
+      </div>
+
+      {/* User list */}
+      {loading ? (
+        <div style={{textAlign:"center",padding:"40px",color:"#b08060",fontStyle:"italic"}}>Loading members...</div>
+      ) : (
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {filtered.map(u=>(
+            <div key={u.id} style={{background:"rgba(255,252,246,0.93)",border:"1px solid rgba(200,137,90,0.12)",borderRadius:16,padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+              <div>
+                <div style={{fontWeight:700,color:"#5a2e0e",fontSize:14}}>{u.username}</div>
+                <div style={{fontSize:12,color:"#b08060",marginTop:2}}>{u.email}</div>
+              </div>
+              <span style={{fontSize:10,fontWeight:800,padding:"3px 12px",borderRadius:10,textTransform:"uppercase",letterSpacing:"0.5px",background:PLANS[u.plan]?.color+"22",color:PLANS[u.plan]?.color}}>
+                {u.plan}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
