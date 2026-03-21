@@ -9,8 +9,7 @@ export default async function handler(req, res) {
     const session = event.data.object;
     const email = session.customer_email;
     const priceId = session.line_items?.data?.[0]?.price?.id;
-    const plan = priceId === "price_1TBmxqDC5IHfzeBkFuxyZPfX" ? "plus" : "group";
-
+    const plan = priceId === "price_1TDFaiDC5IHfzeBkH1kqn47G" ? "offtherecord" : "community";
     await fetch(`${process.env.SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
       method: "PATCH",
       headers: {
