@@ -552,7 +552,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
   const [insightLoading, setInsightLoading] = useState(false);
   const [pwaDismissed, setPwaDismissed] = useState(false);
   const [showRecap, setShowRecap] = useState(false);
-  const [theme, setTheme] = useState(()=>localStorage.getItem(`theme_${user.email}`)||'original');
+  const [theme, setTheme] = useState(()=>localStorage.getItem('theme_'+user.email)||'original');
   const T = THEMES[theme]||THEMES.original;
   const isPro = user.plan==="community" || user.plan==="offtherecord";
   const isOTR = user.plan==="offtherecord";
@@ -655,7 +655,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
                 </div>
               )}
               <ProfileMenu user={user} theme={theme} T={T} onLogout={onLogout}
-                onTheme={(key)=>{setTheme(key);localStorage.setItem(`theme_${user.email}`,key);}}/>
+                onTheme={(key)=>{setTheme(key);localStorage.setItem("theme_"+user.email,key);}}/>
             </div>
           </div>
           <nav style={{display:"flex",gap:2,width:"100%",justifyContent:"space-around"}}>
