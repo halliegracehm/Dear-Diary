@@ -66,6 +66,101 @@ const PLANS = {
   offtherecord:{ name:"Off the Record",  price:"$12/mo", color:"#7a4a1e", features:["Everything in Community","AI reflections","PDF export","Deeper guided prompts","Challenge access","Private intentional space"] },
 };
 
+
+// ── Themes ────────────────────────────────────────────────────────────────
+const THEMES = {
+  original: {
+    name:"Original", icon:"🌿",
+    bg:"linear-gradient(160deg,#fdf6ec 0%,#f5e8d3 40%,#ede0cc 100%)",
+    card:"rgba(255,252,246,0.93)", header:"rgba(253,246,236,0.9)",
+    text:"#5a2e0e", subtext:"#b08060", accent:"#c8895a", accentDark:"#7a4a1e",
+    border:"rgba(200,137,90,0.15)", input:"rgba(255,255,255,0.75)",
+    promptBg:"linear-gradient(135deg,rgba(200,137,90,0.1),rgba(155,126,184,0.07))",
+  },
+  midnight: {
+    name:"Midnight", icon:"🌙",
+    bg:"linear-gradient(160deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)",
+    card:"rgba(30,30,60,0.95)", header:"rgba(20,20,40,0.95)",
+    text:"#e8d5b0", subtext:"#a08060", accent:"#d4956a", accentDark:"#f0c080",
+    border:"rgba(212,149,106,0.2)", input:"rgba(255,255,255,0.08)",
+    promptBg:"linear-gradient(135deg,rgba(212,149,106,0.12),rgba(100,80,150,0.1))",
+  },
+  plum: {
+    name:"Plum & Rose", icon:"💜",
+    bg:"linear-gradient(160deg,#2d1b3d 0%,#3d1a3a 50%,#4a1942 100%)",
+    card:"rgba(60,20,60,0.95)", header:"rgba(40,15,45,0.95)",
+    text:"#f0d0e8", subtext:"#c090b0", accent:"#e0709a", accentDark:"#f0a0c0",
+    border:"rgba(200,80,140,0.25)", input:"rgba(255,255,255,0.08)",
+    promptBg:"linear-gradient(135deg,rgba(200,80,140,0.12),rgba(150,60,100,0.08))",
+  },
+};
+
+// ── Affirmations ──────────────────────────────────────────────────────────
+const AFFIRMATIONS = [
+  // Grounding
+  "I am safe in this moment.",
+  "I don't have to solve everything right now.",
+  "I am allowed to slow down.",
+  "I can take this one breath at a time.",
+  "My feelings are valid, even when they're heavy.",
+  // Confidence
+  "I am becoming someone I'm proud of.",
+  "I trust myself to handle what comes.",
+  "I don't need permission to take up space.",
+  "I am enough, even on my hardest days.",
+  "I honor the person I'm growing into.",
+  // Growth
+  "I am allowed to outgrow people and patterns.",
+  "Healing doesn't have a deadline.",
+  "I am learning, not failing.",
+  "Every small step still counts.",
+  "I release what no longer serves me.",
+  // Motivation
+  "I show up for my life, even when it's hard.",
+  "I am building something meaningful.",
+  "My consistency matters more than perfection.",
+  "I can start again as many times as I need.",
+  "I am capable of creating the life I want.",
+  // Boundaries
+  "No is a complete sentence.",
+  "I protect my peace without guilt.",
+  "I don't have to explain my boundaries.",
+  "I choose what I allow into my life.",
+  "I deserve relationships that feel safe and mutual.",
+  // Self-compassion
+  "I am doing the best I can with what I have.",
+  "I speak to myself with kindness.",
+  "I don't need to be perfect to be worthy.",
+  "I am allowed to rest without earning it.",
+  "I hold space for all parts of me.",
+];
+
+function getDailyAffirmation() {
+  const day = Math.floor(Date.now() / (24*60*60*1000));
+  return AFFIRMATIONS[day % AFFIRMATIONS.length];
+}
+
+// ── Night Prompts ─────────────────────────────────────────────────────────
+const NIGHT_PROMPTS = [
+  "What's one thing you're leaving in today that you don't want to carry into tomorrow?",
+  "How does your body feel right now — honestly?",
+  "What would you tell yourself at the start of today if you could go back?",
+  "What went unsaid today that you want to say here?",
+  "What are you grateful for that you didn't get to acknowledge today?",
+  "What does quiet feel like for you tonight?",
+  "If today had a color, what would it be and why?",
+  "What do you need more of right now — rest, connection, or solitude?",
+];
+
+function getNightPrompt() {
+  const day = Math.floor(Date.now() / (24*60*60*1000));
+  return NIGHT_PROMPTS[day % NIGHT_PROMPTS.length];
+}
+
+function isNightTime() {
+  return new Date().getHours() >= 20;
+}
+
 function getTodayStr() { return new Date().toISOString().split("T")[0]; }
 function formatDate(d) { return new Date(d).toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"}); }
 function hashStr(s) { let h=0; for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;} return String(h); }
@@ -448,6 +543,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
   const [editMode, setEditMode]     = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTag, setFilterTag]   = useState(null);
+  const [filterMood, setFilterMood]   = useState(null);
   const [aiPrompt, setAiPrompt]     = useState("");
   const [promptLoading, setPromptLoading] = useState(false);
   const [loading, setLoading]       = useState(true);
@@ -456,6 +552,8 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
   const [insightLoading, setInsightLoading] = useState(false);
   const [pwaDismissed, setPwaDismissed] = useState(false);
   const [showRecap, setShowRecap] = useState(false);
+  const [theme, setTheme] = useState(()=>localStorage.getItem(`theme_${user.email}`)||'original');
+  const T = THEMES[theme]||THEMES.original;
   const isPro = user.plan==="community" || user.plan==="offtherecord";
   const isOTR = user.plan==="offtherecord";
   const streak = calcStreak(entries);
@@ -535,20 +633,21 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
   const filtered = entries.filter(e => {
     const q = searchQuery.toLowerCase();
     return (!q||e.title?.toLowerCase().includes(q)||e.content?.toLowerCase().includes(q)) &&
-           (!filterTag||e.tags?.includes(filterTag));
+           (!filterTag||e.tags?.includes(filterTag)) &&
+           (!filterMood||e.mood?.label===filterMood);
   });
 
   return (
-    <div style={S.page}>
+    <div style={{...S.page,background:T.bg}}>
       <div style={S.texture}/><GlobalStyles/>
-      <header style={S.header}>
+      <header style={{...S.header,background:T.header}}>
         <div style={S.headerInner}>
           <button onClick={()=>{setTab("journal");setView("list");}} style={S.logoBtn}>
             <span style={{fontSize:22}}>🌿</span>
             <span style={S.logoText}>My Inner Mind</span>
           </button>
           <nav style={{display:"flex",gap:4}}>
-            {[["journal","📖"],["journey","🌱"],["community","🌿"],["pricing","💎"],...(user.email===ADMIN_EMAIL?[["admin","🔐"]]:[])].map(([t,icon])=>(
+            {[["journal","📖"],["journey","🌱"],["letters","💌"],["community","🌿"],["pricing","💎"],...(user.email===ADMIN_EMAIL?[["admin","🔐"]]:[])].map(([t,icon])=>(
               <button key={t} onClick={()=>{setTab(t);setView("list");}}
                 style={{...S.navBtn,...(tab===t?S.navBtnActive:{}),padding:"6px 10px"}}>
                 <span style={{fontSize:16}}>{icon}</span>
@@ -566,14 +665,29 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
               <span style={{fontSize:12,fontWeight:600,color:"#7a4a1e"}}>👤 {user.username}</span>
               <span style={{...S.planPill,background:PLANS[user.plan]?.color+"22",color:PLANS[user.plan]?.color}}>{user.plan}</span>
             </div>
+            <div style={{display:"flex",gap:4}}>
+              {Object.entries(THEMES).map(([key,t])=>(
+                <button key={key} onClick={()=>{setTheme(key);localStorage.setItem(`theme_${user.email}`,key);}}
+                  title={t.name}
+                  style={{background:theme===key?"rgba(200,137,90,0.2)":"none",border:"1px solid rgba(200,137,90,0.2)",borderRadius:10,padding:"4px 7px",fontSize:14,cursor:"pointer"}}>
+                  {t.icon}
+                </button>
+              ))}
+            </div>
             <button onClick={onLogout} style={{...S.ghostBtn,padding:"6px 12px",fontSize:12}}>Sign out</button>
           </div>
         </div>
       </header>
 
-      <main style={S.main}>
+      <main style={{...S.main,color:T.text}}>
         {tab==="journal"&&view==="list"&&(
           <div style={{display:"flex",flexDirection:"column",gap:20}}>
+            {showRecap&&<MonthlyRecap entries={entries} user={user} onDismiss={()=>setShowRecap(false)}/>}
+            <AffirmationCard theme={T}/>
+            <IntentionBanner user={user} onWrite={startNew} theme={T}/>
+            {entries.length>0&&!loading&&<GentleNudge entries={entries} theme={T}/>}
+            <MoodChart entries={entries} theme={T}/>
+            <BadgesSection entries={entries} user={user} theme={T}/>
             {reward && (
               <div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.12),rgba(200,137,90,0.08))",border:"1px solid rgba(245,158,11,0.3)",borderRadius:16,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}>
                 <span style={{fontSize:32}}>🔥</span>
@@ -592,15 +706,15 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
               <div style={{fontSize:12,color:"#b08060",marginBottom:12}}>{halliePrompt.note}</div>
               <button onClick={()=>startNew(halliePrompt.prompt)} style={S.softBtn}>Write to this →</button>
             </div>
-            <div style={S.promptCard}>
+            <div style={{...S.promptCard,background:isNightTime()?"linear-gradient(135deg,rgba(30,20,60,0.12),rgba(100,80,150,0.08))":S.promptCard.background,border:isNightTime()?"1px solid rgba(100,80,150,0.25)":S.promptCard.border}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                <span style={{fontSize:18}}>✨</span>
-                <span style={{fontWeight:700,color:"#7a4a1e",fontSize:12,textTransform:"uppercase",letterSpacing:"0.6px"}}>Today's AI Prompt</span>
+                <span style={{fontSize:18}}>{isNightTime()?"🌙":"✨"}</span>
+                <span style={{fontWeight:700,color:"#7a4a1e",fontSize:12,textTransform:"uppercase",letterSpacing:"0.6px"}}>{isNightTime()?"Tonight's Reflection":"Today's AI Prompt"}</span>
               </div>
               <p style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.7,marginBottom:14}}>
-                {promptLoading ? "Finding your prompt..." : aiPrompt || "What are you grateful for right now?"}
+                {isNightTime() ? getNightPrompt() : (promptLoading ? "Finding your prompt..." : aiPrompt || "What are you grateful for right now?")}
               </p>
-              <button onClick={()=>startNew(aiPrompt)} style={S.softBtn}>Write to this →</button>
+              <button onClick={()=>startNew(isNightTime()?getNightPrompt():aiPrompt)} style={S.softBtn}>Write to this →</button>
             </div>
             <div style={{display:"flex",gap:10,alignItems:"center"}}>
               <div style={{flex:1,position:"relative"}}>
@@ -614,6 +728,10 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
             <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
               <Chip active={!filterTag} onClick={()=>setFilterTag(null)}>All</Chip>
               {TAG_OPTIONS.map(t=><Chip key={t} active={filterTag===t} activeColor={TAG_COLORS[t]} onClick={()=>setFilterTag(filterTag===t?null:t)}>{t}</Chip>)}
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
+              <Chip active={!filterMood} onClick={()=>setFilterMood(null)}>All Moods</Chip>
+              {MOODS.map(m=><Chip key={m.label} active={filterMood===m.label} activeColor={m.color} onClick={()=>setFilterMood(filterMood===m.label?null:m.label)}>{m.emoji} {m.label}</Chip>)}
             </div>
             {loading ? (
               <div style={{textAlign:"center",padding:"70px 0",color:"#b08060",fontStyle:"italic"}}>Loading your journal...</div>
@@ -660,6 +778,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
             </div>
             <textarea style={S.textarea} rows={12} placeholder="What's on your mind? Write freely..."
               value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))}/>
+            {form.content.trim()&&<div style={{fontSize:11,color:"#b08060",textAlign:"right",marginTop:-8}}>{form.content.trim().split(/\s+/).filter(Boolean).length} words</div>}
             {isPro&&(
               <label style={{display:"flex",alignItems:"center",gap:9,cursor:"pointer",fontSize:14,color:"#8a6040"}}>
                 <input type="checkbox" checked={form.shared} onChange={e=>setForm(f=>({...f,shared:e.target.checked}))} style={{accentColor:"#c8895a",width:16,height:16}}/>
@@ -714,6 +833,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
 
         {tab==="admin"&&user.email===ADMIN_EMAIL&&<AdminTab/>}
         {tab==="journey"&&<JourneyTab entries={entries} user={user}/>}
+        {tab==="letters"&&<LettersTab user={user}/>}
         {tab==="community"&&<CommunityTab currentUser={user} isPro={isPro} onUpgrade={()=>setTab("pricing")}/>}
         {tab==="pricing"&&<PricingTab currentPlan={user.plan} userEmail={user.email} onUpgrade={onUpgradePlan}/>}
       </main>
@@ -1386,6 +1506,7 @@ function JourneyTab({ entries, user }) {
       </div>
 
       <MoodChart entries={entries}/>
+      <GrowthTree entries={entries}/>
       <BadgesSection entries={entries} user={user}/>
 
       {/* Monthly recap */}
@@ -1405,6 +1526,184 @@ function JourneyTab({ entries, user }) {
           {monthEntries.length===0&&<p style={{fontSize:13,color:"#b08060",fontStyle:"italic"}}>No entries yet this month — start writing! 🌱</p>}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Affirmation Card ──────────────────────────────────────────────────────
+function AffirmationCard({ theme }) {
+  const T = theme || THEMES.original;
+  const [revealed, setRevealed] = useState(false);
+  const affirmation = getDailyAffirmation();
+  return (
+    <div onClick={()=>setRevealed(true)} style={{background:`linear-gradient(135deg,${T.accent}18,${T.accent}08)`,border:`1px solid ${T.accent}33`,borderRadius:20,padding:"18px 24px",cursor:revealed?"default":"pointer",transition:"all 0.3s"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+        <span style={{fontSize:16}}>💫</span>
+        <span style={{fontSize:11,fontWeight:700,color:T.accent,textTransform:"uppercase",letterSpacing:"0.6px"}}>Today's Affirmation</span>
+      </div>
+      {revealed ? (
+        <p style={{fontFamily:"'Lora',serif",fontSize:17,color:T.text,fontStyle:"italic",lineHeight:1.65,textAlign:"center",padding:"8px 0"}}>
+          "{affirmation}"
+        </p>
+      ) : (
+        <p style={{fontSize:13,color:T.subtext,textAlign:"center",padding:"4px 0"}}>Tap to reveal today's affirmation 🌿</p>
+      )}
+    </div>
+  );
+}
+
+// ── Gentle Nudge ──────────────────────────────────────────────────────────
+function GentleNudge({ entries, theme }) {
+  const T = theme || THEMES.original;
+  const [dismissed, setDismissed] = useState(false);
+  if (dismissed) return null;
+  const lastEntry = entries[0];
+  if (!lastEntry) return null;
+  const daysSince = Math.floor((Date.now() - new Date(lastEntry.date).getTime()) / (24*60*60*1000));
+  if (daysSince < 5) return null;
+  return (
+    <div style={{background:`linear-gradient(135deg,${T.accent}10,${T.accent}06)`,border:`1px dashed ${T.accent}40`,borderRadius:18,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}>
+      <span style={{fontSize:28}}>🌱</span>
+      <div style={{flex:1}}>
+        <div style={{fontWeight:700,color:T.accentDark,fontSize:14}}>We've missed you</div>
+        <div style={{fontSize:13,color:T.subtext,marginTop:2}}>It's been {daysSince} days since your last entry. No pressure — just here when you're ready. 🌿</div>
+      </div>
+      <button onClick={()=>setDismissed(true)} style={{background:"none",border:"none",color:T.subtext,fontSize:18,cursor:"pointer",padding:4}}>×</button>
+    </div>
+  );
+}
+
+// ── Growth Tree ───────────────────────────────────────────────────────────
+function GrowthTree({ entries }) {
+  const count = entries.length;
+  const stage = count === 0 ? 0 : count < 5 ? 1 : count < 15 ? 2 : count < 30 ? 3 : count < 60 ? 4 : 5;
+  const trees = ["🌱","🌿","🪴","🌳","🌲","🎋"];
+  const labels = ["Plant your seed","Sprouting","Growing","Rooted","Thriving","Flourishing"];
+  const next = [1,5,15,30,60,Infinity];
+  return (
+    <div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px",textAlign:"center"}}>
+      <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>Your Growth</div>
+      <div style={{fontSize:64,marginBottom:8}}>{trees[stage]}</div>
+      <div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{labels[stage]}</div>
+      <div style={{fontSize:13,color:"#b08060",marginBottom:12}}>{count} {count===1?"entry":"entries"} written</div>
+      {stage < 5 && (
+        <div style={{background:"rgba(200,137,90,0.1)",borderRadius:12,height:8,overflow:"hidden"}}>
+          <div style={{background:"linear-gradient(90deg,#c8895a,#d4956a)",height:"100%",width:`${Math.min(100,((count-(next[stage-1]||0))/(next[stage]-(next[stage-1]||0)))*100)}%`,transition:"width 0.5s",borderRadius:12}}/>
+        </div>
+      )}
+      {stage < 5 && <div style={{fontSize:11,color:"#b08060",marginTop:6}}>{next[stage]-count} more entries to {labels[stage+1]}</div>}
+    </div>
+  );
+}
+
+// ── Letters to Future Me ──────────────────────────────────────────────────
+function LettersTab({ user }) {
+  const [letters, setLetters] = useState(()=>{
+    try { return JSON.parse(localStorage.getItem(`letters_${user.email}`)||"[]"); } catch { return []; }
+  });
+  const [writing, setWriting] = useState(false);
+  const [form, setForm] = useState({title:"",content:"",deliverIn:30});
+
+  function saveLetter() {
+    if (!form.content.trim()) return;
+    const letter = {
+      id: Date.now(),
+      title: form.title || "A letter to my future self",
+      content: form.content,
+      written: new Date().toISOString(),
+      deliverOn: new Date(Date.now()+form.deliverIn*24*60*60*1000).toISOString(),
+      deliverIn: form.deliverIn,
+      opened: false,
+    };
+    const updated = [letter, ...letters];
+    setLetters(updated);
+    localStorage.setItem(`letters_${user.email}`, JSON.stringify(updated));
+    setWriting(false);
+    setForm({title:"",content:"",deliverIn:30});
+  }
+
+  function openLetter(id) {
+    const updated = letters.map(l=>l.id===id?{...l,opened:true}:l);
+    setLetters(updated);
+    localStorage.setItem(`letters_${user.email}`, JSON.stringify(updated));
+  }
+
+  const ready = letters.filter(l=>new Date(l.deliverOn)<=new Date());
+  const waiting = letters.filter(l=>new Date(l.deliverOn)>new Date());
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div>
+          <h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>💌 Letters to Future Me</h2>
+          <p style={{color:"#b08060",fontSize:13,marginTop:4}}>Write to yourself across time</p>
+        </div>
+        <button onClick={()=>setWriting(true)} style={S.newBtn}>+ Write</button>
+      </div>
+
+      {writing && (
+        <div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:24,padding:"28px 24px",boxShadow:"0 4px 24px rgba(160,100,50,0.12)"}}>
+          <input style={{...S.titleInput,marginBottom:16}} placeholder="Give this letter a title..." value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))}/>
+          <textarea style={{...S.textarea,minHeight:160,marginBottom:16}} placeholder="Dear future me..." value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))} autoFocus/>
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Deliver in</div>
+            <div style={{display:"flex",gap:8}}>
+              {[{label:"30 days",val:30},{label:"60 days",val:60},{label:"90 days",val:90},{label:"6 months",val:180},{label:"1 year",val:365}].map(o=>(
+                <button key={o.val} onClick={()=>setForm(f=>({...f,deliverIn:o.val}))}
+                  style={{padding:"6px 14px",borderRadius:14,border:`1px solid ${form.deliverIn===o.val?"#c8895a":"rgba(200,137,90,0.3)"}`,background:form.deliverIn===o.val?"rgba(200,137,90,0.15)":"transparent",color:form.deliverIn===o.val?"#7a4a1e":"#b08060",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between"}}>
+            <button onClick={()=>setWriting(false)} style={S.ghostBtn}>Cancel</button>
+            <button onClick={saveLetter} style={S.saveBtn}>Seal & Send ✉️</button>
+          </div>
+        </div>
+      )}
+
+      {ready.length>0&&(
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>📬 Ready to open ({ready.length})</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {ready.map(l=>(
+              <div key={l.id} style={{background:"linear-gradient(135deg,rgba(200,137,90,0.1),rgba(122,74,30,0.07))",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"18px 20px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                  <div>
+                    <div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600}}>{l.title}</div>
+                    <div style={{fontSize:11,color:"#b08060",marginTop:2}}>Written {new Date(l.written).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div>
+                  </div>
+                  {!l.opened&&<button onClick={()=>openLetter(l.id)} style={{...S.saveBtn,padding:"6px 16px",fontSize:12}}>Open ✉️</button>}
+                </div>
+                {l.opened&&<p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",lineHeight:1.75,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{l.content}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {waiting.length>0&&(
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🔒 Sealed ({waiting.length})</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {waiting.map(l=>(
+              <div key={l.id} style={{background:"rgba(200,137,90,0.05)",border:"1px dashed rgba(200,137,90,0.25)",borderRadius:16,padding:"14px 18px",opacity:0.7}}>
+                <div style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{l.title}</div>
+                <div style={{fontSize:12,color:"#b08060"}}>Opens {new Date(l.deliverOn).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {letters.length===0&&!writing&&(
+        <div style={{textAlign:"center",padding:"60px 0"}}>
+          <div style={{fontSize:52,marginBottom:14}}>💌</div>
+          <p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#b08060",fontStyle:"italic",marginBottom:20}}>Write a letter to your future self.<br/>It'll be waiting when you're ready.</p>
+          <button onClick={()=>setWriting(true)} style={S.saveBtn}>Write Your First Letter →</button>
+        </div>
+      )}
     </div>
   );
 }
