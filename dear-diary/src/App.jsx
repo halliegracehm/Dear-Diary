@@ -1415,12 +1415,12 @@ function MonthlyRecap({ entries, user, onDismiss }) {
 // ── Intention Setting ─────────────────────────────────────────────────────
 function IntentionBanner({ user, onWrite }) {
   const weekKey = `intention_${user.email}_${Math.ceil((new Date() - new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000))}`;
-  const [intention, setIntention] = useState(()=>sessionStorage.getItem(weekKey)||"");
+  const [intention, setIntention] = useState(()=>localStorage.getItem(weekKey)||"");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
   function save() {
-    sessionStorage.setItem(weekKey, draft);
+    localStorage.setItem(weekKey, draft);
     setIntention(draft);
     setEditing(false);
   }
