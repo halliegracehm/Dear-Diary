@@ -281,6 +281,12 @@ export default function App() {
         if (result?.length > 0) {
           const u = result[0];
           sessionStorage.setItem("myinnerminduser", JSON.stringify(u));
+          // Add to Mailchimp list
+          fetch("/api/add-to-mailchimp", {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ email: email, name: authForm.username }),
+          }).catch(()=>{});
           setCurrentUser(u); setScreen("onboarding");
         } else setAuthError("Something went wrong. Please try again.");
       } else {
