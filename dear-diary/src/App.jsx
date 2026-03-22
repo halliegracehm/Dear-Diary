@@ -729,7 +729,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
               <Chip active={!filterTag} onClick={()=>setFilterTag(null)}>All</Chip>
               {TAG_OPTIONS.map(t=><Chip key={t} active={filterTag===t} activeColor={TAG_COLORS[t]} onClick={()=>setFilterTag(filterTag===t?null:t)}>{t}</Chip>)}
             </div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
+            <div style={{display:"flex",flexWrap:"wrap",gap:7,overflowX:"hidden"}}>
               <Chip active={!filterMood} onClick={()=>setFilterMood(null)}>All Moods</Chip>
               {MOODS.map(m=><Chip key={m.label} active={filterMood===m.label} activeColor={m.color} onClick={()=>setFilterMood(filterMood===m.label?null:m.label)}>{m.emoji} {m.label}</Chip>)}
             </div>
@@ -1042,7 +1042,7 @@ function SectionLabel({children}){return <div style={{fontSize:11,fontWeight:700
 function GlobalStyles(){return <style>{`@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Nunito:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Nunito',sans-serif}textarea{resize:none}button{transition:opacity .15s}button:hover{opacity:0.85}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#d4a87a55;border-radius:3px}input::placeholder,textarea::placeholder{opacity:0.45}`}</style>;}
 
 const S = {
-  page:{minHeight:"100vh",background:"linear-gradient(160deg,#fdf6ec 0%,#f5e8d3 40%,#ede0cc 100%)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",position:"relative"},
+  page:{minHeight:"100vh",background:"linear-gradient(160deg,#fdf6ec 0%,#f5e8d3 40%,#ede0cc 100%)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",position:"relative",overflowX:"hidden"},
   texture:{position:"fixed",inset:0,backgroundImage:`url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8895a' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,pointerEvents:"none",zIndex:0},
   header:{position:"sticky",top:0,zIndex:100,background:"rgba(253,246,236,0.9)",backdropFilter:"blur(14px)",borderBottom:"1px solid rgba(200,137,90,0.15)"},
   headerInner:{maxWidth:960,margin:"0 auto",padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8},
@@ -1052,7 +1052,7 @@ const S = {
   navBtnActive:{background:"rgba(200,137,90,0.12)",borderColor:"rgba(200,137,90,0.3)",color:"#7a4a1e"},
   userBadge:{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",background:"rgba(200,137,90,0.08)",borderRadius:20,border:"1px solid rgba(200,137,90,0.18)"},
   planPill:{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:8,textTransform:"uppercase",letterSpacing:"0.5px"},
-  main:{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",padding:"24px 16px 100px",width:"100%"},
+  main:{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",padding:"24px 16px 100px",width:"100%",overflowX:"hidden",boxSizing:"border-box"},
   authCard:{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:24,padding:"36px 40px",width:"100%",maxWidth:400,boxShadow:"0 8px 40px rgba(160,100,50,0.15)",position:"relative",zIndex:1},
   input:{width:"100%",padding:"11px 15px",borderRadius:13,border:"1px solid rgba(200,137,90,0.25)",background:"rgba(255,255,255,0.75)",fontFamily:"'Nunito',sans-serif",fontSize:15,color:"#5a3a1a",outline:"none"},
   errorBox:{background:"rgba(200,80,60,0.08)",border:"1px solid rgba(200,80,60,0.2)",borderRadius:10,padding:"8px 14px",color:"#c05040",fontSize:13,fontWeight:600,marginBottom:14},
