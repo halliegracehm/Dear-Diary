@@ -655,11 +655,12 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
                 </div>
               )}
               <ProfileMenu user={user} theme={theme} T={T} onLogout={onLogout}
-                onTheme={(key)=>{setTheme(key);localStorage.setItem("theme_"+user.email,key);}}/>
+                onTheme={(key)=>{setTheme(key);localStorage.setItem("theme_"+user.email,key);}}
+                onUpgradeTab={()=>setTab("pricing")}/>
             </div>
           </div>
           <nav style={{display:"flex",gap:2,width:"100%",justifyContent:"space-around"}}>
-            {[["journal","📖"],["journey","🌱"],["letters","💌"],["community","🌿"],["pricing","💎"],...(user.email===ADMIN_EMAIL?[["admin","🔐"]]:[])].map(([t,icon])=>(
+            {[["journal","📖"],["journey","🌱"],["letters","💌"],["community","🌿"],...(user.email===ADMIN_EMAIL?[["admin","🔐"]]:[])].map(([t,icon])=>(
               <button key={t} onClick={()=>{setTab(t);setView("list");}}
                 style={{...S.navBtn,...(tab===t?S.navBtnActive:{}),padding:"5px 8px",fontSize:11,display:"flex",flexDirection:"column",alignItems:"center",gap:2,flex:1}}>
                 <span style={{fontSize:18}}>{icon}</span>
@@ -1700,7 +1701,7 @@ function LettersTab({ user }) {
 }
 
 // ── Profile Menu ──────────────────────────────────────────────────────────
-function ProfileMenu({ user, theme, T, onLogout, onTheme }) {
+function ProfileMenu({ user, theme, T, onLogout, onTheme, onUpgradeTab }) {
   const [open, setOpen] = useState(false);
   const plan = PLANS[user.plan];
   return (
@@ -1724,6 +1725,10 @@ function ProfileMenu({ user, theme, T, onLogout, onTheme }) {
             ))}
           </div>
           <div style={{height:1,background:"rgba(200,137,90,0.15)",marginBottom:10}}/>
+          <button onClick={()=>{onUpgradeTab();setOpen(false);}}
+            style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",border:"none",borderRadius:14,padding:"8px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:8}}>
+            💎 Plans & Upgrade
+          </button>
           <button onClick={()=>{onLogout();setOpen(false);}}
             style={{width:"100%",background:"none",border:"1px solid rgba(200,80,60,0.25)",borderRadius:14,padding:"8px",color:"#c05040",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>
             Sign out
