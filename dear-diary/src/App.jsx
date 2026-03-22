@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import * as React from "react";
 
 const SUPABASE_URL = "https://xwhpyslvwnnbvyydimmg.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3aHB5c2x2d25uYnZ5eWRpbW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NTkwOTIsImV4cCI6MjA4ODIzNTA5Mn0.bdxjpBNI6qEBFjSrRjBVCKqUU8oPBUL-8LzXKgxxJ4A";
@@ -660,7 +661,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
             </div>
           </div>
           <nav style={{display:"flex",gap:2,width:"100%",justifyContent:"space-around"}}>
-            {[["journal","📖"],["journey","🌱"],["letters","💌"],["community","🌿"],...(user.email===ADMIN_EMAIL?[["admin","🔐"]]:[])].map(([t,icon])=>(
+            {[["journal","📖"],["nest","🪹"],["journey","🌱"],["letters","💌"],["community","🌿"],...(user.email===ADMIN_EMAIL?[["admin","🔐"]]:[])].map(([t,icon])=>(
               <button key={t} onClick={()=>{setTab(t);setView("list");}}
                 style={{...S.navBtn,...(tab===t?S.navBtnActive:{}),padding:"5px 8px",fontSize:11,display:"flex",flexDirection:"column",alignItems:"center",gap:2,flex:1}}>
                 <span style={{fontSize:18}}>{icon}</span>
@@ -675,7 +676,6 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
         {tab==="journal"&&view==="list"&&(
           <div style={{display:"flex",flexDirection:"column",gap:20}}>
             {showRecap&&<MonthlyRecap entries={entries} user={user} onDismiss={()=>setShowRecap(false)}/>}
-            <AffirmationCard theme={T}/>
             <IntentionBanner user={user} onWrite={startNew} theme={T}/>
             {entries.length>0&&!loading&&<GentleNudge entries={entries} theme={T}/>}
             <MoodChart entries={entries} theme={T}/>
@@ -698,16 +698,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
               <div style={{fontSize:12,color:"#b08060",marginBottom:12}}>{halliePrompt.note}</div>
               <button onClick={()=>startNew(halliePrompt.prompt)} style={S.softBtn}>Write to this →</button>
             </div>
-            <div style={{...S.promptCard,background:isNightTime()?"linear-gradient(135deg,rgba(30,20,60,0.12),rgba(100,80,150,0.08))":S.promptCard.background,border:isNightTime()?"1px solid rgba(100,80,150,0.25)":S.promptCard.border}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                <span style={{fontSize:18}}>{isNightTime()?"🌙":"✨"}</span>
-                <span style={{fontWeight:700,color:"#7a4a1e",fontSize:12,textTransform:"uppercase",letterSpacing:"0.6px"}}>{isNightTime()?"Tonight's Reflection":"Today's AI Prompt"}</span>
-              </div>
-              <p style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.7,marginBottom:14}}>
-                {isNightTime() ? getNightPrompt() : (promptLoading ? "Finding your prompt..." : aiPrompt || "What are you grateful for right now?")}
-              </p>
-              <button onClick={()=>startNew(isNightTime()?getNightPrompt():aiPrompt)} style={S.softBtn}>Write to this →</button>
-            </div>
+
             <div style={{display:"flex",gap:10,alignItems:"center"}}>
               <div style={{flex:1,position:"relative"}}>
                 <span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",opacity:0.35,fontSize:15}}>🔍</span>
@@ -824,6 +815,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
         )}
 
         {tab==="admin"&&user.email===ADMIN_EMAIL&&<AdminTab/>}
+        {tab==="nest"&&<NestTab user={user} isPro={isPro} isOTR={isOTR} aiPrompt={aiPrompt} promptLoading={promptLoading} onWrite={startNew} theme={T}/>}
         {tab==="journey"&&<JourneyTab entries={entries} user={user}/>}
         {tab==="letters"&&<LettersTab user={user}/>}
         {tab==="community"&&<CommunityTab currentUser={user} isPro={isPro} onUpgrade={()=>setTab("pricing")}/>}
@@ -1735,6 +1727,306 @@ function ProfileMenu({ user, theme, T, onLogout, onTheme, onUpgradeTab }) {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Nest Tab ──────────────────────────────────────────────────────────────
+const WEEKLY_BREATHWORK = [
+  { id:"box",    name:"Box Breathing",    desc:"Calm your nervous system",       inhale:4, hold1:4, exhale:4, hold2:4, cycles:4, color:"#7a8c6e" },
+  { id:"478",    name:"4-7-8 Breathing",  desc:"For sleep & deep calm",          inhale:4, hold1:7, exhale:8, hold2:0, cycles:3, color:"#9b7eb8" },
+  { id:"belly",  name:"Belly Breathing",  desc:"Deep grounding breath",          inhale:5, hold1:2, exhale:6, hold2:1, cycles:4, color:"#c8895a" },
+  { id:"reset",  name:"Quick Reset",      desc:"1-minute instant calm",          inhale:3, hold1:1, exhale:5, hold2:0, cycles:5, color:"#5b8fa8" },
+];
+
+const MEDITATIONS = [
+  { id:"return", name:"Return to Calm", duration:"2 min", free:true,  steps:[
+    "Find a comfortable position and gently close your eyes.",
+    "Take a slow breath in through your nose... and release it through your mouth.",
+    "Notice where your body is holding tension right now. Just notice — no need to fix anything.",
+    "With your next exhale, imagine that tension softening. Just a little.",
+    "You are safe in this moment. Nothing needs your attention right now.",
+    "Breathe in what you need... breathe out what you don't.",
+    "Rest here for a moment. You are allowed to simply be.",
+    "When you're ready, slowly open your eyes. Carry this calm with you.",
+  ]},
+  { id:"morning", name:"Morning Intention", duration:"2 min", free:false, steps:[
+    "Begin your day by arriving fully in your body.",
+    "Take three deep breaths before you do anything else.",
+    "Ask yourself: what do I want to feel today?",
+    "Not what you want to accomplish — how you want to feel.",
+    "Let that feeling settle into your chest like warmth.",
+    "You get to choose your energy today, even when things feel uncertain.",
+    "Set one gentle intention. Just one. Something that honors you.",
+    "Carry it like a quiet thread through your whole day.",
+  ]},
+  { id:"release", name:"Let It Go", duration:"2 min", free:false, steps:[
+    "Think of one thing you've been holding onto today.",
+    "It could be a worry, a conversation, a feeling — anything weighing on you.",
+    "Breathe it in fully. Really acknowledge it.",
+    "Now with your exhale, imagine placing it down. Not throwing it away — just setting it down.",
+    "You don't have to carry everything all the time.",
+    "Some things aren't yours to solve tonight.",
+    "Breathe in peace. Breathe out weight.",
+    "You are lighter than you think. Rest now.",
+  ]},
+];
+
+const AMBIENT_SOUNDS = [
+  { id:"rain",    name:"Soft Rain",    icon:"🌧️", free:true,  freq:200, type:"rain" },
+  { id:"forest",  name:"Forest",       icon:"🌲", free:true,  freq:300, type:"forest" },
+  { id:"piano",   name:"Gentle Piano", icon:"🎹", free:true,  freq:440, type:"piano" },
+  { id:"ocean",   name:"Ocean Waves",  icon:"🌊", free:true,  freq:150, type:"ocean" },
+  { id:"silence", name:"Warm Silence", icon:"✨", free:true,  freq:40,  type:"tone" },
+  { id:"fire",    name:"Fireplace",    icon:"🔥", free:false, freq:100, type:"fire" },
+  { id:"cafe",    name:"Café Hum",     icon:"☕", free:false, freq:250, type:"cafe" },
+];
+
+function useAmbientSound() {
+  const ctxRef = useRef(null);
+  const nodesRef = useRef([]);
+
+  function stop() {
+    nodesRef.current.forEach(n => { try { n.stop(); } catch(e){} });
+    nodesRef.current = [];
+    if (ctxRef.current) { ctxRef.current.close(); ctxRef.current = null; }
+  }
+
+  function play(sound) {
+    stop();
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctxRef.current = ctx;
+    const master = ctx.createGain();
+    master.gain.value = 0.3;
+    master.connect(ctx.destination);
+
+    if (sound.type === "rain" || sound.type === "ocean" || sound.type === "forest" || sound.type === "fire" || sound.type === "cafe") {
+      const buf = ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i=0; i<data.length; i++) data[i] = (Math.random()*2-1)*0.8;
+      const src = ctx.createBufferSource();
+      src.buffer = buf; src.loop = true;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = sound.freq;
+      src.connect(filter); filter.connect(master);
+      src.start();
+      nodesRef.current.push(src);
+    } else if (sound.type === "piano" || sound.type === "tone") {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.frequency.value = sound.freq;
+      osc.type = "sine";
+      gainNode.gain.value = 0.1;
+      osc.connect(gainNode); gainNode.connect(master);
+      osc.start();
+      nodesRef.current.push(osc);
+    }
+  }
+
+  return { play, stop };
+}
+
+function NestTab({ user, isPro, isOTR, aiPrompt, promptLoading, onWrite, theme }) {
+  const T = theme || THEMES.original;
+  const [section, setSection] = useState(null);
+  const affirmation = getDailyAffirmation();
+  const weekIndex = Math.ceil((new Date() - new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000)) % WEEKLY_BREATHWORK.length;
+  const weeklyBreath = WEEKLY_BREATHWORK[weekIndex];
+  const nightTime = isNightTime();
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:0}}>
+      {/* Header */}
+      <div style={{textAlign:"center",padding:"28px 0 20px"}}>
+        <div style={{fontSize:48,marginBottom:8}}>🪹</div>
+        <h2 style={{fontFamily:"'Lora',serif",fontSize:28,color:T.accentDark,marginBottom:6,fontWeight:600}}>Welcome to your Nest</h2>
+        <p style={{fontSize:14,color:T.subtext,fontStyle:"italic",maxWidth:340,margin:"0 auto",lineHeight:1.6}}>A place to pause, breathe, and return to yourself.</p>
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+        {/* Daily Affirmation */}
+        <NestCard icon="💫" title="Daily Affirmation" subtitle="Your daily reminder to soften and center" color={T.accent} onOpen={()=>setSection(section==="affirmation"?null:"affirmation")}>
+          {section==="affirmation"&&(
+            <div style={{textAlign:"center",padding:"16px 0 8px"}}>
+              <p style={{fontFamily:"'Lora',serif",fontSize:18,color:T.text,fontStyle:"italic",lineHeight:1.65}}>"{affirmation}"</p>
+            </div>
+          )}
+        </NestCard>
+
+        {/* Breathwork */}
+        <NestCard icon="🌬️" title="Breathwork" subtitle={`This week: ${weeklyBreath.name} — ${weeklyBreath.desc}`} color="#7a8c6e" onOpen={()=>setSection(section==="breath"?null:"breath")}>
+          {section==="breath"&&<BreathworkPlayer exercise={weeklyBreath}/>}
+        </NestCard>
+
+        {/* Meditation */}
+        <NestCard icon="🧘" title="2-min Meditation" subtitle="Pause for 2 minutes. Sit back, settle in, return to calm." color="#9b7eb8" onOpen={()=>setSection(section==="meditation"?null:"meditation")}>
+          {section==="meditation"&&<MeditationPlayer isOTR={isOTR} onUpgrade={()=>setSection(null)}/>}
+        </NestCard>
+
+        {/* Ambient Sound */}
+        <NestCard icon="🎵" title="Ambient Sounds" subtitle="Let the sounds carry you to your calm space." color="#5b8fa8" onOpen={()=>setSection(section==="sound"?null:"sound")}>
+          {section==="sound"&&<AmbientPlayer isOTR={isOTR}/>}
+        </NestCard>
+
+        {/* AI Prompt / Night Reflection */}
+        <NestCard icon={nightTime?"🌙":"✨"} title={nightTime?"Tonight's Reflection":"Today's Prompt"} subtitle={nightTime?"Softly close the day with intention.":"A gentle nudge for self-reflection."} color={nightTime?"#6b5ba8":"#c8895a"} onOpen={()=>setSection(section==="prompt"?null:"prompt")}>
+          {section==="prompt"&&(
+            <div style={{padding:"12px 0 4px"}}>
+              <p style={{fontFamily:"'Lora',serif",fontSize:15,color:T.text,fontStyle:"italic",lineHeight:1.7,marginBottom:14}}>
+                {nightTime ? getNightPrompt() : (promptLoading?"Finding your prompt...":aiPrompt||"What are you grateful for right now?")}
+              </p>
+              <button onClick={()=>onWrite(nightTime?getNightPrompt():aiPrompt)} style={S.softBtn}>Write to this →</button>
+            </div>
+          )}
+        </NestCard>
+
+      </div>
+    </div>
+  );
+}
+
+function NestCard({ icon, title, subtitle, color, onOpen, children }) {
+  return (
+    <div style={{background:"rgba(255,252,246,0.93)",border:"1px solid rgba(200,137,90,0.12)",borderRadius:20,overflow:"hidden"}}>
+      <button onClick={onOpen} style={{width:"100%",background:"none",border:"none",padding:"18px 20px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",textAlign:"left"}}>
+        <div style={{width:44,height:44,borderRadius:14,background:`${color}18`,border:`1px solid ${color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
+          {icon}
+        </div>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:700,color:"#5a2e0e",fontSize:15,fontFamily:"'Nunito',sans-serif"}}>{title}</div>
+          <div style={{fontSize:12,color:"#b08060",marginTop:2,lineHeight:1.4}}>{subtitle}</div>
+        </div>
+        <span style={{fontSize:16,color:"#b08060"}}>›</span>
+      </button>
+      {children&&<div style={{padding:"0 20px 18px"}}>{children}</div>}
+    </div>
+  );
+}
+
+function BreathworkPlayer({ exercise }) {
+  const [phase, setPhase] = useState("ready");
+  const [count, setCount] = useState(0);
+  const [cycle, setCycle] = useState(0);
+  const [running, setRunning] = useState(false);
+  const [size, setSize] = useState(120);
+
+  useEffect(() => {
+    if (!running) return;
+    const phases = [
+      { name:"Breathe in", duration:exercise.inhale, size:180 },
+      ...(exercise.hold1?[{ name:"Hold", duration:exercise.hold1, size:180 }]:[]),
+      { name:"Breathe out", duration:exercise.exhale, size:120 },
+      ...(exercise.hold2?[{ name:"Hold", duration:exercise.hold2, size:120 }]:[]),
+    ];
+    let phaseIdx = 0;
+    let elapsed = 0;
+    setPhase(phases[0].name); setSize(phases[0].size);
+    const interval = setInterval(()=>{
+      elapsed++;
+      setCount(phases[phaseIdx].duration - elapsed);
+      if (elapsed >= phases[phaseIdx].duration) {
+        elapsed = 0;
+        phaseIdx = (phaseIdx+1) % phases.length;
+        if (phaseIdx===0) {
+          setCycle(c=>{
+            if (c+1 >= exercise.cycles) { setRunning(false); setPhase("done"); clearInterval(interval); return 0; }
+            return c+1;
+          });
+        }
+        setPhase(phases[phaseIdx].name);
+        setSize(phases[phaseIdx].size);
+      }
+    }, 1000);
+    return ()=>clearInterval(interval);
+  }, [running]);
+
+  return (
+    <div style={{textAlign:"center",padding:"16px 0"}}>
+      <div style={{position:"relative",width:200,height:200,margin:"0 auto 20px"}}>
+        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{width:size,height:size,borderRadius:"50%",background:`${exercise.color}22`,border:`3px solid ${exercise.color}`,transition:"all 1s ease-in-out",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column"}}>
+            <div style={{fontSize:13,fontWeight:700,color:exercise.color,textAlign:"center",lineHeight:1.3}}>{phase==="done"?"Done ✓":phase==="ready"?"Tap to begin":phase}</div>
+            {running&&<div style={{fontSize:24,fontWeight:800,color:exercise.color}}>{count}</div>}
+          </div>
+        </div>
+      </div>
+      <div style={{fontSize:12,color:"#b08060",marginBottom:14}}>Cycle {cycle+1} of {exercise.cycles}</div>
+      {!running&&phase!=="done"&&<button onClick={()=>{setRunning(true);setCycle(0);}} style={{...S.saveBtn,padding:"10px 28px"}}>Begin →</button>}
+      {running&&<button onClick={()=>{setRunning(false);setPhase("ready");setCycle(0);}} style={S.ghostBtn}>Stop</button>}
+      {phase==="done"&&<div style={{fontSize:16,color:"#7a4a1e",fontFamily:"'Lora',serif",fontStyle:"italic"}}>Well done 🌿 Take a moment to notice how you feel.</div>}
+    </div>
+  );
+}
+
+function MeditationPlayer({ isOTR }) {
+  const [selected, setSelected] = useState(null);
+  const [stepIdx, setStepIdx] = useState(0);
+  const [running, setRunning] = useState(false);
+
+  const available = isOTR ? MEDITATIONS : MEDITATIONS.filter(m=>m.free);
+
+  if (selected) {
+    const step = selected.steps[stepIdx];
+    const isLast = stepIdx === selected.steps.length-1;
+    return (
+      <div style={{padding:"8px 0"}}>
+        <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",borderRadius:16,padding:"20px",marginBottom:14,minHeight:100,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,textAlign:"center"}}>{step}</p>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:12,color:"#b08060"}}>{stepIdx+1} / {selected.steps.length}</div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>{setSelected(null);setStepIdx(0);}} style={S.ghostBtn}>← Back</button>
+            {!isLast?<button onClick={()=>setStepIdx(i=>i+1)} style={S.saveBtn}>Next →</button>
+            :<button onClick={()=>{setSelected(null);setStepIdx(0);}} style={{...S.saveBtn,background:"linear-gradient(135deg,#7a8c6e,#6a7c5e)"}}>Complete ✓</button>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:10,paddingTop:8}}>
+      {available.map(m=>(
+        <button key={m.id} onClick={()=>{setSelected(m);setStepIdx(0);}}
+          style={{background:"rgba(155,126,184,0.08)",border:"1px solid rgba(155,126,184,0.2)",borderRadius:14,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",textAlign:"left"}}>
+          <div>
+            <div style={{fontWeight:700,color:"#5a2e0e",fontSize:14}}>{m.name}</div>
+            <div style={{fontSize:12,color:"#b08060",marginTop:2}}>{m.duration}</div>
+          </div>
+          <span style={{fontSize:18}}>›</span>
+        </button>
+      ))}
+      {!isOTR&&<div style={{fontSize:12,color:"#b08060",textAlign:"center",fontStyle:"italic",padding:"4px 0"}}>✨ Upgrade to Off the Record for the full meditation library</div>}
+    </div>
+  );
+}
+
+function AmbientPlayer({ isOTR }) {
+  const [playing, setPlaying] = useState(null);
+  const sound = useAmbientSound();
+  const available = isOTR ? AMBIENT_SOUNDS : AMBIENT_SOUNDS.filter(s=>s.free);
+
+  function toggle(s) {
+    if (playing===s.id) { sound.stop(); setPlaying(null); }
+    else { sound.play(s); setPlaying(s.id); }
+  }
+
+  return (
+    <div style={{paddingTop:8}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:8,marginBottom:8}}>
+        {available.map(s=>(
+          <button key={s.id} onClick={()=>toggle(s)}
+            style={{background:playing===s.id?"rgba(91,143,168,0.2)":"rgba(91,143,168,0.06)",border:`1px solid ${playing===s.id?"#5b8fa8":"rgba(91,143,168,0.2)"}`,borderRadius:14,padding:"12px 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer"}}>
+            <span style={{fontSize:24}}>{s.icon}</span>
+            <span style={{fontSize:11,fontWeight:600,color:playing===s.id?"#5b8fa8":"#9a7050"}}>{s.name}</span>
+            {playing===s.id&&<span style={{fontSize:9,color:"#5b8fa8",fontWeight:700}}>PLAYING</span>}
+          </button>
+        ))}
+      </div>
+      {!isOTR&&<div style={{fontSize:12,color:"#b08060",textAlign:"center",fontStyle:"italic"}}>✨ More sounds available in Off the Record</div>}
     </div>
   );
 }
