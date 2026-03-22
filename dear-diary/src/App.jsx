@@ -641,43 +641,33 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
     <div style={{...S.page,background:T.bg}}>
       <div style={S.texture}/><GlobalStyles/>
       <header style={{...S.header,background:T.header}}>
-        <div style={S.headerInner}>
-          <button onClick={()=>{setTab("journal");setView("list");}} style={S.logoBtn}>
-            <span style={{fontSize:22}}>🌿</span>
-            <span style={S.logoText}>My Inner Mind</span>
-          </button>
-          <nav style={{display:"flex",gap:4}}>
+        <div style={{...S.headerInner,flexDirection:"column",gap:0,padding:"8px 16px"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",marginBottom:6}}>
+            <button onClick={()=>{setTab("journal");setView("list");}} style={S.logoBtn}>
+              <span style={{fontSize:20}}>🌿</span>
+              <span style={{...S.logoText,fontSize:16}}>My Inner Mind</span>
+            </button>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              {streak > 0 && (
+                <div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 8px",background:"rgba(245,158,11,0.12)",borderRadius:12,border:"1px solid rgba(245,158,11,0.3)"}}>
+                  <span style={{fontSize:12}}>🔥</span>
+                  <span style={{fontSize:11,fontWeight:700,color:"#b45309"}}>{streak}</span>
+                </div>
+              )}
+              <ProfileMenu user={user} theme={theme} T={T} onLogout={onLogout}
+                onTheme={(key)=>{setTheme(key);localStorage.setItem(`theme_${user.email}`,key);}}/>
+            </div>
+          </div>
+          <nav style={{display:"flex",gap:2,width:"100%",justifyContent:"space-around"}}>
             {[["journal","📖"],["journey","🌱"],["letters","💌"],["community","🌿"],["pricing","💎"],...(user.email===ADMIN_EMAIL?[["admin","🔐"]]:[])].map(([t,icon])=>(
               <button key={t} onClick={()=>{setTab(t);setView("list");}}
-                style={{...S.navBtn,...(tab===t?S.navBtnActive:{}),padding:"6px 10px"}}>
-                <span style={{fontSize:16}}>{icon}</span>
+                style={{...S.navBtn,...(tab===t?S.navBtnActive:{}),padding:"5px 8px",fontSize:11,display:"flex",flexDirection:"column",alignItems:"center",gap:2,flex:1}}>
+                <span style={{fontSize:18}}>{icon}</span>
+                <span style={{fontSize:9,textTransform:"capitalize",fontWeight:tab===t?700:500}}>{t}</span>
               </button>
             ))}
           </nav>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            {streak > 0 && (
-              <div style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",background:"rgba(245,158,11,0.12)",borderRadius:16,border:"1px solid rgba(245,158,11,0.3)"}}>
-                <span style={{fontSize:14}}>🔥</span>
-                <span style={{fontSize:12,fontWeight:700,color:"#b45309"}}>{streak}</span>
-              </div>
-            )}
-            <div style={S.userBadge}>
-              <span style={{fontSize:12,fontWeight:600,color:"#7a4a1e"}}>👤 {user.username}</span>
-              <span style={{...S.planPill,background:PLANS[user.plan]?.color+"22",color:PLANS[user.plan]?.color}}>{user.plan}</span>
-            </div>
-            <div style={{display:"flex",gap:4}}>
-              {Object.entries(THEMES).map(([key,t])=>(
-                <button key={key} onClick={()=>{setTheme(key);localStorage.setItem(`theme_${user.email}`,key);}}
-                  title={t.name}
-                  style={{background:theme===key?"rgba(200,137,90,0.2)":"none",border:"1px solid rgba(200,137,90,0.2)",borderRadius:10,padding:"4px 7px",fontSize:14,cursor:"pointer"}}>
-                  {t.icon}
-                </button>
-              ))}
-            </div>
-            <button onClick={onLogout} style={{...S.ghostBtn,padding:"6px 12px",fontSize:12}}>Sign out</button>
-          </div>
         </div>
-      </header>
 
       <main style={{...S.main,color:T.text}}>
         {tab==="journal"&&view==="list"&&(
@@ -1702,6 +1692,41 @@ function LettersTab({ user }) {
           <div style={{fontSize:52,marginBottom:14}}>💌</div>
           <p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#b08060",fontStyle:"italic",marginBottom:20}}>Write a letter to your future self.<br/>It'll be waiting when you're ready.</p>
           <button onClick={()=>setWriting(true)} style={S.saveBtn}>Write Your First Letter →</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Profile Menu ──────────────────────────────────────────────────────────
+function ProfileMenu({ user, theme, T, onLogout, onTheme }) {
+  const [open, setOpen] = useState(false);
+  const plan = PLANS[user.plan];
+  return (
+    <div style={{position:"relative"}}>
+      <button onClick={()=>setOpen(o=>!o)}
+        style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(200,137,90,0.08)",borderRadius:20,border:"1px solid rgba(200,137,90,0.18)",cursor:"pointer"}}>
+        <span style={{fontSize:12,fontWeight:600,color:"#7a4a1e"}}>👤 {user.username}</span>
+        <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:8,textTransform:"uppercase",background:plan?.color+"22",color:plan?.color}}>{plan?.name}</span>
+        <span style={{fontSize:10,color:"#b08060"}}>{open?"▲":"▼"}</span>
+      </button>
+      {open&&(
+        <div style={{position:"absolute",right:0,top:"calc(100% + 8px)",background:"#fffdf8",border:"1px solid rgba(200,137,90,0.2)",borderRadius:18,padding:"12px",minWidth:200,boxShadow:"0 8px 32px rgba(120,70,20,0.2)",zIndex:200}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Theme</div>
+          <div style={{display:"flex",gap:6,marginBottom:12}}>
+            {Object.entries(THEMES).map(([key,t])=>(
+              <button key={key} onClick={()=>{onTheme(key);setOpen(false);}}
+                style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"8px 4px",borderRadius:12,border:`1px solid ${theme===key?"#c8895a":"rgba(200,137,90,0.2)"}`,background:theme===key?"rgba(200,137,90,0.12)":"transparent",cursor:"pointer"}}>
+                <span style={{fontSize:20}}>{t.icon}</span>
+                <span style={{fontSize:9,fontWeight:600,color:theme===key?"#7a4a1e":"#b08060"}}>{t.name}</span>
+              </button>
+            ))}
+          </div>
+          <div style={{height:1,background:"rgba(200,137,90,0.15)",marginBottom:10}}/>
+          <button onClick={()=>{onLogout();setOpen(false);}}
+            style={{width:"100%",background:"none",border:"1px solid rgba(200,80,60,0.25)",borderRadius:14,padding:"8px",color:"#c05040",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+            Sign out
+          </button>
         </div>
       )}
     </div>
