@@ -668,6 +668,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
             ))}
           </nav>
         </div>
+      </header>
 
       <main style={{...S.main,color:T.text}}>
         {tab==="journal"&&view==="list"&&(
