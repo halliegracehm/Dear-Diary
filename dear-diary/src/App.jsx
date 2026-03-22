@@ -815,7 +815,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
         )}
 
         {tab==="admin"&&user.email===ADMIN_EMAIL&&<AdminTab/>}
-        {tab==="nest"&&<NestTab user={user} isPro={isPro} isOTR={isOTR} aiPrompt={aiPrompt} promptLoading={promptLoading} onWrite={startNew} theme={T}/>}
+        {tab==="nest"&&<NestTab user={user} isPro={isPro} isOTR={isOTR} aiPrompt={aiPrompt} promptLoading={promptLoading} onWrite={(prefill)=>{setTab("journal");startNew(prefill);}} theme={T}/>}
         {tab==="journey"&&<JourneyTab entries={entries} user={user}/>}
         {tab==="letters"&&<LettersTab user={user}/>}
         {tab==="community"&&<CommunityTab currentUser={user} isPro={isPro} onUpgrade={()=>setTab("pricing")}/>}
