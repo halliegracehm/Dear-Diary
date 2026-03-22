@@ -1877,7 +1877,7 @@ function NestTab({ user, isPro, isOTR, aiPrompt, promptLoading, onWrite, theme }
               <p style={{fontFamily:"'Lora',serif",fontSize:15,color:T.text,fontStyle:"italic",lineHeight:1.7,marginBottom:14}}>
                 {nightTime ? getNightPrompt() : (promptLoading?"Finding your prompt...":aiPrompt||"What are you grateful for right now?")}
               </p>
-              <button onClick={()=>onWrite(nightTime?getNightPrompt():aiPrompt)} style={S.softBtn}>Write to this →</button>
+              <button onClick={(e)=>{e.stopPropagation();onWrite(nightTime?getNightPrompt():aiPrompt);}} style={S.softBtn}>Write to this →</button>
             </div>
           )}
         </NestCard>
@@ -1890,7 +1890,7 @@ function NestTab({ user, isPro, isOTR, aiPrompt, promptLoading, onWrite, theme }
 function NestCard({ icon, title, subtitle, color, onOpen, children }) {
   return (
     <div style={{background:"rgba(255,252,246,0.93)",border:"1px solid rgba(200,137,90,0.12)",borderRadius:20,overflow:"hidden"}}>
-      <button onClick={onOpen} style={{width:"100%",background:"none",border:"none",padding:"18px 20px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",textAlign:"left"}}>
+      <button onClick={onOpen} style={{width:"100%",background:"none",border:"none",padding:"18px 20px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",textAlign:"left"}} type="button">
         <div style={{width:44,height:44,borderRadius:14,background:`${color}18`,border:`1px solid ${color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
           {icon}
         </div>
