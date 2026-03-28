@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import * as React from "react";
+import Communities from "./Communities";
 
 const SUPABASE_URL = "https://xwhpyslvwnnbvyydimmg.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3aHB5c2x2d25uYnZ5eWRpbW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NTkwOTIsImV4cCI6MjA4ODIzNTA5Mn0.bdxjpBNI6qEBFjSrRjBVCKqUU8oPBUL-8LzXKgxxJ4A";
@@ -67,7 +68,6 @@ const PLANS = {
   offtherecord:{ name:"Off the Record",  price:"$12/mo", color:"#7a4a1e", features:["Everything in Community","AI reflections","PDF export","Deeper guided prompts","Challenge access","Private intentional space"] },
 };
 
-// ── Themes ────────────────────────────────────────────────────────────────
 const THEMES = {
   original: {
     name:"Original", icon:"🌿",
@@ -95,7 +95,6 @@ const THEMES = {
   },
 };
 
-// ── Affirmations ──────────────────────────────────────────────────────────
 const AFFIRMATIONS = [
   "I am safe in this moment.",
   "I don't have to solve everything right now.",
@@ -134,7 +133,6 @@ function getDailyAffirmation() {
   return AFFIRMATIONS[day % AFFIRMATIONS.length];
 }
 
-// ── Night Prompts ─────────────────────────────────────────────────────────
 const NIGHT_PROMPTS = [
   "What's one thing you're leaving in today that you don't want to carry into tomorrow?",
   "How does your body feel right now — honestly?",
@@ -151,10 +149,7 @@ function getNightPrompt() {
   return NIGHT_PROMPTS[day % NIGHT_PROMPTS.length];
 }
 
-function isNightTime() {
-  return new Date().getHours() >= 20;
-}
-
+function isNightTime() { return new Date().getHours() >= 20; }
 function getTodayStr() { return new Date().toISOString().split("T")[0]; }
 function formatDate(d) { return new Date(d).toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"}); }
 function hashStr(s) { let h=0; for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;} return String(h); }
@@ -311,7 +306,7 @@ export default function App() {
   if (screen === "splash") return <Splash />;
   if (screen === "landing") return <LandingScreen onGetStarted={()=>{setAuthMode("register");setScreen("auth");}} onSignIn={()=>{setAuthMode("login");setScreen("auth");}} />;
   if (screen === "onboarding") return <OnboardingScreen user={currentUser} onDone={()=>setScreen("app")} />;
-  if (screen === "auth")   return (
+  if (screen === "auth") return (
     <AuthScreen
       mode={authMode} form={authForm} error={authError} loading={authLoading}
       pwaPrompt={pwaPrompt}
@@ -346,7 +341,6 @@ function Splash() {
 function PWABanner({ prompt, onDismiss }) {
   const [installing, setInstalling] = useState(false);
   if (!prompt) return null;
-
   async function handleInstall() {
     setInstalling(true);
     prompt.prompt();
@@ -354,30 +348,16 @@ function PWABanner({ prompt, onDismiss }) {
     if (result.outcome === "accepted") onDismiss();
     setInstalling(false);
   }
-
   return (
-    <div style={{
-      position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)",
-      zIndex:999, width:"calc(100% - 32px)", maxWidth:440,
-      background:"linear-gradient(135deg,#7a4a1e,#c8895a)",
-      borderRadius:20, padding:"14px 20px",
-      boxShadow:"0 8px 32px rgba(120,70,20,0.35)",
-      display:"flex", alignItems:"center", gap:14,
-    }}>
+    <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",zIndex:999,width:"calc(100% - 32px)",maxWidth:440,background:"linear-gradient(135deg,#7a4a1e,#c8895a)",borderRadius:20,padding:"14px 20px",boxShadow:"0 8px 32px rgba(120,70,20,0.35)",display:"flex",alignItems:"center",gap:14}}>
       <span style={{fontSize:32}}>🌿</span>
       <div style={{flex:1}}>
         <div style={{color:"#fff",fontWeight:700,fontSize:14,fontFamily:"'Nunito',sans-serif"}}>Add to your Home Screen</div>
         <div style={{color:"rgba(255,255,255,0.8)",fontSize:12,marginTop:2}}>Open My Inner Mind like an app, anytime</div>
       </div>
       <div style={{display:"flex",gap:8}}>
-        <button onClick={onDismiss}
-          style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:12,padding:"7px 12px",color:"#fff",fontSize:12,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
-          Later
-        </button>
-        <button onClick={handleInstall} disabled={installing}
-          style={{background:"#fff",border:"none",borderRadius:12,padding:"7px 14px",color:"#7a4a1e",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
-          {installing ? "..." : "Install"}
-        </button>
+        <button onClick={onDismiss} style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:12,padding:"7px 12px",color:"#fff",fontSize:12,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>Later</button>
+        <button onClick={handleInstall} disabled={installing} style={{background:"#fff",border:"none",borderRadius:12,padding:"7px 14px",color:"#7a4a1e",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>{installing ? "..." : "Install"}</button>
       </div>
     </div>
   );
@@ -386,9 +366,7 @@ function PWABanner({ prompt, onDismiss }) {
 function AuthScreen({mode, form, error, loading, pwaPrompt, onChange, onSubmit, onToggle}) {
   const [showForgot, setShowForgot] = useState(false);
   const [pwaDismissed, setPwaDismissed] = useState(false);
-
   if (showForgot) return <ForgotPasswordScreen onBack={() => setShowForgot(false)} />;
-
   return (
     <div style={{...S.page,justifyContent:"center",alignItems:"center"}}>
       <div style={S.texture}/><GlobalStyles/>
@@ -396,39 +374,17 @@ function AuthScreen({mode, form, error, loading, pwaPrompt, onChange, onSubmit, 
         <div style={{textAlign:"center",marginBottom:28}}>
           <div style={{fontSize:44,marginBottom:10}}>🌿</div>
           <div style={{fontFamily:"'Lora',serif",fontSize:26,color:"#7a4a1e",fontWeight:600}}>My Inner Mind</div>
-          <div style={{color:"#b08060",fontSize:13,marginTop:5,fontStyle:"italic"}}>
-            {mode==="login" ? "Welcome back" : "Begin your journey inward"}
-          </div>
+          <div style={{color:"#b08060",fontSize:13,marginTop:5,fontStyle:"italic"}}>{mode==="login" ? "Welcome back" : "Begin your journey inward"}</div>
         </div>
-        {mode==="register" && (
-          <Field label="Name"><input style={S.input} placeholder="Your name" value={form.username} onChange={e=>onChange({username:e.target.value})}/></Field>
-        )}
-        <Field label="Email">
-          <input style={S.input} type="email" placeholder="you@email.com" value={form.email}
-            onChange={e=>onChange({email:e.target.value})} onKeyDown={e=>e.key==="Enter"&&onSubmit()}/>
-        </Field>
-        <Field label="Password">
-          <input style={S.input} type="password" placeholder="••••••••" value={form.password}
-            onChange={e=>onChange({password:e.target.value})} onKeyDown={e=>e.key==="Enter"&&onSubmit()}/>
-        </Field>
-        {mode==="login" && (
-          <div style={{textAlign:"right",marginTop:-8,marginBottom:12}}>
-            <button onClick={() => setShowForgot(true)}
-              style={{background:"none",border:"none",color:"#c8895a",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
-              Forgot password?
-            </button>
-          </div>
-        )}
+        {mode==="register" && (<Field label="Name"><input style={S.input} placeholder="Your name" value={form.username} onChange={e=>onChange({username:e.target.value})}/></Field>)}
+        <Field label="Email"><input style={S.input} type="email" placeholder="you@email.com" value={form.email} onChange={e=>onChange({email:e.target.value})} onKeyDown={e=>e.key==="Enter"&&onSubmit()}/></Field>
+        <Field label="Password"><input style={S.input} type="password" placeholder="••••••••" value={form.password} onChange={e=>onChange({password:e.target.value})} onKeyDown={e=>e.key==="Enter"&&onSubmit()}/></Field>
+        {mode==="login" && (<div style={{textAlign:"right",marginTop:-8,marginBottom:12}}><button onClick={() => setShowForgot(true)} style={{background:"none",border:"none",color:"#c8895a",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>Forgot password?</button></div>)}
         {error && <div style={S.errorBox}>{error}</div>}
-        <button onClick={onSubmit} disabled={loading}
-          style={{...S.saveBtn,width:"100%",padding:"13px",fontSize:15,marginTop:4}}>
-          {loading ? "One moment..." : mode==="login" ? "Sign In →" : "Create My Journal →"}
-        </button>
+        <button onClick={onSubmit} disabled={loading} style={{...S.saveBtn,width:"100%",padding:"13px",fontSize:15,marginTop:4}}>{loading ? "One moment..." : mode==="login" ? "Sign In →" : "Create My Journal →"}</button>
         <div style={{textAlign:"center",marginTop:18,fontSize:13,color:"#b08060"}}>
           {mode==="login" ? "New here? " : "Already have an account? "}
-          <button onClick={onToggle} style={{background:"none",border:"none",color:"#c8895a",fontWeight:700,cursor:"pointer",fontSize:13}}>
-            {mode==="login" ? "Create an account" : "Sign in"}
-          </button>
+          <button onClick={onToggle} style={{background:"none",border:"none",color:"#c8895a",fontWeight:700,cursor:"pointer",fontSize:13}}>{mode==="login" ? "Create an account" : "Sign in"}</button>
         </div>
       </div>
       {!pwaDismissed && <PWABanner prompt={pwaPrompt} onDismiss={() => setPwaDismissed(true)} />}
@@ -437,14 +393,14 @@ function AuthScreen({mode, form, error, loading, pwaPrompt, onChange, onSubmit, 
 }
 
 function ForgotPasswordScreen({ onBack }) {
-  const [step, setStep]                 = useState("email");
-  const [email, setEmail]               = useState("");
-  const [code, setCode]                 = useState("");
-  const [newPassword, setNewPassword]   = useState("");
+  const [step, setStep] = useState("email");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError]               = useState("");
-  const [loading, setLoading]           = useState(false);
-  const [sentTo, setSentTo]             = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sentTo, setSentTo] = useState("");
 
   async function handleSendCode() {
     setError(""); setLoading(true);
@@ -455,11 +411,7 @@ function ForgotPasswordScreen({ onBack }) {
       const resetCode = String(Math.floor(100000 + Math.random() * 900000));
       const expiry = Date.now() + 15 * 60 * 1000;
       await sbUpdate("users", `email=eq.${encodeURIComponent(normalizedEmail)}`, { reset_code: resetCode, reset_expiry: expiry });
-      await fetch("/api/send-reset-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, code: resetCode }),
-      });
+      await fetch("/api/send-reset-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: normalizedEmail, code: resetCode }) });
       setSentTo(normalizedEmail); setStep("verify");
     } catch { setError("Something went wrong. Please try again."); }
     finally { setLoading(false); }
@@ -506,9 +458,7 @@ function ForgotPasswordScreen({ onBack }) {
           <div style={{textAlign:"center",marginTop:16}}><button onClick={onBack} style={{background:"none",border:"none",color:"#b08060",fontSize:13,cursor:"pointer"}}>← Back to sign in</button></div>
         </>}
         {step==="verify"&&<>
-          <div style={{background:"rgba(200,137,90,0.08)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:12,padding:"12px 16px",marginBottom:20,fontSize:13,color:"#9a7050",lineHeight:1.6,textAlign:"center"}}>
-            A reset code has been sent to <strong>{sentTo}</strong>. Check your inbox!
-          </div>
+          <div style={{background:"rgba(200,137,90,0.08)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:12,padding:"12px 16px",marginBottom:20,fontSize:13,color:"#9a7050",lineHeight:1.6,textAlign:"center"}}>A reset code has been sent to <strong>{sentTo}</strong>. Check your inbox!</div>
           <Field label="Enter 6-digit code"><input style={{...S.input,letterSpacing:"4px",fontSize:20,textAlign:"center"}} placeholder="000000" maxLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,""))} onKeyDown={e=>e.key==="Enter"&&handleVerifyCode()}/></Field>
           {error&&<div style={S.errorBox}>{error}</div>}
           <button onClick={handleVerifyCode} disabled={loading||code.length!==6} style={{...S.saveBtn,width:"100%",padding:"13px",marginTop:4}}>{loading?"Verifying...":"Verify Code →"}</button>
@@ -540,7 +490,7 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
   const [editMode, setEditMode]     = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTag, setFilterTag]   = useState(null);
-  const [filterMood, setFilterMood]   = useState(null);
+  const [filterMood, setFilterMood] = useState(null);
   const [aiPrompt, setAiPrompt]     = useState("");
   const [promptLoading, setPromptLoading] = useState(false);
   const [loading, setLoading]       = useState(true);
@@ -548,8 +498,8 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
   const [insight, setInsight]       = useState("");
   const [insightLoading, setInsightLoading] = useState(false);
   const [pwaDismissed, setPwaDismissed] = useState(false);
-  const [showRecap, setShowRecap] = useState(false);
-  const [theme, setTheme] = useState(()=>localStorage.getItem('theme_'+user.email)||'original');
+  const [showRecap, setShowRecap]   = useState(false);
+  const [theme, setTheme]           = useState(()=>localStorage.getItem('theme_'+user.email)||'original');
   const T = THEMES[theme]||THEMES.original;
   const isPro = user.plan==="community" || user.plan==="offtherecord";
   const isOTR = user.plan==="offtherecord";
@@ -693,12 +643,10 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
               <div style={{fontSize:12,color:"#b08060",marginBottom:12}}>{halliePrompt.note}</div>
               <button onClick={()=>startNew(halliePrompt.prompt)} style={S.softBtn}>Write to this →</button>
             </div>
-
             <div style={{display:"flex",gap:10,alignItems:"center"}}>
               <div style={{flex:1,position:"relative"}}>
                 <span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",opacity:0.35,fontSize:15}}>🔍</span>
-                <input style={{...S.input,paddingLeft:38,width:"100%"}} placeholder="Search your entries..."
-                  value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}/>
+                <input style={{...S.input,paddingLeft:38,width:"100%"}} placeholder="Search your entries..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}/>
               </div>
               {isOTR&&<button onClick={()=>exportToPDF(entries,user.username)} style={S.ghostBtn}>📄 PDF</button>}
               <button onClick={()=>startNew()} style={S.newBtn}>+ New</button>
@@ -729,18 +677,13 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
 
         {tab==="journal"&&view==="write"&&(
           <div style={S.writeCard}>
-            <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}
-              style={{...S.input,width:"auto",fontSize:13}}/>
-            <input style={S.titleInput} placeholder="Give this entry a title..." value={form.title}
-              onChange={e=>setForm(f=>({...f,title:e.target.value}))} autoFocus/>
+            <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))} style={{...S.input,width:"auto",fontSize:13}}/>
+            <input style={S.titleInput} placeholder="Give this entry a title..." value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} autoFocus/>
             <SectionLabel>How are you feeling?</SectionLabel>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:4}}>
               {MOODS.map(m=>(
-                <button key={m.label} title={m.label}
-                  onClick={()=>setForm(f=>({...f,mood:f.mood?.label===m.label?null:m}))}
-                  style={{width:42,height:42,fontSize:22,borderRadius:12,cursor:"pointer",transition:"all .15s",
-                    border:`2px solid ${form.mood?.label===m.label?m.color:"transparent"}`,
-                    background:form.mood?.label===m.label?m.color+"25":"rgba(255,255,255,0.6)"}}>
+                <button key={m.label} title={m.label} onClick={()=>setForm(f=>({...f,mood:f.mood?.label===m.label?null:m}))}
+                  style={{width:42,height:42,fontSize:22,borderRadius:12,cursor:"pointer",transition:"all .15s",border:`2px solid ${form.mood?.label===m.label?m.color:"transparent"}`,background:form.mood?.label===m.label?m.color+"25":"rgba(255,255,255,0.6)"}}>
                   {m.emoji}
                 </button>
               ))}
@@ -748,14 +691,12 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
             <SectionLabel>Tags</SectionLabel>
             <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:4}}>
               {TAG_OPTIONS.map(t=>(
-                <Chip key={t} active={form.tags.includes(t)} activeColor={TAG_COLORS[t]}
-                  onClick={()=>setForm(f=>({...f,tags:f.tags.includes(t)?f.tags.filter(x=>x!==t):[...f.tags,t]}))}>
+                <Chip key={t} active={form.tags.includes(t)} activeColor={TAG_COLORS[t]} onClick={()=>setForm(f=>({...f,tags:f.tags.includes(t)?f.tags.filter(x=>x!==t):[...f.tags,t]}))}>
                   {t}
                 </Chip>
               ))}
             </div>
-            <textarea style={S.textarea} rows={12} placeholder="What's on your mind? Write freely..."
-              value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))}/>
+            <textarea style={S.textarea} rows={12} placeholder="What's on your mind? Write freely..." value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))}/>
             {form.content.trim()&&<div style={{fontSize:11,color:"#b08060",textAlign:"right",marginTop:-8}}>{form.content.trim().split(/\s+/).filter(Boolean).length} words</div>}
             {isPro&&(
               <label style={{display:"flex",alignItems:"center",gap:9,cursor:"pointer",fontSize:14,color:"#8a6040"}}>
@@ -813,87 +754,11 @@ function JournalApp({user, onLogout, onUpgradePlan, pwaPrompt, onPwaInstalled}) 
         {tab==="nest"&&<NestTab user={user} isPro={isPro} isOTR={isOTR} aiPrompt={aiPrompt} promptLoading={promptLoading} onWrite={(prefill)=>{setTab("journal");startNew(prefill);}} theme={T}/>}
         {tab==="journey"&&<JourneyTab entries={entries} user={user}/>}
         {tab==="letters"&&<LettersTab user={user}/>}
-        {tab==="community"&&<CommunityTab currentUser={user} isPro={isPro} onUpgrade={()=>setTab("pricing")}/>}
+        {tab==="community"&&<Communities user={user} userTier={user.plan} onUpgrade={()=>setTab("pricing")}/>}
         {tab==="pricing"&&<PricingTab currentPlan={user.plan} userEmail={user.email} onUpgrade={onUpgradePlan}/>}
       </main>
 
       {!pwaDismissed && <PWABanner prompt={pwaPrompt} onDismiss={()=>{setPwaDismissed(true);onPwaInstalled();}}/>}
-    </div>
-  );
-}
-
-function CommunityTab({currentUser, isPro, onUpgrade}) {
-  const [posts, setPosts]   = useState([]);
-  const [featured, setFeatured] = useState(null);
-  const [loading, setLoading]  = useState(true);
-
-  useEffect(() => { if (!isPro) { setLoading(false); return; } loadPosts(); }, [isPro]);
-
-  async function loadPosts() {
-    setLoading(true);
-    try {
-      const data = await sbGet("entries","shared=eq.true&order=updated_at.desc");
-      const all = Array.isArray(data) ? data : [];
-      const thisMonth = new Date().toISOString().slice(0,7);
-      const feat = all.find(e => e.submit_to_feature && e.date?.startsWith(thisMonth));
-      setFeatured(feat || null);
-      setPosts(all.filter(e => e.id !== feat?.id));
-    } catch { setPosts([]); setFeatured(null); }
-    finally { setLoading(false); }
-  }
-
-  if (!isPro) return (
-    <div style={{textAlign:"center",padding:"80px 24px"}}>
-      <div style={{fontSize:54,marginBottom:16}}>🌿</div>
-      <h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e",marginBottom:12}}>Community Feed</h2>
-      <p style={{color:"#b08060",fontSize:16,maxWidth:400,margin:"0 auto 28px",lineHeight:1.7,fontStyle:"italic",fontFamily:"'Lora',serif"}}>
-        Connect with others through shared reflections. Upgrade to Community or Off the Record to join.
-      </p>
-      <button onClick={onUpgrade} style={S.saveBtn}>See Plans →</button>
-    </div>
-  );
-
-  return (
-    <div style={{display:"flex",flexDirection:"column",gap:20}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div>
-          <h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🌿 Community Feed</h2>
-          <p style={{color:"#b08060",fontSize:13,marginTop:5}}>Entries shared by My Inner Mind members</p>
-        </div>
-        <button onClick={loadPosts} style={S.ghostBtn}>↻ Refresh</button>
-      </div>
-      {featured && (
-        <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.1),rgba(200,137,90,0.07))",border:"2px solid rgba(122,74,30,0.2)",borderRadius:20,padding:"22px 26px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-            <span style={{fontSize:20}}>🎙️</span>
-            <span style={{fontWeight:800,color:"#7a4a1e",fontSize:12,textTransform:"uppercase",letterSpacing:"0.8px"}}>Story of the Month</span>
-            <span style={{background:"#c8895a",color:"#fff",fontSize:10,fontWeight:800,padding:"2px 10px",borderRadius:10,textTransform:"uppercase"}}>Featured</span>
-          </div>
-          <h3 style={{fontFamily:"'Lora',serif",fontSize:20,color:"#5a2e0e",marginBottom:8,fontWeight:600}}>{featured.title||"Untitled"}</h3>
-          <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",lineHeight:1.8,fontStyle:"italic",marginBottom:12}}>
-            {(featured.content||"").slice(0,300)}{(featured.content||"").length>300?"…":""}
-          </p>
-          <div style={{fontSize:12,color:"#b08060"}}>Shared by {featured.author_name} · {formatDate(featured.date)}</div>
-          <div style={{marginTop:12,fontSize:13,color:"#9a7050",fontStyle:"italic"}}>💌 This story may be featured on the My Sister's Closet podcast</div>
-        </div>
-      )}
-      {!featured && (
-        <div style={{background:"rgba(200,137,90,0.05)",border:"1px dashed rgba(200,137,90,0.3)",borderRadius:16,padding:"20px 24px",textAlign:"center"}}>
-          <div style={{fontSize:32,marginBottom:8}}>🎙️</div>
-          <div style={{fontWeight:700,color:"#7a4a1e",fontSize:14,marginBottom:6}}>Story of the Month</div>
-          <div style={{fontSize:13,color:"#b08060",lineHeight:1.6}}>No story featured yet this month. When you write an entry, tick "Submit for Story of the Month" — Hallie may feature it on the podcast! 🌿</div>
-        </div>
-      )}
-      {loading ? (
-        <div style={{textAlign:"center",padding:"60px 0",color:"#b08060",fontStyle:"italic"}}>Loading...</div>
-      ) : posts.length===0 ? (
-        <div style={{textAlign:"center",padding:"40px 0"}}>
-          <div style={{fontSize:48,marginBottom:12}}>🌱</div>
-          <p style={{color:"#b08060",fontFamily:"'Lora',serif",fontStyle:"italic"}}>No shared entries yet. Be the first!</p>
-        </div>
-      ) : (
-        <div style={S.grid}>{posts.map(post=><EntryCard key={post.id} entry={post} showAuthor/>)}</div>
-      )}
     </div>
   );
 }
@@ -941,10 +806,10 @@ function PricingTab({currentPlan, userEmail, onUpgrade}) {
       <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.09),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.18)",borderRadius:22,padding:"28px 32px"}}>
         <div style={{textAlign:"center",marginBottom:20}}>
           <div style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:8}}>Off the Record</div>
-          <p style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.6}}>"Some thoughts aren't meant for the surface."</p>
+          <p style={{fontFamily:"'Lora',serif",fontSize:"clamp(16px,2.5vw,20px)",color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,maxWidth:600,margin:"0 auto 20px"}}>"Some thoughts aren't meant for the surface."</p>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:14}}>
-          {[{icon:"🎙️",title:"For the thoughts you don't say out loud",desc:"Deeper prompts that actually go somewhere — no surface-level stuff."},{icon:"🔥",title:"Challenges that call you out",desc:"Monthly challenges designed to unpack what's really going on."},{icon:"✨",title:"AI reflections",desc:"A warm, honest insight on every entry — like journaling with someone who gets it."},{icon:"🔒",title:"A more intentional space",desc:"Private. Unfiltered. Just you being real with yourself."}].map(item=>(
+          {[{icon:"🎙️",title:"For the thoughts you don't say out loud",desc:"Deeper prompts that actually go somewhere."},{icon:"🔥",title:"Challenges that call you out",desc:"Monthly challenges designed to unpack what's really going on."},{icon:"✨",title:"AI reflections",desc:"A warm, honest insight on every entry."},{icon:"🔒",title:"A more intentional space",desc:"Private. Unfiltered. Just you being real with yourself."}].map(item=>(
             <div key={item.title} style={{padding:"14px 16px",background:"rgba(122,74,30,0.06)",borderRadius:14}}>
               <div style={{fontSize:24,marginBottom:6}}>{item.icon}</div>
               <div style={{fontWeight:700,color:"#7a4a1e",fontSize:14,marginBottom:4}}>{item.title}</div>
@@ -980,16 +845,10 @@ function EntryCard({entry, onClick, showAuthor}) {
 }
 
 function ReactionBar({entryId}) {
-  const REACTIONS = [
-    {emoji:"🌿",label:"Felt this"},
-    {emoji:"🔥",label:"Needed this"},
-    {emoji:"💛",label:"Thank you for sharing"},
-  ];
+  const REACTIONS = [{emoji:"🌿",label:"Felt this"},{emoji:"🔥",label:"Needed this"},{emoji:"💛",label:"Thank you for sharing"}];
   const key = `reactions_${entryId}`;
   const [picked, setPicked] = useState(()=>sessionStorage.getItem(key)||null);
-  const [counts, setCounts] = useState(()=>{
-    try { return JSON.parse(sessionStorage.getItem(key+"_counts")||"{}"); } catch { return {}; }
-  });
+  const [counts, setCounts] = useState(()=>{ try { return JSON.parse(sessionStorage.getItem(key+"_counts")||"{}"); } catch { return {}; } });
   function react(label) {
     const newCounts = {...counts};
     if (picked) newCounts[picked] = Math.max(0,(newCounts[picked]||1)-1);
@@ -1003,14 +862,14 @@ function ReactionBar({entryId}) {
       {REACTIONS.map(r=>(
         <button key={r.label} onClick={e=>{e.stopPropagation();react(r.label);}}
           style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:12,border:`1px solid ${picked===r.label?"rgba(200,137,90,0.5)":"rgba(200,137,90,0.2)"}`,background:picked===r.label?"rgba(200,137,90,0.12)":"transparent",cursor:"pointer",fontSize:12,color:"#9a7050",fontFamily:"'Nunito',sans-serif",fontWeight:600}}>
-          <span>{r.emoji}</span>
-          <span>{r.label}</span>
+          <span>{r.emoji}</span><span>{r.label}</span>
           {counts[r.label]>0&&<span style={{fontSize:11,color:"#c8895a",fontWeight:700}}>{counts[r.label]}</span>}
         </button>
       ))}
     </div>
   );
 }
+
 function TagPill({tag}){return <span style={{padding:"3px 10px",borderRadius:12,fontSize:11,fontWeight:700,fontFamily:"'Nunito',sans-serif",letterSpacing:"0.3px",background:TAG_COLORS[tag]+"22",color:TAG_COLORS[tag],border:`1px solid ${TAG_COLORS[tag]}44`}}>{tag}</span>;}
 function Chip({children,active,activeColor,onClick}){
   const base={padding:"5px 14px",borderRadius:20,border:"1px solid rgba(200,137,90,0.3)",background:"rgba(255,255,255,0.6)",color:"#9a6a3a",fontSize:13,fontWeight:600,fontFamily:"'Nunito',sans-serif",cursor:"pointer",transition:"all .15s"};
@@ -1030,8 +889,6 @@ const S = {
   logoText:{fontFamily:"'Lora',serif",fontSize:18,fontWeight:600,color:"#7a4a1e"},
   navBtn:{background:"none",border:"1px solid transparent",borderRadius:20,padding:"6px 10px",color:"#9a7050",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"},
   navBtnActive:{background:"rgba(200,137,90,0.12)",borderColor:"rgba(200,137,90,0.3)",color:"#7a4a1e"},
-  userBadge:{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",background:"rgba(200,137,90,0.08)",borderRadius:20,border:"1px solid rgba(200,137,90,0.18)"},
-  planPill:{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:8,textTransform:"uppercase",letterSpacing:"0.5px"},
   main:{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",padding:"24px 16px 100px",width:"100%",overflowX:"hidden",boxSizing:"border-box"},
   authCard:{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:24,padding:"36px 40px",width:"100%",maxWidth:400,boxShadow:"0 8px 40px rgba(160,100,50,0.15)",position:"relative",zIndex:1},
   input:{width:"100%",padding:"11px 15px",borderRadius:13,border:"1px solid rgba(200,137,90,0.25)",background:"rgba(255,255,255,0.75)",fontFamily:"'Nunito',sans-serif",fontSize:15,color:"#5a3a1a",outline:"none"},
@@ -1052,7 +909,6 @@ const S = {
   deleteBtn:{background:"none",border:"1px solid rgba(200,80,60,0.3)",borderRadius:18,padding:"9px 20px",color:"#c05040",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:600,cursor:"pointer"},
 };
 
-// ── Landing Screen ────────────────────────────────────────────────────────
 function LandingScreen({ onGetStarted, onSignIn }) {
   return (
     <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#fdf6ec 0%,#f5e8d3 50%,#ede0cc 100%)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",position:"relative",overflowX:"hidden"}}>
@@ -1065,36 +921,18 @@ function LandingScreen({ onGetStarted, onSignIn }) {
         </div>
         <button onClick={onSignIn} style={{background:"none",border:"1px solid rgba(200,137,90,0.4)",borderRadius:20,padding:"8px 20px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Sign In</button>
       </nav>
-
       <div style={{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",padding:"60px 24px 40px",width:"100%",textAlign:"center"}}>
-        <div style={{display:"inline-block",background:"rgba(200,137,90,0.12)",border:"1px solid rgba(200,137,90,0.3)",borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:24}}>
-          ✨ A space built with you in mind
-        </div>
-        <h1 style={{fontFamily:"'Lora',serif",fontSize:"clamp(32px,6vw,58px)",color:"#5a2e0e",fontWeight:600,lineHeight:1.15,marginBottom:20}}>
-          Journal together.<br/>
-          <span style={{color:"#c8895a",fontStyle:"italic"}}>Grow together.</span>
-        </h1>
-        <p style={{fontSize:"clamp(15px,2vw,18px)",color:"#9a7050",lineHeight:1.75,maxWidth:560,margin:"0 auto 36px",fontFamily:"'Lora',serif",fontStyle:"italic"}}>
-          My Inner Mind is a journaling community where your words are witnessed, your growth is celebrated, and you never have to reflect alone.
-        </p>
+        <div style={{display:"inline-block",background:"rgba(200,137,90,0.12)",border:"1px solid rgba(200,137,90,0.3)",borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:24}}>✨ A space built with you in mind</div>
+        <h1 style={{fontFamily:"'Lora',serif",fontSize:"clamp(32px,6vw,58px)",color:"#5a2e0e",fontWeight:600,lineHeight:1.15,marginBottom:20}}>Journal together.<br/><span style={{color:"#c8895a",fontStyle:"italic"}}>Grow together.</span></h1>
+        <p style={{fontSize:"clamp(15px,2vw,18px)",color:"#9a7050",lineHeight:1.75,maxWidth:560,margin:"0 auto 36px",fontFamily:"'Lora',serif",fontStyle:"italic"}}>My Inner Mind is a journaling community where your words are witnessed, your growth is celebrated, and you never have to reflect alone.</p>
         <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap"}}>
-          <button onClick={onGetStarted} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:24,padding:"14px 32px",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(200,137,90,0.45)"}}>
-            Start Journaling Free →
-          </button>
-          <button onClick={onSignIn} style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(200,137,90,0.3)",borderRadius:24,padding:"14px 28px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:600,cursor:"pointer"}}>
-            I have an account
-          </button>
+          <button onClick={onGetStarted} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:24,padding:"14px 32px",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(200,137,90,0.45)"}}>Start Journaling Free →</button>
+          <button onClick={onSignIn} style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(200,137,90,0.3)",borderRadius:24,padding:"14px 28px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:600,cursor:"pointer"}}>I have an account</button>
         </div>
       </div>
-
       <div style={{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",padding:"20px 24px 60px",width:"100%"}}>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:20,marginBottom:48}}>
-          {[
-            {icon:"💌",title:"Hallie's Weekly Prompts",desc:"Every week, a personal prompt from Hallie to guide your reflection — like a letter from a friend who gets it."},
-            {icon:"🌿",title:"Community Feed",desc:"Share entries with the My Inner Mind community. Be seen, be heard, and witness others doing the same."},
-            {icon:"🎙️",title:"Story of the Month",desc:"Submit your entry and Hallie may feature your story on the My Sister's Closet podcast."},
-            {icon:"✨",title:"AI Reflections",desc:"Get a warm, thoughtful insight on any entry — like journaling with a wise companion who reads between the lines."},
-          ].map(f=>(
+          {[{icon:"💌",title:"Hallie's Weekly Prompts",desc:"Every week, a personal prompt from Hallie to guide your reflection."},{icon:"🌿",title:"Community Spaces",desc:"10 communities to find your people — Daily Check-in, Healing & Growth, and more."},{icon:"🎙️",title:"Story of the Month",desc:"Submit your entry and Hallie may feature your story on the podcast."},{icon:"✨",title:"AI Reflections",desc:"Get a warm, thoughtful insight on any entry."}].map(f=>(
             <div key={f.title} style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"24px"}}>
               <div style={{fontSize:32,marginBottom:12}}>{f.icon}</div>
               <div style={{fontFamily:"'Lora',serif",fontSize:17,fontWeight:600,color:"#5a2e0e",marginBottom:8}}>{f.title}</div>
@@ -1102,19 +940,13 @@ function LandingScreen({ onGetStarted, onSignIn }) {
             </div>
           ))}
         </div>
-
         <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.09),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.18)",borderRadius:24,padding:"36px",textAlign:"center",marginBottom:48}}>
           <div style={{fontSize:36,marginBottom:16}}>🌿</div>
-          <p style={{fontFamily:"'Lora',serif",fontSize:"clamp(16px,2.5vw,20px)",color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,maxWidth:600,margin:"0 auto 20px"}}>
-            "I built this because I needed it. A place to be honest, to grow, and to feel less alone in the process. I hope it becomes that for you too."
-          </p>
+          <p style={{fontFamily:"'Lora',serif",fontSize:"clamp(16px,2.5vw,20px)",color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,maxWidth:600,margin:"0 auto 20px"}}>"I built this because I needed it. A place to be honest, to grow, and to feel less alone in the process."</p>
           <div style={{fontSize:13,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.5px"}}>— Hallie, My Sister's Closet</div>
         </div>
-
         <div style={{textAlign:"center"}}>
-          <button onClick={onGetStarted} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:24,padding:"16px 40px",fontFamily:"'Nunito',sans-serif",fontSize:16,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(200,137,90,0.4)"}}>
-            Join the Community →
-          </button>
+          <button onClick={onGetStarted} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:24,padding:"16px 40px",fontFamily:"'Nunito',sans-serif",fontSize:16,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(200,137,90,0.4)"}}>Join the Community →</button>
           <div style={{fontSize:13,color:"#b08060",marginTop:12}}>Free to start · No credit card required</div>
         </div>
       </div>
@@ -1122,84 +954,51 @@ function LandingScreen({ onGetStarted, onSignIn }) {
   );
 }
 
-// ── Onboarding Screen ─────────────────────────────────────────────────────
 function OnboardingScreen({ user, onDone }) {
   const [step, setStep] = useState(0);
   const [answer, setAnswer] = useState("");
   const [saving, setSaving] = useState(false);
-
   const welcomePrompt = "What brought you here today? There's no right answer — just write what's true.";
-
   async function handleFinish() {
     setSaving(true);
     if (answer.trim()) {
-      const entry = {
-        id: `${user.email}_onboarding`,
-        user_email: user.email,
-        date: new Date().toISOString().split("T")[0],
-        title: "My first entry 🌿",
-        content: answer,
-        mood: null,
-        tags: ["personal"],
-        shared: false,
-        submit_to_feature: false,
-        author_name: user.username,
-        updated_at: Date.now(),
-      };
+      const entry = { id:`${user.email}_onboarding`, user_email:user.email, date:new Date().toISOString().split("T")[0], title:"My first entry 🌿", content:answer, mood:null, tags:["personal"], shared:false, submit_to_feature:false, author_name:user.username, updated_at:Date.now() };
       await sbUpsert("entries", entry).catch(()=>{});
     }
-    setSaving(false);
-    onDone();
+    setSaving(false); onDone();
   }
-
   return (
     <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#fdf6ec 0%,#f5e8d3 50%,#ede0cc 100%)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",position:"relative"}}>
       <div style={{position:"fixed",inset:0,backgroundImage:`url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8895a' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,pointerEvents:"none",zIndex:0}}/>
       <GlobalStyles/>
       <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:540}}>
-        {step === 0 && (
+        {step===0&&(
           <div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:28,padding:"44px 40px",textAlign:"center",boxShadow:"0 8px 40px rgba(160,100,50,0.12)"}}>
             <div style={{fontSize:56,marginBottom:16}}>🌿</div>
             <h2 style={{fontFamily:"'Lora',serif",fontSize:28,color:"#5a2e0e",marginBottom:12,fontWeight:600}}>Welcome, {user.username}!</h2>
-            <p style={{fontSize:15,color:"#9a7050",lineHeight:1.7,marginBottom:28,fontFamily:"'Lora',serif",fontStyle:"italic"}}>
-              You've found your space to think, feel, and grow. My Inner Mind is a community — and you're now part of it.
-            </p>
+            <p style={{fontSize:15,color:"#9a7050",lineHeight:1.7,marginBottom:28,fontFamily:"'Lora',serif",fontStyle:"italic"}}>You've found your space to think, feel, and grow. My Inner Mind is a community — and you're now part of it.</p>
             <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:28}}>
-              {[{icon:"💌",text:"Weekly prompts from Hallie"},{icon:"🌿",text:"A community who gets it"},{icon:"✨",text:"AI reflections on your entries"}].map(i=>(
+              {[{icon:"💌",text:"Weekly prompts from Hallie"},{icon:"🌿",text:"10 communities to find your people"},{icon:"✨",text:"AI reflections on your entries"}].map(i=>(
                 <div key={i.text} style={{display:"flex",alignItems:"center",gap:12,background:"rgba(200,137,90,0.06)",borderRadius:14,padding:"12px 16px",textAlign:"left"}}>
                   <span style={{fontSize:20}}>{i.icon}</span>
                   <span style={{fontSize:14,color:"#7a5030",fontWeight:600}}>{i.text}</span>
                 </div>
               ))}
             </div>
-            <button onClick={()=>setStep(1)} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"13px 32px",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(200,137,90,0.4)",width:"100%"}}>
-              Let's write something →
-            </button>
+            <button onClick={()=>setStep(1)} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"13px 32px",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(200,137,90,0.4)",width:"100%"}}>Let's write something →</button>
           </div>
         )}
-        {step === 1 && (
+        {step===1&&(
           <div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:28,padding:"40px",boxShadow:"0 8px 40px rgba(160,100,50,0.12)"}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
               <span style={{fontSize:20}}>💌</span>
               <span style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.8px"}}>A welcome prompt from Hallie</span>
             </div>
-            <p style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.7,marginBottom:24}}>
-              "{welcomePrompt}"
-            </p>
-            <textarea
-              style={{width:"100%",minHeight:180,fontFamily:"'Lora',serif",fontSize:15,lineHeight:1.85,color:"#5a3a1a",background:"rgba(253,248,242,0.85)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:16,padding:"16px 20px",outline:"none",fontStyle:"italic",resize:"none",boxSizing:"border-box"}}
-              placeholder="Write freely — this is just for you..."
-              value={answer}
-              onChange={e=>setAnswer(e.target.value)}
-              autoFocus
-            />
+            <p style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.7,marginBottom:24}}>"{welcomePrompt}"</p>
+            <textarea style={{width:"100%",minHeight:180,fontFamily:"'Lora',serif",fontSize:15,lineHeight:1.85,color:"#5a3a1a",background:"rgba(253,248,242,0.85)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:16,padding:"16px 20px",outline:"none",fontStyle:"italic",resize:"none",boxSizing:"border-box"}} placeholder="Write freely — this is just for you..." value={answer} onChange={e=>setAnswer(e.target.value)} autoFocus/>
             <div style={{display:"flex",justifyContent:"space-between",marginTop:20,gap:12}}>
-              <button onClick={onDone} style={{background:"none",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"10px 20px",color:"#b08060",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>
-                Skip for now
-              </button>
-              <button onClick={handleFinish} disabled={saving} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"10px 28px",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(200,137,90,0.4)"}}>
-                {saving ? "Saving..." : "Save & Enter →"}
-              </button>
+              <button onClick={onDone} style={{background:"none",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"10px 20px",color:"#b08060",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>Skip for now</button>
+              <button onClick={handleFinish} disabled={saving} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"10px 28px",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(200,137,90,0.4)"}}>{saving?"Saving...":"Save & Enter →"}</button>
             </div>
           </div>
         )}
@@ -1208,33 +1007,21 @@ function OnboardingScreen({ user, onDone }) {
   );
 }
 
-// ── Admin Tab ─────────────────────────────────────────────────────────────
 const ADMIN_EMAIL = "halliegracehm@gmail.com";
 
 function AdminTab() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-
   useEffect(() => { loadUsers(); }, []);
-
   async function loadUsers() {
     setLoading(true);
-    try {
-      const data = await sbGet("users", "order=id.desc");
-      setUsers(Array.isArray(data) ? data : []);
-    } catch { setUsers([]); }
-    finally { setLoading(false); }
+    try { const data = await sbGet("users", "order=id.desc"); setUsers(Array.isArray(data) ? data : []); }
+    catch { setUsers([]); } finally { setLoading(false); }
   }
-
-  const filtered = users.filter(u =>
-    u.email?.toLowerCase().includes(search.toLowerCase()) ||
-    u.username?.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const counts = { free: 0, community: 0, offtherecord: 0 };
+  const filtered = users.filter(u => u.email?.toLowerCase().includes(search.toLowerCase()) || u.username?.toLowerCase().includes(search.toLowerCase()));
+  const counts = { free:0, community:0, offtherecord:0 };
   users.forEach(u => { if (counts[u.plan] !== undefined) counts[u.plan]++; });
-
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
       <div>
@@ -1251,12 +1038,9 @@ function AdminTab() {
       </div>
       <div style={{position:"relative"}}>
         <span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",opacity:0.35,fontSize:15}}>🔍</span>
-        <input style={{width:"100%",padding:"11px 15px 11px 38px",borderRadius:13,border:"1px solid rgba(200,137,90,0.25)",background:"rgba(255,255,255,0.75)",fontFamily:"'Nunito',sans-serif",fontSize:14,color:"#5a3a1a",outline:"none",boxSizing:"border-box"}}
-          placeholder="Search by name or email..." value={search} onChange={e=>setSearch(e.target.value)}/>
+        <input style={{width:"100%",padding:"11px 15px 11px 38px",borderRadius:13,border:"1px solid rgba(200,137,90,0.25)",background:"rgba(255,255,255,0.75)",fontFamily:"'Nunito',sans-serif",fontSize:14,color:"#5a3a1a",outline:"none",boxSizing:"border-box"}} placeholder="Search by name or email..." value={search} onChange={e=>setSearch(e.target.value)}/>
       </div>
-      {loading ? (
-        <div style={{textAlign:"center",padding:"40px",color:"#b08060",fontStyle:"italic"}}>Loading members...</div>
-      ) : (
+      {loading ? <div style={{textAlign:"center",padding:"40px",color:"#b08060",fontStyle:"italic"}}>Loading members...</div> : (
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           {filtered.map(u=>(
             <div key={u.id} style={{background:"rgba(255,252,246,0.93)",border:"1px solid rgba(200,137,90,0.12)",borderRadius:16,padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
@@ -1264,9 +1048,7 @@ function AdminTab() {
                 <div style={{fontWeight:700,color:"#5a2e0e",fontSize:14}}>{u.username}</div>
                 <div style={{fontSize:12,color:"#b08060",marginTop:2}}>{u.email}</div>
               </div>
-              <span style={{fontSize:10,fontWeight:800,padding:"3px 12px",borderRadius:10,textTransform:"uppercase",letterSpacing:"0.5px",background:PLANS[u.plan]?.color+"22",color:PLANS[u.plan]?.color}}>
-                {u.plan}
-              </span>
+              <span style={{fontSize:10,fontWeight:800,padding:"3px 12px",borderRadius:10,textTransform:"uppercase",letterSpacing:"0.5px",background:PLANS[u.plan]?.color+"22",color:PLANS[u.plan]?.color}}>{u.plan}</span>
             </div>
           ))}
         </div>
@@ -1275,20 +1057,19 @@ function AdminTab() {
   );
 }
 
-// ── Badges ────────────────────────────────────────────────────────────────
 const BADGES = [
-  { id:"first_entry",    icon:"🌱", label:"First Entry",           desc:"You wrote your first entry",          check:(entries,user)=>entries.length>=1 },
-  { id:"ten_entries",    icon:"📖", label:"10 Entries",            desc:"You've written 10 journal entries",   check:(entries,user)=>entries.length>=10 },
-  { id:"streak_7",       icon:"🔥", label:"7-Day Streak",          desc:"You journaled 7 days in a row",       check:(entries,user)=>calcStreak(entries)>=7 },
-  { id:"streak_30",      icon:"🏆", label:"30-Day Streak",         desc:"You journaled 30 days in a row",      check:(entries,user)=>calcStreak(entries)>=30 },
-  { id:"community_share",icon:"🌿", label:"Community Sharer",      desc:"You shared your first entry",         check:(entries,user)=>entries.some(e=>e.shared) },
-  { id:"off_the_record", icon:"✨", label:"Off the Record",         desc:"You went deeper",                     check:(entries,user)=>user.plan==="offtherecord" },
+  { id:"first_entry",    icon:"🌱", label:"First Entry",       desc:"You wrote your first entry",        check:(entries)=>entries.length>=1 },
+  { id:"ten_entries",    icon:"📖", label:"10 Entries",        desc:"You've written 10 journal entries",  check:(entries)=>entries.length>=10 },
+  { id:"streak_7",       icon:"🔥", label:"7-Day Streak",      desc:"You journaled 7 days in a row",      check:(entries)=>calcStreak(entries)>=7 },
+  { id:"streak_30",      icon:"🏆", label:"30-Day Streak",     desc:"You journaled 30 days in a row",     check:(entries)=>calcStreak(entries)>=30 },
+  { id:"community_share",icon:"🌿", label:"Community Sharer",  desc:"You shared your first entry",        check:(entries)=>entries.some(e=>e.shared) },
+  { id:"off_the_record", icon:"✨", label:"Off the Record",     desc:"You went deeper",                    check:(_,user)=>user.plan==="offtherecord" },
 ];
 
 function BadgesSection({ entries, user }) {
   const earned = BADGES.filter(b => b.check(entries, user));
   const unearned = BADGES.filter(b => !b.check(entries, user));
-  if (earned.length === 0 && unearned.length === 0) return null;
+  if (!earned.length && !unearned.length) return null;
   return (
     <div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px"}}>
       <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:14}}>Your Badges</div>
@@ -1310,7 +1091,6 @@ function BadgesSection({ entries, user }) {
   );
 }
 
-// ── Mood Chart ────────────────────────────────────────────────────────────
 function MoodChart({ entries }) {
   const last14 = entries.filter(e=>e.mood).slice(0,14).reverse();
   if (last14.length < 2) return null;
@@ -1324,26 +1104,16 @@ function MoodChart({ entries }) {
     <div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px"}}>
       <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>Mood This Month</div>
       <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%",height:80}}>
-        <defs>
-          <linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#c8895a" stopOpacity="0.3"/>
-            <stop offset="100%" stopColor="#c8895a" stopOpacity="0"/>
-          </linearGradient>
-        </defs>
+        <defs><linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#c8895a" stopOpacity="0.3"/><stop offset="100%" stopColor="#c8895a" stopOpacity="0"/></linearGradient></defs>
         <path d={`${path} L${xs[xs.length-1]},${h} L${xs[0]},${h} Z`} fill="url(#moodGrad)"/>
         <path d={path} fill="none" stroke="#c8895a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        {points.map((p,i)=>(
-          <circle key={i} cx={xs[i]} cy={ys[i]} r="3" fill={p.mood?.color||"#c8895a"} stroke="#fff" strokeWidth="1.5"/>
-        ))}
+        {points.map((p,i)=><circle key={i} cx={xs[i]} cy={ys[i]} r="3" fill={p.mood?.color||"#c8895a"} stroke="#fff" strokeWidth="1.5"/>)}
       </svg>
-      <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#b08060",marginTop:4}}>
-        <span>😢 Low</span><span>😌 Calm</span><span>🌟 Radiant</span>
-      </div>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#b08060",marginTop:4}}><span>😢 Low</span><span>😌 Calm</span><span>🌟 Radiant</span></div>
     </div>
   );
 }
 
-// ── Monthly Recap Modal ───────────────────────────────────────────────────
 function MonthlyRecap({ entries, user, onDismiss }) {
   const now = new Date();
   const lastMonth = new Date(now.getFullYear(), now.getMonth()-1, 1);
@@ -1351,17 +1121,8 @@ function MonthlyRecap({ entries, user, onDismiss }) {
   const monthName = lastMonth.toLocaleDateString("en-US",{month:"long",year:"numeric"});
   const monthEntries = entries.filter(e=>e.date?.startsWith(monthStr));
   const streak = calcStreak(entries);
-  const topMood = (() => {
-    const counts = {};
-    monthEntries.forEach(e=>{ if(e.mood?.label) counts[e.mood.label]=(counts[e.mood.label]||0)+1; });
-    return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
-  })();
-  const topTag = (() => {
-    const counts = {};
-    monthEntries.forEach(e=>e.tags?.forEach(t=>{ counts[t]=(counts[t]||0)+1; }));
-    return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
-  })();
-
+  const topMood = (() => { const counts={}; monthEntries.forEach(e=>{ if(e.mood?.label) counts[e.mood.label]=(counts[e.mood.label]||0)+1; }); return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0]; })();
+  const topTag = (() => { const counts={}; monthEntries.forEach(e=>e.tags?.forEach(t=>{ counts[t]=(counts[t]||0)+1; })); return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0]; })();
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(90,46,14,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onDismiss}>
       <div style={{background:"#fffdf8",borderRadius:28,padding:"36px 32px",maxWidth:400,width:"100%",boxShadow:"0 20px 60px rgba(90,46,14,0.3)",position:"relative"}} onClick={e=>e.stopPropagation()}>
@@ -1371,12 +1132,7 @@ function MonthlyRecap({ entries, user, onDismiss }) {
           <p style={{fontSize:13,color:"#b08060",fontStyle:"italic"}}>Look how far you've come</p>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
-          {[
-            {label:"Entries Written",value:monthEntries.length,icon:"📖"},
-            {label:"Current Streak",value:`${streak} days`,icon:"🔥"},
-            {label:"Top Mood",value:topMood?`${MOODS.find(m=>m.label===topMood[0])?.emoji} ${topMood[0]}`:"—",icon:"💭"},
-            {label:"Top Tag",value:topTag?`#${topTag[0]}`:"—",icon:"🏷️"},
-          ].map(s=>(
+          {[{label:"Entries Written",value:monthEntries.length,icon:"📖"},{label:"Current Streak",value:`${streak} days`,icon:"🔥"},{label:"Top Mood",value:topMood?`${MOODS.find(m=>m.label===topMood[0])?.emoji} ${topMood[0]}`:"—",icon:"💭"},{label:"Top Tag",value:topTag?`#${topTag[0]}`:"—",icon:"🏷️"}].map(s=>(
             <div key={s.label} style={{background:"rgba(200,137,90,0.07)",borderRadius:16,padding:"14px",textAlign:"center"}}>
               <div style={{fontSize:22,marginBottom:4}}>{s.icon}</div>
               <div style={{fontSize:20,fontWeight:800,color:"#7a4a1e",fontFamily:"'Lora',serif"}}>{s.value}</div>
@@ -1385,72 +1141,46 @@ function MonthlyRecap({ entries, user, onDismiss }) {
           ))}
         </div>
         <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",fontStyle:"italic",textAlign:"center",lineHeight:1.7,marginBottom:20}}>
-          {monthEntries.length===0 ? "A new month is a fresh page. Start writing yours. 🌱" :
-           monthEntries.length<5 ? "Every entry matters. Keep showing up for yourself. 🌿" :
-           "You showed up for yourself this month. That's everything. ✨"}
+          {monthEntries.length===0?"A new month is a fresh page. Start writing yours. 🌱":monthEntries.length<5?"Every entry matters. Keep showing up for yourself. 🌿":"You showed up for yourself this month. That's everything. ✨"}
         </p>
-        <button onClick={onDismiss} style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"12px",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-          Keep Going →
-        </button>
+        <button onClick={onDismiss} style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"12px",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>Keep Going →</button>
       </div>
     </div>
   );
 }
 
-// ── Intention Setting ─────────────────────────────────────────────────────
 function IntentionBanner({ user, onWrite }) {
   const weekKey = `intention_${user.email}_${Math.ceil((new Date() - new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000))}`;
   const [intention, setIntention] = useState(()=>localStorage.getItem(weekKey)||"");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
-
-  function save() {
-    localStorage.setItem(weekKey, draft);
-    setIntention(draft);
-    setEditing(false);
-  }
-
+  function save() { localStorage.setItem(weekKey, draft); setIntention(draft); setEditing(false); }
   if (editing) return (
     <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:20,padding:"20px 24px"}}>
       <div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🎯 This Week's Intention</div>
-      <input style={{width:"100%",padding:"10px 14px",borderRadius:12,border:"1px solid rgba(155,126,184,0.3)",background:"rgba(255,255,255,0.8)",fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",outline:"none",marginBottom:12,boxSizing:"border-box"}}
-        placeholder="I intend to..." value={draft} onChange={e=>setDraft(e.target.value)} autoFocus onKeyDown={e=>e.key==="Enter"&&save()}/>
+      <input style={{width:"100%",padding:"10px 14px",borderRadius:12,border:"1px solid rgba(155,126,184,0.3)",background:"rgba(255,255,255,0.8)",fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",outline:"none",marginBottom:12,boxSizing:"border-box"}} placeholder="I intend to..." value={draft} onChange={e=>setDraft(e.target.value)} autoFocus onKeyDown={e=>e.key==="Enter"&&save()}/>
       <div style={{display:"flex",gap:8}}>
         <button onClick={()=>setEditing(false)} style={{background:"none",border:"1px solid rgba(155,126,184,0.3)",borderRadius:14,padding:"7px 16px",color:"#9b7eb8",fontFamily:"'Nunito',sans-serif",fontSize:13,cursor:"pointer"}}>Cancel</button>
         <button onClick={save} style={{background:"#9b7eb8",border:"none",borderRadius:14,padding:"7px 20px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Set Intention ✓</button>
       </div>
     </div>
   );
-
   return (
     <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:20,padding:"18px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
       <div style={{flex:1}}>
         <div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:4}}>🎯 This Week's Intention</div>
-        {intention ? (
-          <p style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",fontStyle:"italic"}}>{intention}</p>
-        ) : (
-          <p style={{fontSize:13,color:"#b08060"}}>Set an intention for this week — something to come back to.</p>
-        )}
+        {intention?<p style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",fontStyle:"italic"}}>{intention}</p>:<p style={{fontSize:13,color:"#b08060"}}>Set an intention for this week — something to come back to.</p>}
       </div>
-      <button onClick={()=>{setDraft(intention);setEditing(true);}} style={{background:"rgba(155,126,184,0.15)",border:"1px solid rgba(155,126,184,0.3)",borderRadius:14,padding:"7px 14px",color:"#9b7eb8",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
-        {intention ? "Edit" : "Set →"}
-      </button>
+      <button onClick={()=>{setDraft(intention);setEditing(true);}} style={{background:"rgba(155,126,184,0.15)",border:"1px solid rgba(155,126,184,0.3)",borderRadius:14,padding:"7px 14px",color:"#9b7eb8",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{intention?"Edit":"Set →"}</button>
     </div>
   );
 }
 
-// ── Journey Tab ───────────────────────────────────────────────────────────
 function JourneyTab({ entries, user }) {
   const streak = calcStreak(entries);
   const thisMonth = new Date().toISOString().slice(0,7);
   const monthEntries = entries.filter(e=>e.date?.startsWith(thisMonth));
-  const topMood = (() => {
-    const counts = {};
-    entries.forEach(e=>{ if(e.mood?.label) counts[e.mood.label]=(counts[e.mood.label]||0)+1; });
-    const top = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
-    return top ? MOODS.find(m=>m.label===top[0]) : null;
-  })();
-
+  const topMood = (() => { const counts={}; entries.forEach(e=>{ if(e.mood?.label) counts[e.mood.label]=(counts[e.mood.label]||0)+1; }); const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0]; return top?MOODS.find(m=>m.label===top[0]):null; })();
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
       <div>
@@ -1458,12 +1188,7 @@ function JourneyTab({ entries, user }) {
         <p style={{color:"#b08060",fontSize:13,marginTop:4}}>Your growth, all in one place</p>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:14}}>
-        {[
-          {icon:"📖",label:"Total Entries",value:entries.length},
-          {icon:"🔥",label:"Current Streak",value:`${streak}d`},
-          {icon:"📅",label:"This Month",value:monthEntries.length},
-          {icon:"💭",label:"Top Mood",value:topMood?`${topMood.emoji} ${topMood.label}`:"—"},
-        ].map(s=>(
+        {[{icon:"📖",label:"Total Entries",value:entries.length},{icon:"🔥",label:"Current Streak",value:`${streak}d`},{icon:"📅",label:"This Month",value:monthEntries.length},{icon:"💭",label:"Top Mood",value:topMood?`${topMood.emoji} ${topMood.label}`:"—"}].map(s=>(
           <div key={s.label} style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:18,padding:"18px",textAlign:"center"}}>
             <div style={{fontSize:26,marginBottom:6}}>{s.icon}</div>
             <div style={{fontSize:22,fontWeight:800,color:"#7a4a1e",fontFamily:"'Lora',serif"}}>{s.value}</div>
@@ -1477,16 +1202,7 @@ function JourneyTab({ entries, user }) {
       <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:20,padding:"20px 24px"}}>
         <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>This Month at a Glance</div>
         <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
-          {(() => {
-            const tagCounts = {};
-            monthEntries.forEach(e=>e.tags?.forEach(t=>{tagCounts[t]=(tagCounts[t]||0)+1;}));
-            return Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([tag,count])=>(
-              <div key={tag} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:TAG_COLORS[tag]+"22",border:`1px solid ${TAG_COLORS[tag]}44`,borderRadius:12}}>
-                <span style={{fontSize:12,fontWeight:700,color:TAG_COLORS[tag]}}>{tag}</span>
-                <span style={{fontSize:11,color:"#b08060"}}>×{count}</span>
-              </div>
-            ));
-          })()}
+          {(() => { const tagCounts={}; monthEntries.forEach(e=>e.tags?.forEach(t=>{tagCounts[t]=(tagCounts[t]||0)+1;})); return Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([tag,count])=>(<div key={tag} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:TAG_COLORS[tag]+"22",border:`1px solid ${TAG_COLORS[tag]}44`,borderRadius:12}}><span style={{fontSize:12,fontWeight:700,color:TAG_COLORS[tag]}}>{tag}</span><span style={{fontSize:11,color:"#b08060"}}>×{count}</span></div>)); })()}
           {monthEntries.length===0&&<p style={{fontSize:13,color:"#b08060",fontStyle:"italic"}}>No entries yet this month — start writing! 🌱</p>}
         </div>
       </div>
@@ -1494,29 +1210,6 @@ function JourneyTab({ entries, user }) {
   );
 }
 
-// ── Affirmation Card ──────────────────────────────────────────────────────
-function AffirmationCard({ theme }) {
-  const T = theme || THEMES.original;
-  const [revealed, setRevealed] = useState(false);
-  const affirmation = getDailyAffirmation();
-  return (
-    <div onClick={()=>setRevealed(true)} style={{background:`linear-gradient(135deg,${T.accent}18,${T.accent}08)`,border:`1px solid ${T.accent}33`,borderRadius:20,padding:"18px 24px",cursor:revealed?"default":"pointer",transition:"all 0.3s"}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-        <span style={{fontSize:16}}>💫</span>
-        <span style={{fontSize:11,fontWeight:700,color:T.accent,textTransform:"uppercase",letterSpacing:"0.6px"}}>Today's Affirmation</span>
-      </div>
-      {revealed ? (
-        <p style={{fontFamily:"'Lora',serif",fontSize:17,color:T.text,fontStyle:"italic",lineHeight:1.65,textAlign:"center",padding:"8px 0"}}>
-          "{affirmation}"
-        </p>
-      ) : (
-        <p style={{fontSize:13,color:T.subtext,textAlign:"center",padding:"4px 0"}}>Tap to reveal today's affirmation 🌿</p>
-      )}
-    </div>
-  );
-}
-
-// ── Gentle Nudge ──────────────────────────────────────────────────────────
 function GentleNudge({ entries, theme }) {
   const T = theme || THEMES.original;
   const [dismissed, setDismissed] = useState(false);
@@ -1537,10 +1230,9 @@ function GentleNudge({ entries, theme }) {
   );
 }
 
-// ── Growth Tree ───────────────────────────────────────────────────────────
 function GrowthTree({ entries }) {
   const count = entries.length;
-  const stage = count === 0 ? 0 : count < 5 ? 1 : count < 15 ? 2 : count < 30 ? 3 : count < 60 ? 4 : 5;
+  const stage = count===0?0:count<5?1:count<15?2:count<30?3:count<60?4:5;
   const trees = ["🌱","🌿","🪴","🌳","🌲","🎋"];
   const labels = ["Plant your seed","Sprouting","Growing","Rooted","Thriving","Flourishing"];
   const next = [1,5,15,30,60,Infinity];
@@ -1550,62 +1242,36 @@ function GrowthTree({ entries }) {
       <div style={{fontSize:64,marginBottom:8}}>{trees[stage]}</div>
       <div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{labels[stage]}</div>
       <div style={{fontSize:13,color:"#b08060",marginBottom:12}}>{count} {count===1?"entry":"entries"} written</div>
-      {stage < 5 && (
-        <div style={{background:"rgba(200,137,90,0.1)",borderRadius:12,height:8,overflow:"hidden"}}>
-          <div style={{background:"linear-gradient(90deg,#c8895a,#d4956a)",height:"100%",width:`${Math.min(100,((count-(next[stage-1]||0))/(next[stage]-(next[stage-1]||0)))*100)}%`,transition:"width 0.5s",borderRadius:12}}/>
-        </div>
-      )}
-      {stage < 5 && <div style={{fontSize:11,color:"#b08060",marginTop:6}}>{next[stage]-count} more entries to {labels[stage+1]}</div>}
+      {stage<5&&(<div style={{background:"rgba(200,137,90,0.1)",borderRadius:12,height:8,overflow:"hidden"}}><div style={{background:"linear-gradient(90deg,#c8895a,#d4956a)",height:"100%",width:`${Math.min(100,((count-(next[stage-1]||0))/(next[stage]-(next[stage-1]||0)))*100)}%`,transition:"width 0.5s",borderRadius:12}}/></div>)}
+      {stage<5&&<div style={{fontSize:11,color:"#b08060",marginTop:6}}>{next[stage]-count} more entries to {labels[stage+1]}</div>}
     </div>
   );
 }
 
-// ── Letters to Future Me ──────────────────────────────────────────────────
 function LettersTab({ user }) {
-  const [letters, setLetters] = useState(()=>{
-    try { return JSON.parse(localStorage.getItem(`letters_${user.email}`)||"[]"); } catch { return []; }
-  });
+  const [letters, setLetters] = useState(()=>{ try { return JSON.parse(localStorage.getItem(`letters_${user.email}`)||"[]"); } catch { return []; } });
   const [writing, setWriting] = useState(false);
   const [form, setForm] = useState({title:"",content:"",deliverIn:30});
-
   function saveLetter() {
     if (!form.content.trim()) return;
-    const letter = {
-      id: Date.now(),
-      title: form.title || "A letter to my future self",
-      content: form.content,
-      written: new Date().toISOString(),
-      deliverOn: new Date(Date.now()+form.deliverIn*24*60*60*1000).toISOString(),
-      deliverIn: form.deliverIn,
-      opened: false,
-    };
-    const updated = [letter, ...letters];
-    setLetters(updated);
-    localStorage.setItem(`letters_${user.email}`, JSON.stringify(updated));
-    setWriting(false);
-    setForm({title:"",content:"",deliverIn:30});
+    const letter = { id:Date.now(), title:form.title||"A letter to my future self", content:form.content, written:new Date().toISOString(), deliverOn:new Date(Date.now()+form.deliverIn*24*60*60*1000).toISOString(), deliverIn:form.deliverIn, opened:false };
+    const updated = [letter,...letters]; setLetters(updated);
+    localStorage.setItem(`letters_${user.email}`,JSON.stringify(updated));
+    setWriting(false); setForm({title:"",content:"",deliverIn:30});
   }
-
   function openLetter(id) {
     const updated = letters.map(l=>l.id===id?{...l,opened:true}:l);
-    setLetters(updated);
-    localStorage.setItem(`letters_${user.email}`, JSON.stringify(updated));
+    setLetters(updated); localStorage.setItem(`letters_${user.email}`,JSON.stringify(updated));
   }
-
   const ready = letters.filter(l=>new Date(l.deliverOn)<=new Date());
   const waiting = letters.filter(l=>new Date(l.deliverOn)>new Date());
-
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div>
-          <h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>💌 Letters to Future Me</h2>
-          <p style={{color:"#b08060",fontSize:13,marginTop:4}}>Write to yourself across time</p>
-        </div>
+        <div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>💌 Letters to Future Me</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Write to yourself across time</p></div>
         <button onClick={()=>setWriting(true)} style={S.newBtn}>+ Write</button>
       </div>
-
-      {writing && (
+      {writing&&(
         <div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:24,padding:"28px 24px",boxShadow:"0 4px 24px rgba(160,100,50,0.12)"}}>
           <input style={{...S.titleInput,marginBottom:16}} placeholder="Give this letter a title..." value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))}/>
           <textarea style={{...S.textarea,minHeight:160,marginBottom:16}} placeholder="Dear future me..." value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))} autoFocus/>
@@ -1613,10 +1279,7 @@ function LettersTab({ user }) {
             <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Deliver in</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               {[{label:"30 days",val:30},{label:"60 days",val:60},{label:"90 days",val:90},{label:"6 months",val:180},{label:"1 year",val:365}].map(o=>(
-                <button key={o.val} onClick={()=>setForm(f=>({...f,deliverIn:o.val}))}
-                  style={{padding:"6px 14px",borderRadius:14,border:`1px solid ${form.deliverIn===o.val?"#c8895a":"rgba(200,137,90,0.3)"}`,background:form.deliverIn===o.val?"rgba(200,137,90,0.15)":"transparent",color:form.deliverIn===o.val?"#7a4a1e":"#b08060",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
-                  {o.label}
-                </button>
+                <button key={o.val} onClick={()=>setForm(f=>({...f,deliverIn:o.val}))} style={{padding:"6px 14px",borderRadius:14,border:`1px solid ${form.deliverIn===o.val?"#c8895a":"rgba(200,137,90,0.3)"}`,background:form.deliverIn===o.val?"rgba(200,137,90,0.15)":"transparent",color:form.deliverIn===o.val?"#7a4a1e":"#b08060",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>{o.label}</button>
               ))}
             </div>
           </div>
@@ -1626,60 +1289,19 @@ function LettersTab({ user }) {
           </div>
         </div>
       )}
-
-      {ready.length>0&&(
-        <div>
-          <div style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>📬 Ready to open ({ready.length})</div>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {ready.map(l=>(
-              <div key={l.id} style={{background:"linear-gradient(135deg,rgba(200,137,90,0.1),rgba(122,74,30,0.07))",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"18px 20px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                  <div>
-                    <div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600}}>{l.title}</div>
-                    <div style={{fontSize:11,color:"#b08060",marginTop:2}}>Written {new Date(l.written).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div>
-                  </div>
-                  {!l.opened&&<button onClick={()=>openLetter(l.id)} style={{...S.saveBtn,padding:"6px 16px",fontSize:12}}>Open ✉️</button>}
-                </div>
-                {l.opened&&<p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",lineHeight:1.75,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{l.content}</p>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {waiting.length>0&&(
-        <div>
-          <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🔒 Sealed ({waiting.length})</div>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {waiting.map(l=>(
-              <div key={l.id} style={{background:"rgba(200,137,90,0.05)",border:"1px dashed rgba(200,137,90,0.25)",borderRadius:16,padding:"14px 18px",opacity:0.7}}>
-                <div style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{l.title}</div>
-                <div style={{fontSize:12,color:"#b08060"}}>Opens {new Date(l.deliverOn).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {letters.length===0&&!writing&&(
-        <div style={{textAlign:"center",padding:"60px 0"}}>
-          <div style={{fontSize:52,marginBottom:14}}>💌</div>
-          <p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#b08060",fontStyle:"italic",marginBottom:20}}>Write a letter to your future self.<br/>It'll be waiting when you're ready.</p>
-          <button onClick={()=>setWriting(true)} style={S.saveBtn}>Write Your First Letter →</button>
-        </div>
-      )}
+      {ready.length>0&&(<div><div style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>📬 Ready to open ({ready.length})</div><div style={{display:"flex",flexDirection:"column",gap:10}}>{ready.map(l=>(<div key={l.id} style={{background:"linear-gradient(135deg,rgba(200,137,90,0.1),rgba(122,74,30,0.07))",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}><div><div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600}}>{l.title}</div><div style={{fontSize:11,color:"#b08060",marginTop:2}}>Written {new Date(l.written).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div></div>{!l.opened&&<button onClick={()=>openLetter(l.id)} style={{...S.saveBtn,padding:"6px 16px",fontSize:12}}>Open ✉️</button>}</div>{l.opened&&<p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",lineHeight:1.75,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{l.content}</p>}</div>))}</div></div>)}
+      {waiting.length>0&&(<div><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🔒 Sealed ({waiting.length})</div><div style={{display:"flex",flexDirection:"column",gap:10}}>{waiting.map(l=>(<div key={l.id} style={{background:"rgba(200,137,90,0.05)",border:"1px dashed rgba(200,137,90,0.25)",borderRadius:16,padding:"14px 18px",opacity:0.7}}><div style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{l.title}</div><div style={{fontSize:12,color:"#b08060"}}>Opens {new Date(l.deliverOn).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div></div>))}</div></div>)}
+      {letters.length===0&&!writing&&(<div style={{textAlign:"center",padding:"60px 0"}}><div style={{fontSize:52,marginBottom:14}}>💌</div><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#b08060",fontStyle:"italic",marginBottom:20}}>Write a letter to your future self.<br/>It'll be waiting when you're ready.</p><button onClick={()=>setWriting(true)} style={S.saveBtn}>Write Your First Letter →</button></div>)}
     </div>
   );
 }
 
-// ── Profile Menu ──────────────────────────────────────────────────────────
 function ProfileMenu({ user, theme, T, onLogout, onTheme, onUpgradeTab }) {
   const [open, setOpen] = useState(false);
   const plan = PLANS[user.plan];
   return (
     <div style={{position:"relative"}}>
-      <button onClick={()=>setOpen(o=>!o)}
-        style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(200,137,90,0.08)",borderRadius:20,border:"1px solid rgba(200,137,90,0.18)",cursor:"pointer"}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(200,137,90,0.08)",borderRadius:20,border:"1px solid rgba(200,137,90,0.18)",cursor:"pointer"}}>
         <span style={{fontSize:12,fontWeight:600,color:"#7a4a1e"}}>👤 {user.username}</span>
         <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:8,textTransform:"uppercase",background:plan?.color+"22",color:plan?.color}}>{plan?.name}</span>
         <span style={{fontSize:10,color:"#b08060"}}>{open?"▲":"▼"}</span>
@@ -1689,285 +1311,102 @@ function ProfileMenu({ user, theme, T, onLogout, onTheme, onUpgradeTab }) {
           <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Theme</div>
           <div style={{display:"flex",gap:6,marginBottom:12}}>
             {Object.entries(THEMES).map(([key,t])=>(
-              <button key={key} onClick={()=>{onTheme(key);setOpen(false);}}
-                style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"8px 4px",borderRadius:12,border:`1px solid ${theme===key?"#c8895a":"rgba(200,137,90,0.2)"}`,background:theme===key?"rgba(200,137,90,0.12)":"transparent",cursor:"pointer"}}>
+              <button key={key} onClick={()=>{onTheme(key);setOpen(false);}} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"8px 4px",borderRadius:12,border:`1px solid ${theme===key?"#c8895a":"rgba(200,137,90,0.2)"}`,background:theme===key?"rgba(200,137,90,0.12)":"transparent",cursor:"pointer"}}>
                 <span style={{fontSize:20}}>{t.icon}</span>
                 <span style={{fontSize:9,fontWeight:600,color:theme===key?"#7a4a1e":"#b08060"}}>{t.name}</span>
               </button>
             ))}
           </div>
           <div style={{height:1,background:"rgba(200,137,90,0.15)",marginBottom:10}}/>
-          <button onClick={()=>{onUpgradeTab();setOpen(false);}}
-            style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",border:"none",borderRadius:14,padding:"8px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:8}}>
-            💎 Plans & Upgrade
-          </button>
-          <button onClick={()=>{onLogout();setOpen(false);}}
-            style={{width:"100%",background:"none",border:"1px solid rgba(200,80,60,0.25)",borderRadius:14,padding:"8px",color:"#c05040",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>
-            Sign out
-          </button>
+          <button onClick={()=>{onUpgradeTab();setOpen(false);}} style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",border:"none",borderRadius:14,padding:"8px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:8}}>💎 Plans & Upgrade</button>
+          <button onClick={()=>{onLogout();setOpen(false);}} style={{width:"100%",background:"none",border:"1px solid rgba(200,80,60,0.25)",borderRadius:14,padding:"8px",color:"#c05040",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>Sign out</button>
         </div>
       )}
     </div>
   );
 }
 
-// ── Nest Tab ──────────────────────────────────────────────────────────────
 const WEEKLY_BREATHWORK = [
-  { id:"box",    name:"Box Breathing",    desc:"Calm your nervous system",       inhale:4, hold1:4, exhale:4, hold2:4, cycles:4, color:"#7a8c6e" },
-  { id:"478",    name:"4-7-8 Breathing",  desc:"For sleep & deep calm",          inhale:4, hold1:7, exhale:8, hold2:0, cycles:3, color:"#9b7eb8" },
-  { id:"belly",  name:"Belly Breathing",  desc:"Deep grounding breath",          inhale:5, hold1:2, exhale:6, hold2:1, cycles:4, color:"#c8895a" },
-  { id:"reset",  name:"Quick Reset",      desc:"1-minute instant calm",          inhale:3, hold1:1, exhale:5, hold2:0, cycles:5, color:"#5b8fa8" },
+  { id:"box",   name:"Box Breathing",   desc:"Calm your nervous system",  inhale:4,hold1:4,exhale:4,hold2:4,cycles:4,color:"#7a8c6e" },
+  { id:"478",   name:"4-7-8 Breathing", desc:"For sleep & deep calm",     inhale:4,hold1:7,exhale:8,hold2:0,cycles:3,color:"#9b7eb8" },
+  { id:"belly", name:"Belly Breathing", desc:"Deep grounding breath",     inhale:5,hold1:2,exhale:6,hold2:1,cycles:4,color:"#c8895a" },
+  { id:"reset", name:"Quick Reset",     desc:"1-minute instant calm",     inhale:3,hold1:1,exhale:5,hold2:0,cycles:5,color:"#5b8fa8" },
 ];
 
 const MEDITATIONS = [
-  { id:"return", name:"Return to Calm", duration:"2 min", free:true,  steps:[
-    "Find a comfortable position and gently close your eyes.",
-    "Take a slow breath in through your nose... and release it through your mouth.",
-    "Notice where your body is holding tension right now. Just notice — no need to fix anything.",
-    "With your next exhale, imagine that tension softening. Just a little.",
-    "You are safe in this moment. Nothing needs your attention right now.",
-    "Breathe in what you need... breathe out what you don't.",
-    "Rest here for a moment. You are allowed to simply be.",
-    "When you're ready, slowly open your eyes. Carry this calm with you.",
-  ]},
-  { id:"morning", name:"Morning Intention", duration:"2 min", free:false, steps:[
-    "Begin your day by arriving fully in your body.",
-    "Take three deep breaths before you do anything else.",
-    "Ask yourself: what do I want to feel today?",
-    "Not what you want to accomplish — how you want to feel.",
-    "Let that feeling settle into your chest like warmth.",
-    "You get to choose your energy today, even when things feel uncertain.",
-    "Set one gentle intention. Just one. Something that honors you.",
-    "Carry it like a quiet thread through your whole day.",
-  ]},
-  { id:"release", name:"Let It Go", duration:"2 min", free:false, steps:[
-    "Think of one thing you've been holding onto today.",
-    "It could be a worry, a conversation, a feeling — anything weighing on you.",
-    "Breathe it in fully. Really acknowledge it.",
-    "Now with your exhale, imagine placing it down. Not throwing it away — just setting it down.",
-    "You don't have to carry everything all the time.",
-    "Some things aren't yours to solve tonight.",
-    "Breathe in peace. Breathe out weight.",
-    "You are lighter than you think. Rest now.",
-  ]},
+  { id:"return",  name:"Return to Calm",      duration:"2 min", free:true,  steps:["Find a comfortable position and gently close your eyes.","Take a slow breath in through your nose... and release it through your mouth.","Notice where your body is holding tension right now. Just notice — no need to fix anything.","With your next exhale, imagine that tension softening. Just a little.","You are safe in this moment. Nothing needs your attention right now.","Breathe in what you need... breathe out what you don't.","Rest here for a moment. You are allowed to simply be.","When you're ready, slowly open your eyes. Carry this calm with you."] },
+  { id:"morning", name:"Morning Intention",   duration:"2 min", free:false, steps:["Begin your day by arriving fully in your body.","Take three deep breaths before you do anything else.","Ask yourself: what do I want to feel today?","Not what you want to accomplish — how you want to feel.","Let that feeling settle into your chest like warmth.","You get to choose your energy today, even when things feel uncertain.","Set one gentle intention. Just one. Something that honors you.","Carry it like a quiet thread through your whole day."] },
+  { id:"release", name:"Let It Go",           duration:"2 min", free:false, steps:["Think of one thing you've been holding onto today.","It could be a worry, a conversation, a feeling — anything weighing on you.","Breathe it in fully. Really acknowledge it.","Now with your exhale, imagine placing it down. Not throwing it away — just setting it down.","You don't have to carry everything all the time.","Some things aren't yours to solve tonight.","Breathe in peace. Breathe out weight.","You are lighter than you think. Rest now."] },
 ];
 
-// ── Ambient Sounds (updated: removed Warm Silence, added distinct Fire + Café) ──
 const AMBIENT_SOUNDS = [
-  { id:"rain",    name:"Soft Rain",    icon:"🌧️", free:true,  type:"rain" },
-  { id:"forest",  name:"Forest",       icon:"🌲", free:true,  type:"forest" },
-  { id:"piano",   name:"Gentle Piano", icon:"🎹", free:true,  type:"piano" },
-  { id:"ocean",   name:"Ocean Waves",  icon:"🌊", free:true,  type:"ocean" },
-  { id:"fire",    name:"Fireplace",    icon:"🔥", free:false, type:"fire" },
-  { id:"cafe",    name:"Café Hum",     icon:"☕", free:false, type:"cafe" },
+  { id:"rain",   name:"Soft Rain",    icon:"🌧️", free:true,  type:"rain" },
+  { id:"forest", name:"Forest",       icon:"🌲", free:true,  type:"forest" },
+  { id:"piano",  name:"Gentle Piano", icon:"🎹", free:true,  type:"piano" },
+  { id:"ocean",  name:"Ocean Waves",  icon:"🌊", free:true,  type:"ocean" },
+  { id:"fire",   name:"Fireplace",    icon:"🔥", free:false, type:"fire" },
+  { id:"cafe",   name:"Café Hum",     icon:"☕", free:false, type:"cafe" },
 ];
 
 function useAmbientSound() {
   const ctxRef = useRef(null);
   const nodesRef = useRef([]);
-
   function stop() {
     nodesRef.current.forEach(n => { try { n.stop?.(); n.disconnect?.(); } catch(e){} });
     nodesRef.current = [];
     if (ctxRef.current) { ctxRef.current.close(); ctxRef.current = null; }
   }
-
-  function makeNoise(ctx, color = "white") {
+  function makeNoise(ctx, color="white") {
     const bufSize = ctx.sampleRate * 3;
-    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const buf = ctx.createBuffer(1,bufSize,ctx.sampleRate);
     const data = buf.getChannelData(0);
     let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
-    for (let i = 0; i < bufSize; i++) {
-      const white = Math.random() * 2 - 1;
-      if (color === "pink") {
-        b0=0.99886*b0+white*0.0555179; b1=0.99332*b1+white*0.0750759;
-        b2=0.96900*b2+white*0.1538520; b3=0.86650*b3+white*0.3104856;
-        b4=0.55000*b4+white*0.5329522; b5=-0.7616*b5-white*0.0168980;
-        data[i]=(b0+b1+b2+b3+b4+b5+b6+white*0.5362)/7; b6=white*0.115926;
-      } else { data[i] = white; }
+    for (let i=0;i<bufSize;i++) {
+      const white = Math.random()*2-1;
+      if (color==="pink") { b0=0.99886*b0+white*0.0555179;b1=0.99332*b1+white*0.0750759;b2=0.96900*b2+white*0.1538520;b3=0.86650*b3+white*0.3104856;b4=0.55000*b4+white*0.5329522;b5=-0.7616*b5-white*0.0168980;data[i]=(b0+b1+b2+b3+b4+b5+b6+white*0.5362)/7;b6=white*0.115926; }
+      else { data[i]=white; }
     }
-    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
-    return src;
+    const src = ctx.createBufferSource(); src.buffer=buf; src.loop=true; return src;
   }
-
   function play(sound) {
     stop();
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
     ctxRef.current = ctx;
-    const master = ctx.createGain();
-    master.gain.value = 0.35;
-    master.connect(ctx.destination);
+    const master = ctx.createGain(); master.gain.value=0.35; master.connect(ctx.destination);
     const nodes = [];
-
-    if (sound.type === "rain") {
-      const src = makeNoise(ctx, "pink");
-      const hi = ctx.createBiquadFilter(); hi.type="highpass"; hi.frequency.value=1200;
-      const lo = ctx.createBiquadFilter(); lo.type="lowpass";  lo.frequency.value=6000;
-      const g  = ctx.createGain(); g.gain.value = 1.2;
-      src.connect(hi); hi.connect(lo); lo.connect(g); g.connect(master);
-      src.start(); nodes.push(src);
-      function drip() {
-        if (!ctxRef.current) return;
-        const osc = ctx.createOscillator();
-        const eg  = ctx.createGain();
-        osc.frequency.value = 800 + Math.random()*600;
-        osc.type = "sine";
-        eg.gain.setValueAtTime(0.08, ctx.currentTime);
-        eg.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.18);
-        osc.connect(eg); eg.connect(master);
-        osc.start(); osc.stop(ctx.currentTime+0.18);
-        setTimeout(drip, 200 + Math.random()*600);
-      }
-      drip();
+    if (sound.type==="rain") {
+      const src=makeNoise(ctx,"pink"); const hi=ctx.createBiquadFilter(); hi.type="highpass"; hi.frequency.value=1200; const lo=ctx.createBiquadFilter(); lo.type="lowpass"; lo.frequency.value=6000; const g=ctx.createGain(); g.gain.value=1.2;
+      src.connect(hi);hi.connect(lo);lo.connect(g);g.connect(master);src.start();nodes.push(src);
+      function drip(){if(!ctxRef.current)return;const osc=ctx.createOscillator();const eg=ctx.createGain();osc.frequency.value=800+Math.random()*600;osc.type="sine";eg.gain.setValueAtTime(0.08,ctx.currentTime);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.18);osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+0.18);setTimeout(drip,200+Math.random()*600);}drip();
+    } else if (sound.type==="ocean") {
+      const src=makeNoise(ctx,"pink");const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=400;const mid=ctx.createBiquadFilter();mid.type="bandpass";mid.frequency.value=200;mid.Q.value=0.5;const g=ctx.createGain();g.gain.value=1.4;src.connect(lo);lo.connect(mid);mid.connect(g);g.connect(master);src.start();nodes.push(src);const lfo=ctx.createOscillator();const lfoG=ctx.createGain();lfoG.gain.value=0.4;lfo.frequency.value=0.14;lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start();nodes.push(lfo);
+    } else if (sound.type==="forest") {
+      const src=makeNoise(ctx,"pink");const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=800;bp.Q.value=0.4;const g=ctx.createGain();g.gain.value=0.7;src.connect(bp);bp.connect(g);g.connect(master);src.start();nodes.push(src);
+      function chirp(){if(!ctxRef.current)return;const n=2+Math.floor(Math.random()*3);for(let i=0;i<n;i++){setTimeout(()=>{const osc=ctx.createOscillator();const eg=ctx.createGain();const bf=1800+Math.random()*1400;osc.frequency.setValueAtTime(bf,ctx.currentTime);osc.frequency.linearRampToValueAtTime(bf*1.3,ctx.currentTime+0.06);osc.type="sine";eg.gain.setValueAtTime(0.06,ctx.currentTime);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.12);osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+0.12);},i*120);}setTimeout(chirp,2500+Math.random()*5000);}chirp();
+    } else if (sound.type==="piano") {
+      [261.63,329.63,392.00,523.25].forEach((freq,i)=>{const osc=ctx.createOscillator();const gain=ctx.createGain();osc.type="sine";osc.frequency.value=freq;gain.gain.value=0.07/(i+1);osc.connect(gain);gain.connect(master);osc.start();nodes.push(osc);});
+      const pluck=[261.63,329.63,392.00,493.88,523.25];let ni=0;
+      function p(){if(!ctxRef.current)return;const osc=ctx.createOscillator();const eg=ctx.createGain();osc.type="triangle";osc.frequency.value=pluck[ni%pluck.length];ni++;eg.gain.setValueAtTime(0.12,ctx.currentTime);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+2.5);osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+2.5);setTimeout(p,1800+Math.random()*1200);}p();
+    } else if (sound.type==="fire") {
+      const s1=makeNoise(ctx,"white");const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=180;const g1=ctx.createGain();g1.gain.value=1.1;s1.connect(lo);lo.connect(g1);g1.connect(master);s1.start();nodes.push(s1);const s2=makeNoise(ctx,"white");const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=600;bp.Q.value=2;const g2=ctx.createGain();g2.gain.value=0.3;s2.connect(bp);bp.connect(g2);g2.connect(master);s2.start();nodes.push(s2);
+      function pop(){if(!ctxRef.current)return;const osc=ctx.createOscillator();const eg=ctx.createGain();osc.type="sawtooth";osc.frequency.value=60+Math.random()*80;eg.gain.setValueAtTime(0.15,ctx.currentTime);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.05);osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+0.05);setTimeout(pop,300+Math.random()*1200);}pop();
+    } else if (sound.type==="cafe") {
+      [[300,0.8,0.4],[900,1.5,0.2],[2000,2,0.08]].forEach(([freq,Q,gain])=>{const src=makeNoise(ctx,"pink");const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=freq;bp.Q.value=Q;const g=ctx.createGain();g.gain.value=gain;src.connect(bp);bp.connect(g);g.connect(master);src.start();nodes.push(src);});
+      function murmur(){if(!ctxRef.current)return;const src=makeNoise(ctx,"pink");const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=400+Math.random()*300;bp.Q.value=3;const eg=ctx.createGain();const dur=0.3+Math.random()*0.6;eg.gain.setValueAtTime(0,ctx.currentTime);eg.gain.linearRampToValueAtTime(0.18,ctx.currentTime+0.05);eg.gain.linearRampToValueAtTime(0,ctx.currentTime+dur);src.connect(bp);bp.connect(eg);eg.connect(master);src.start();src.stop(ctx.currentTime+dur+0.1);setTimeout(murmur,400+Math.random()*1500);}murmur();
+      function clink(){if(!ctxRef.current)return;if(Math.random()>0.4){const osc=ctx.createOscillator();const eg=ctx.createGain();osc.frequency.value=2200+Math.random()*600;osc.type="sine";eg.gain.setValueAtTime(0.06,ctx.currentTime);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+0.4);}setTimeout(clink,3000+Math.random()*7000);}clink();
     }
-
-    else if (sound.type === "ocean") {
-      const src = makeNoise(ctx, "pink");
-      const lo = ctx.createBiquadFilter(); lo.type="lowpass";  lo.frequency.value=400;
-      const mid= ctx.createBiquadFilter(); mid.type="bandpass"; mid.frequency.value=200; mid.Q.value=0.5;
-      const g  = ctx.createGain(); g.gain.value=1.4;
-      src.connect(lo); lo.connect(mid); mid.connect(g); g.connect(master);
-      src.start(); nodes.push(src);
-      const lfo = ctx.createOscillator();
-      const lfoG= ctx.createGain(); lfoG.gain.value=0.4;
-      lfo.frequency.value = 0.14;
-      lfo.connect(lfoG); lfoG.connect(g.gain);
-      lfo.start(); nodes.push(lfo);
-    }
-
-    else if (sound.type === "forest") {
-      const src = makeNoise(ctx, "pink");
-      const bp = ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=800; bp.Q.value=0.4;
-      const g  = ctx.createGain(); g.gain.value=0.7;
-      src.connect(bp); bp.connect(g); g.connect(master);
-      src.start(); nodes.push(src);
-      function chirp() {
-        if (!ctxRef.current) return;
-        const numNotes = 2 + Math.floor(Math.random()*3);
-        for (let i=0; i<numNotes; i++) {
-          setTimeout(()=>{
-            const osc = ctx.createOscillator();
-            const eg  = ctx.createGain();
-            const baseFreq = 1800 + Math.random()*1400;
-            osc.frequency.setValueAtTime(baseFreq, ctx.currentTime);
-            osc.frequency.linearRampToValueAtTime(baseFreq*1.3, ctx.currentTime+0.06);
-            osc.type = "sine";
-            eg.gain.setValueAtTime(0.06, ctx.currentTime);
-            eg.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.12);
-            osc.connect(eg); eg.connect(master);
-            osc.start(); osc.stop(ctx.currentTime+0.12);
-          }, i*120);
-        }
-        setTimeout(chirp, 2500 + Math.random()*5000);
-      }
-      chirp();
-    }
-
-    else if (sound.type === "piano") {
-      const notes = [261.63, 329.63, 392.00, 523.25];
-      notes.forEach((freq, i) => {
-        const osc  = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        gain.gain.value = 0.07 / (i+1);
-        osc.connect(gain); gain.connect(master);
-        osc.start(); nodes.push(osc);
-      });
-      const pluckNotes = [261.63, 329.63, 392.00, 493.88, 523.25];
-      let noteIdx = 0;
-      function pluck() {
-        if (!ctxRef.current) return;
-        const osc = ctx.createOscillator();
-        const eg  = ctx.createGain();
-        osc.type = "triangle";
-        osc.frequency.value = pluckNotes[noteIdx % pluckNotes.length];
-        noteIdx++;
-        eg.gain.setValueAtTime(0.12, ctx.currentTime);
-        eg.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+2.5);
-        osc.connect(eg); eg.connect(master);
-        osc.start(); osc.stop(ctx.currentTime+2.5);
-        setTimeout(pluck, 1800 + Math.random()*1200);
-      }
-      pluck();
-    }
-
-    else if (sound.type === "fire") {
-      const src = makeNoise(ctx, "white");
-      const lo = ctx.createBiquadFilter(); lo.type="lowpass"; lo.frequency.value=180;
-      const g  = ctx.createGain(); g.gain.value=1.1;
-      src.connect(lo); lo.connect(g); g.connect(master);
-      src.start(); nodes.push(src);
-      const src2 = makeNoise(ctx, "white");
-      const bp   = ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=600; bp.Q.value=2;
-      const g2   = ctx.createGain(); g2.gain.value=0.3;
-      src2.connect(bp); bp.connect(g2); g2.connect(master);
-      src2.start(); nodes.push(src2);
-      function pop() {
-        if (!ctxRef.current) return;
-        const osc = ctx.createOscillator();
-        const eg  = ctx.createGain();
-        osc.type="sawtooth"; osc.frequency.value=60+Math.random()*80;
-        eg.gain.setValueAtTime(0.15, ctx.currentTime);
-        eg.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.05);
-        osc.connect(eg); eg.connect(master);
-        osc.start(); osc.stop(ctx.currentTime+0.05);
-        setTimeout(pop, 300+Math.random()*1200);
-      }
-      pop();
-    }
-
-    else if (sound.type === "cafe") {
-      [[300,0.8,0.4],[900,1.5,0.2],[2000,2,0.08]].forEach(([freq,Q,gain])=>{
-        const src = makeNoise(ctx,"pink");
-        const bp  = ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=freq; bp.Q.value=Q;
-        const g   = ctx.createGain(); g.gain.value=gain;
-        src.connect(bp); bp.connect(g); g.connect(master);
-        src.start(); nodes.push(src);
-      });
-      function murmur() {
-        if (!ctxRef.current) return;
-        const src = makeNoise(ctx,"pink");
-        const bp  = ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=400+Math.random()*300; bp.Q.value=3;
-        const eg  = ctx.createGain();
-        const dur = 0.3+Math.random()*0.6;
-        eg.gain.setValueAtTime(0, ctx.currentTime);
-        eg.gain.linearRampToValueAtTime(0.18, ctx.currentTime+0.05);
-        eg.gain.linearRampToValueAtTime(0, ctx.currentTime+dur);
-        src.connect(bp); bp.connect(eg); eg.connect(master);
-        src.start(); src.stop(ctx.currentTime+dur+0.1);
-        setTimeout(murmur, 400+Math.random()*1500);
-      }
-      murmur();
-      function clink() {
-        if (!ctxRef.current) return;
-        if (Math.random()>0.4) {
-          const osc=ctx.createOscillator(); const eg=ctx.createGain();
-          osc.frequency.value=2200+Math.random()*600; osc.type="sine";
-          eg.gain.setValueAtTime(0.06,ctx.currentTime);
-          eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);
-          osc.connect(eg); eg.connect(master);
-          osc.start(); osc.stop(ctx.currentTime+0.4);
-        }
-        setTimeout(clink,3000+Math.random()*7000);
-      }
-      clink();
-    }
-
-    nodesRef.current = nodes;
+    nodesRef.current=nodes;
   }
-
   return { play, stop };
 }
 
 function NestTab({ user, isPro, isOTR, aiPrompt, promptLoading, onWrite, theme }) {
-  const T = theme || THEMES.original;
+  const T = theme||THEMES.original;
   const [section, setSection] = useState(null);
   const affirmation = getDailyAffirmation();
-  const weekIndex = Math.ceil((new Date() - new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000)) % WEEKLY_BREATHWORK.length;
+  const weekIndex = Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000))%WEEKLY_BREATHWORK.length;
   const weeklyBreath = WEEKLY_BREATHWORK[weekIndex];
   const nightTime = isNightTime();
-
   return (
     <div style={{display:"flex",flexDirection:"column",gap:0}}>
       <div style={{textAlign:"center",padding:"28px 0 20px"}}>
@@ -1975,37 +1414,21 @@ function NestTab({ user, isPro, isOTR, aiPrompt, promptLoading, onWrite, theme }
         <h2 style={{fontFamily:"'Lora',serif",fontSize:28,color:T.accentDark,marginBottom:6,fontWeight:600}}>Welcome to your Nest</h2>
         <p style={{fontSize:14,color:T.subtext,fontStyle:"italic",maxWidth:340,margin:"0 auto",lineHeight:1.6}}>A place to pause, breathe, and return to yourself.</p>
       </div>
-
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
         <NestCard icon="💫" title="Daily Affirmation" subtitle="Your daily reminder to soften and center" color={T.accent} onOpen={()=>setSection(section==="affirmation"?null:"affirmation")}>
-          {section==="affirmation"&&(
-            <div style={{textAlign:"center",padding:"16px 0 8px"}}>
-              <p style={{fontFamily:"'Lora',serif",fontSize:18,color:T.text,fontStyle:"italic",lineHeight:1.65}}>"{affirmation}"</p>
-            </div>
-          )}
+          {section==="affirmation"&&(<div style={{textAlign:"center",padding:"16px 0 8px"}}><p style={{fontFamily:"'Lora',serif",fontSize:18,color:T.text,fontStyle:"italic",lineHeight:1.65}}>"{affirmation}"</p></div>)}
         </NestCard>
-
         <NestCard icon="🌬️" title="Breathwork" subtitle={`This week: ${weeklyBreath.name} — ${weeklyBreath.desc}`} color="#7a8c6e" onOpen={()=>setSection(section==="breath"?null:"breath")}>
           {section==="breath"&&<BreathworkPlayer exercise={weeklyBreath}/>}
         </NestCard>
-
         <NestCard icon="🧘" title="2-min Meditation" subtitle="Pause for 2 minutes. Sit back, settle in, return to calm." color="#9b7eb8" onOpen={()=>setSection(section==="meditation"?null:"meditation")}>
           {section==="meditation"&&<MeditationPlayer isOTR={isOTR} onUpgrade={()=>setSection(null)}/>}
         </NestCard>
-
         <NestCard icon="🎵" title="Ambient Sounds" subtitle="Let the sounds carry you to your calm space." color="#5b8fa8" onOpen={()=>setSection(section==="sound"?null:"sound")}>
           {section==="sound"&&<AmbientPlayer isOTR={isOTR}/>}
         </NestCard>
-
         <NestCard icon={nightTime?"🌙":"✨"} title={nightTime?"Tonight's Reflection":"Today's Prompt"} subtitle={nightTime?"Softly close the day with intention.":"A gentle nudge for self-reflection."} color={nightTime?"#6b5ba8":"#c8895a"} onOpen={()=>setSection(section==="prompt"?null:"prompt")}>
-          {section==="prompt"&&(
-            <div style={{padding:"12px 0 4px"}}>
-              <p style={{fontFamily:"'Lora',serif",fontSize:15,color:T.text,fontStyle:"italic",lineHeight:1.7,marginBottom:14}}>
-                {nightTime ? getNightPrompt() : (promptLoading?"Finding your prompt...":aiPrompt||"What are you grateful for right now?")}
-              </p>
-              <button onClick={(e)=>{e.stopPropagation();onWrite(nightTime?getNightPrompt():aiPrompt);}} style={S.softBtn}>Write to this →</button>
-            </div>
-          )}
+          {section==="prompt"&&(<div style={{padding:"12px 0 4px"}}><p style={{fontFamily:"'Lora',serif",fontSize:15,color:T.text,fontStyle:"italic",lineHeight:1.7,marginBottom:14}}>{nightTime?getNightPrompt():(promptLoading?"Finding your prompt...":aiPrompt||"What are you grateful for right now?")}</p><button onClick={(e)=>{e.stopPropagation();onWrite(nightTime?getNightPrompt():aiPrompt);}} style={S.softBtn}>Write to this →</button></div>)}
         </NestCard>
       </div>
     </div>
@@ -2016,9 +1439,7 @@ function NestCard({ icon, title, subtitle, color, onOpen, children }) {
   return (
     <div style={{background:"rgba(255,252,246,0.93)",border:"1px solid rgba(200,137,90,0.12)",borderRadius:20,overflow:"hidden"}}>
       <button onClick={onOpen} style={{width:"100%",background:"none",border:"none",padding:"18px 20px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",textAlign:"left"}} type="button">
-        <div style={{width:44,height:44,borderRadius:14,background:`${color}18`,border:`1px solid ${color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
-          {icon}
-        </div>
+        <div style={{width:44,height:44,borderRadius:14,background:`${color}18`,border:`1px solid ${color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{icon}</div>
         <div style={{flex:1}}>
           <div style={{fontWeight:700,color:"#5a2e0e",fontSize:15,fontFamily:"'Nunito',sans-serif"}}>{title}</div>
           <div style={{fontSize:12,color:"#b08060",marginTop:2,lineHeight:1.4}}>{subtitle}</div>
@@ -2036,37 +1457,14 @@ function BreathworkPlayer({ exercise }) {
   const [cycle, setCycle] = useState(0);
   const [running, setRunning] = useState(false);
   const [size, setSize] = useState(120);
-
-  useEffect(() => {
-    if (!running) return;
-    const phases = [
-      { name:"Breathe in", duration:exercise.inhale, size:180 },
-      ...(exercise.hold1?[{ name:"Hold", duration:exercise.hold1, size:180 }]:[]),
-      { name:"Breathe out", duration:exercise.exhale, size:120 },
-      ...(exercise.hold2?[{ name:"Hold", duration:exercise.hold2, size:120 }]:[]),
-    ];
-    let phaseIdx = 0;
-    let elapsed = 0;
-    setPhase(phases[0].name); setSize(phases[0].size);
-    const interval = setInterval(()=>{
-      elapsed++;
-      setCount(phases[phaseIdx].duration - elapsed);
-      if (elapsed >= phases[phaseIdx].duration) {
-        elapsed = 0;
-        phaseIdx = (phaseIdx+1) % phases.length;
-        if (phaseIdx===0) {
-          setCycle(c=>{
-            if (c+1 >= exercise.cycles) { setRunning(false); setPhase("done"); clearInterval(interval); return 0; }
-            return c+1;
-          });
-        }
-        setPhase(phases[phaseIdx].name);
-        setSize(phases[phaseIdx].size);
-      }
-    }, 1000);
-    return ()=>clearInterval(interval);
-  }, [running]);
-
+  useEffect(()=>{
+    if(!running)return;
+    const phases=[{name:"Breathe in",duration:exercise.inhale,size:180},...(exercise.hold1?[{name:"Hold",duration:exercise.hold1,size:180}]:[]),{name:"Breathe out",duration:exercise.exhale,size:120},...(exercise.hold2?[{name:"Hold",duration:exercise.hold2,size:120}]:[])];
+    let phaseIdx=0,elapsed=0;
+    setPhase(phases[0].name);setSize(phases[0].size);
+    const interval=setInterval(()=>{elapsed++;setCount(phases[phaseIdx].duration-elapsed);if(elapsed>=phases[phaseIdx].duration){elapsed=0;phaseIdx=(phaseIdx+1)%phases.length;if(phaseIdx===0){setCycle(c=>{if(c+1>=exercise.cycles){setRunning(false);setPhase("done");clearInterval(interval);return 0;}return c+1;});}setPhase(phases[phaseIdx].name);setSize(phases[phaseIdx].size);}},1000);
+    return()=>clearInterval(interval);
+  },[running]);
   return (
     <div style={{textAlign:"center",padding:"16px 0"}}>
       <div style={{position:"relative",width:200,height:200,margin:"0 auto 20px"}}>
@@ -2088,38 +1486,27 @@ function BreathworkPlayer({ exercise }) {
 function MeditationPlayer({ isOTR }) {
   const [selected, setSelected] = useState(null);
   const [stepIdx, setStepIdx] = useState(0);
-
-  const available = isOTR ? MEDITATIONS : MEDITATIONS.filter(m=>m.free);
-
+  const available = isOTR?MEDITATIONS:MEDITATIONS.filter(m=>m.free);
   if (selected) {
-    const step = selected.steps[stepIdx];
-    const isLast = stepIdx === selected.steps.length-1;
+    const step=selected.steps[stepIdx]; const isLast=stepIdx===selected.steps.length-1;
     return (
       <div style={{padding:"8px 0"}}>
-        <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",borderRadius:16,padding:"20px",marginBottom:14,minHeight:100,display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,textAlign:"center"}}>{step}</p>
-        </div>
+        <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",borderRadius:16,padding:"20px",marginBottom:14,minHeight:100,display:"flex",alignItems:"center",justifyContent:"center"}}><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,textAlign:"center"}}>{step}</p></div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontSize:12,color:"#b08060"}}>{stepIdx+1} / {selected.steps.length}</div>
           <div style={{display:"flex",gap:8}}>
             <button onClick={()=>{setSelected(null);setStepIdx(0);}} style={S.ghostBtn}>← Back</button>
-            {!isLast?<button onClick={()=>setStepIdx(i=>i+1)} style={S.saveBtn}>Next →</button>
-            :<button onClick={()=>{setSelected(null);setStepIdx(0);}} style={{...S.saveBtn,background:"linear-gradient(135deg,#7a8c6e,#6a7c5e)"}}>Complete ✓</button>}
+            {!isLast?<button onClick={()=>setStepIdx(i=>i+1)} style={S.saveBtn}>Next →</button>:<button onClick={()=>{setSelected(null);setStepIdx(0);}} style={{...S.saveBtn,background:"linear-gradient(135deg,#7a8c6e,#6a7c5e)"}}>Complete ✓</button>}
           </div>
         </div>
       </div>
     );
   }
-
   return (
     <div style={{display:"flex",flexDirection:"column",gap:10,paddingTop:8}}>
       {available.map(m=>(
-        <button key={m.id} onClick={()=>{setSelected(m);setStepIdx(0);}}
-          style={{background:"rgba(155,126,184,0.08)",border:"1px solid rgba(155,126,184,0.2)",borderRadius:14,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",textAlign:"left"}}>
-          <div>
-            <div style={{fontWeight:700,color:"#5a2e0e",fontSize:14}}>{m.name}</div>
-            <div style={{fontSize:12,color:"#b08060",marginTop:2}}>{m.duration}</div>
-          </div>
+        <button key={m.id} onClick={()=>{setSelected(m);setStepIdx(0);}} style={{background:"rgba(155,126,184,0.08)",border:"1px solid rgba(155,126,184,0.2)",borderRadius:14,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",textAlign:"left"}}>
+          <div><div style={{fontWeight:700,color:"#5a2e0e",fontSize:14}}>{m.name}</div><div style={{fontSize:12,color:"#b08060",marginTop:2}}>{m.duration}</div></div>
           <span style={{fontSize:18}}>›</span>
         </button>
       ))}
@@ -2131,19 +1518,13 @@ function MeditationPlayer({ isOTR }) {
 function AmbientPlayer({ isOTR }) {
   const [playing, setPlaying] = useState(null);
   const sound = useAmbientSound();
-  const available = isOTR ? AMBIENT_SOUNDS : AMBIENT_SOUNDS.filter(s=>s.free);
-
-  function toggle(s) {
-    if (playing===s.id) { sound.stop(); setPlaying(null); }
-    else { sound.play(s); setPlaying(s.id); }
-  }
-
+  const available = isOTR?AMBIENT_SOUNDS:AMBIENT_SOUNDS.filter(s=>s.free);
+  function toggle(s) { if(playing===s.id){sound.stop();setPlaying(null);}else{sound.play(s);setPlaying(s.id);} }
   return (
     <div style={{paddingTop:8}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:8,marginBottom:8}}>
         {available.map(s=>(
-          <button key={s.id} onClick={()=>toggle(s)}
-            style={{background:playing===s.id?"rgba(91,143,168,0.2)":"rgba(91,143,168,0.06)",border:`1px solid ${playing===s.id?"#5b8fa8":"rgba(91,143,168,0.2)"}`,borderRadius:14,padding:"12px 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer"}}>
+          <button key={s.id} onClick={()=>toggle(s)} style={{background:playing===s.id?"rgba(91,143,168,0.2)":"rgba(91,143,168,0.06)",border:`1px solid ${playing===s.id?"#5b8fa8":"rgba(91,143,168,0.2)"}`,borderRadius:14,padding:"12px 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer"}}>
             <span style={{fontSize:24}}>{s.icon}</span>
             <span style={{fontSize:11,fontWeight:600,color:playing===s.id?"#5b8fa8":"#9a7050"}}>{s.name}</span>
             {playing===s.id&&<span style={{fontSize:9,color:"#5b8fa8",fontWeight:700}}>PLAYING</span>}
