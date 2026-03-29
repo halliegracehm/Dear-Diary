@@ -302,7 +302,7 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
   async function loadPosts(communityId){
     setPostsLoading(true);
     try{
-      const data=await sbGet("community_posts",`community_id=eq.${communityId}&order=created_at.desc&limit=50&select=*,users(username)`);
+      const data=await sbGet("community_posts",`community_id=eq.${communityId}&order=created_at.desc&limit=50&select=*`);
       if(Array.isArray(data)){
         setPosts(data);
         const ids=data.map(p=>p.id);
@@ -324,6 +324,7 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
     try{
       const data=await sbInsert("community_posts",{
         user_id:userKey,
+        display_name:isAnon?"Anonymous":user?.username||userKey?.split("@")[0]||"Anonymous",
         community_id:activeCommunity.id,
         content:newPost.trim(),
         mood_tag:selectedMood?`${selectedMood.emoji} ${selectedMood.label}`:null,
@@ -332,7 +333,7 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
         is_anonymous:isAnon,
         submit_to_sotm:submitToMonth,
       });
-      if(Array.isArray(data)&&data[0])setPosts(prev=>[{...data[0],users:{username:isAnon?"Anonymous":user?.username||"Anonymous"}},...prev]);
+      if(Array.isArray(data)&&data[0])setPosts(prev=>[{...data[0],display_name:isAnon?"Anonymous":user?.username||user?.email?.split("@")[0]||"Anonymous"},...prev]);
       setNewPost("");setSelectedMood(null);setIsPromptMode(false);setIsAnon(false);setSubmitToMonth(false);
     }catch(e){console.error(e);}
     setSubmitting(false);
@@ -438,8 +439,8 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
               {post.submit_to_sotm&&<div style={{fontSize:10,fontWeight:700,color:"#7a4a1e",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",padding:"3px 10px",borderRadius:8,marginBottom:10,display:"inline-block"}}>🎙️ Submitted for Story of the Month</div>}
               {post.is_prompt_response&&<div style={{fontSize:10,fontWeight:700,letterSpacing:"0.5px",textTransform:"uppercase",padding:"3px 10px",borderRadius:8,border:`1px solid ${cfg.border}`,marginBottom:10,display:"inline-block",color:cfg.color,background:cfg.bg}}>✦ Prompt response</div>}
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                <div style={{width:34,height:34,borderRadius:"50%",background:post.is_anonymous?"linear-gradient(135deg,#b0a090,#9a8878)":`linear-gradient(135deg,${cfg.color}88,${cfg.color})`,color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>{post.is_anonymous?"👤":(post.users?.username||"?")[0].toUpperCase()}</div>
-                <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:"#5a2e0e"}}>{post.is_anonymous?"Anonymous":post.users?.username||"Anonymous"}</div><div style={{fontSize:11,color:"#b08060",marginTop:1}}>{timeAgo(post.created_at)}</div></div>
+                <div style={{width:34,height:34,borderRadius:"50%",background:post.is_anonymous?"linear-gradient(135deg,#b0a090,#9a8878)":`linear-gradient(135deg,${cfg.color}88,${cfg.color})`,color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>{post.is_anonymous?"👤":(post.user_id||"?")[0].toUpperCase()}</div>
+                <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:"#5a2e0e"}}>{post.is_anonymous?"Anonymous":post.display_name||post.user_id?.split("@")[0]||"Anonymous"}</div><div style={{fontSize:11,color:"#b08060",marginTop:1}}>{timeAgo(post.created_at)}</div></div>
                 {post.mood_tag&&<div style={{fontSize:11,color:"#9a7050",background:"rgba(200,137,90,0.08)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:12,padding:"3px 10px",flexShrink:0,fontWeight:600}}>{post.mood_tag}</div>}
               </div>
               <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",lineHeight:1.8,marginBottom:12,fontStyle:"italic"}}>{post.content}</p>
@@ -542,7 +543,7 @@ function StoryOfTheMonth({communityId,cfg}){
     setLoading(true);
     try{
       const filters=communityId?`submit_to_sotm=eq.true&community_id=eq.${communityId}&order=created_at.desc`:`submit_to_sotm=eq.true&order=created_at.desc`;
-      const data=await sbGet("community_posts",`${filters}&select=*,users(username)`);
+      const data=await sbGet("community_posts",`${filters}&select=*`);
       if(Array.isArray(data))setStories(data);
     }catch(e){console.error(e);}
     setLoading(false);
