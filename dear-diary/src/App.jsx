@@ -216,6 +216,7 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
             <MoodChart entries={entries} theme={T}/>
             <BadgesSection entries={entries} user={user} theme={T}/>
             {reward&&(<div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.12),rgba(200,137,90,0.08))",border:"1px solid rgba(245,158,11,0.3)",borderRadius:16,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:32}}>🔥</span><div style={{flex:1}}><div style={{fontWeight:700,color:"#92400e",fontSize:14}}>{reward.label} — {streak} days in a row!</div><div style={{fontSize:13,color:"#b45309",marginTop:3}}>Use code <strong>{reward.discount}</strong> for {reward.pct} off any gratitude journal at halliewho.com</div></div></div>)}
+            <JournalingTimeBanner/>
             <div style={{...S.promptCard,background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.18)"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:18}}>💌</span><span style={{fontWeight:700,color:"#7a4a1e",fontSize:12,textTransform:"uppercase",letterSpacing:"0.6px"}}>Hallie's Prompt This Week</span></div><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.7,marginBottom:6}}>"{halliePrompt.prompt}"</p><div style={{fontSize:12,color:"#b08060",marginBottom:12}}>{halliePrompt.note}</div><button onClick={()=>startNew(halliePrompt.prompt)} style={S.softBtn}>Write to this →</button></div>
             <div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{flex:1,position:"relative"}}><span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",opacity:0.35,fontSize:15}}>🔍</span><input style={{...S.input,paddingLeft:38,width:"100%"}} placeholder="Search your entries..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}/></div>{isOTR&&<button onClick={()=>exportToPDF(entries,user.username)} style={S.ghostBtn}>📄 PDF</button>}<button onClick={()=>startNew()} style={S.newBtn}>+ New</button></div>
             <div style={{display:"flex",flexWrap:"wrap",gap:7}}><Chip active={!filterTag} onClick={()=>setFilterTag(null)}>All</Chip>{TAG_OPTIONS.map(t=><Chip key={t} active={filterTag===t} activeColor={TAG_COLORS[t]} onClick={()=>setFilterTag(filterTag===t?null:t)}>{t}</Chip>)}</div>
@@ -279,6 +280,9 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
   const [isMember,setIsMember]=useState({});
   const [view,setView]=useState("list");
   const userTierLevel=COMMUNITY_TIER_ORDER[userTier]??0;
+  const [isAnon,setIsAnon]=useState(false);
+  const [submitToMonth,setSubmitToMonth]=useState(false);
+  const [communityView,setCommunityView]=useState("feed"); // feed | stories
   const userKey=user?.email||null;
 
   useEffect(()=>{loadCommunities();},[]);
@@ -318,9 +322,18 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
     if(!newPost.trim()||!activeCommunity||!userKey)return;
     setSubmitting(true);
     try{
-      const data=await sbInsert("community_posts",{user_id:userKey,community_id:activeCommunity.id,content:newPost.trim(),mood_tag:selectedMood?`${selectedMood.emoji} ${selectedMood.label}`:null,is_prompt_response:isPromptMode,daily_prompt:isPromptMode?DAILY_PROMPTS[activeCommunity.slug]:null});
-      if(Array.isArray(data)&&data[0])setPosts(prev=>[{...data[0],users:{username:user?.username||"Anonymous"}},...prev]);
-      setNewPost("");setSelectedMood(null);setIsPromptMode(false);
+      const data=await sbInsert("community_posts",{
+        user_id:userKey,
+        community_id:activeCommunity.id,
+        content:newPost.trim(),
+        mood_tag:selectedMood?`${selectedMood.emoji} ${selectedMood.label}`:null,
+        is_prompt_response:isPromptMode,
+        daily_prompt:isPromptMode?DAILY_PROMPTS[activeCommunity.slug]:null,
+        is_anonymous:isAnon,
+        submit_to_sotm:submitToMonth,
+      });
+      if(Array.isArray(data)&&data[0])setPosts(prev=>[{...data[0],users:{username:isAnon?"Anonymous":user?.username||"Anonymous"}},...prev]);
+      setNewPost("");setSelectedMood(null);setIsPromptMode(false);setIsAnon(false);setSubmitToMonth(false);
     }catch(e){console.error(e);}
     setSubmitting(false);
   }
@@ -397,11 +410,22 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
         <h2 style={{fontFamily:"'Lora',serif",fontSize:20,fontWeight:600,color:"#5a2e0e",marginBottom:5}}>{activeCommunity?.name}</h2>
         <p style={{fontSize:13,color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif",lineHeight:1.5}}>{activeCommunity?.description}</p>
       </div>
-      {prompt&&(<div style={{margin:"0 16px 12px",background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px 18px",border:"1px solid rgba(200,137,90,0.15)",boxShadow:"0 2px 12px rgba(160,100,50,0.08)"}}><div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",fontWeight:700,marginBottom:8,color:cfg.color}}>✦ Today's Prompt</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:14,color:"#5a3a1a",lineHeight:1.7,marginBottom:12}}>"{prompt}"</p><button style={{background:"transparent",border:`1px solid ${cfg.color}`,borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",color:cfg.color}} onClick={()=>{setIsPromptMode(true);setNewPost("");}}>Answer this →</button></div>)}
+      <div style={{display:"flex",gap:0,margin:"0 16px 14px",background:"rgba(200,137,90,0.06)",borderRadius:14,padding:4}}>
+        <button onClick={()=>setCommunityView("feed")} style={{flex:1,padding:"8px",borderRadius:10,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:communityView==="feed"?"white":"transparent",color:communityView==="feed"?"#5a2e0e":"#b08060",boxShadow:communityView==="feed"?"0 1px 6px rgba(0,0,0,0.08)":"none",transition:"all 0.2s"}}>💬 Feed</button>
+        <button onClick={()=>setCommunityView("stories")} style={{flex:1,padding:"8px",borderRadius:10,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:communityView==="stories"?"white":"transparent",color:communityView==="stories"?"#5a2e0e":"#b08060",boxShadow:communityView==="stories"?"0 1px 6px rgba(0,0,0,0.08)":"none",transition:"all 0.2s"}}>🎙️ Story of the Month</button>
+      </div>
+
+      {communityView==="stories"&&<StoryOfTheMonth communityId={activeCommunity?.id} cfg={cfg}/>}
+
+      {communityView==="feed"&&<>{prompt&&(<div style={{margin:"0 16px 12px",background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px 18px",border:"1px solid rgba(200,137,90,0.15)",boxShadow:"0 2px 12px rgba(160,100,50,0.08)"}}><div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",fontWeight:700,marginBottom:8,color:cfg.color}}>✦ Today's Prompt</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:14,color:"#5a3a1a",lineHeight:1.7,marginBottom:12}}>"{prompt}"</p><button style={{background:"transparent",border:`1px solid ${cfg.color}`,borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",color:cfg.color}} onClick={()=>{setIsPromptMode(true);setNewPost("");}}>Answer this →</button></div>)}
       {hasAccess&&(<div style={{margin:"0 16px 12px",background:"rgba(255,252,246,0.97)",borderRadius:18,padding:"16px",boxShadow:"0 2px 16px rgba(160,100,50,0.1)",border:"1px solid rgba(200,137,90,0.15)"}}>
         {isPromptMode&&(<div style={{fontSize:11,color:"#c8895a",fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(200,137,90,0.07)",padding:"6px 10px",borderRadius:8}}>✦ Answering today's prompt<button style={{background:"none",border:"none",fontSize:12,color:"#b08060",cursor:"pointer"}} onClick={()=>setIsPromptMode(false)}>✕</button></div>)}
         <textarea style={{width:"100%",padding:"12px 14px",border:"1.5px solid rgba(200,137,90,0.2)",borderRadius:12,fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",resize:"none",outline:"none",lineHeight:1.7,marginBottom:10,background:"rgba(253,248,242,0.8)",boxSizing:"border-box",fontStyle:"italic"}} placeholder={isPromptMode?"Share your thoughts here...":"What's on your heart today?"} value={newPost} onChange={e=>setNewPost(e.target.value)} rows={3}/>
         <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>{COMMUNITY_MOOD_TAGS.map(mood=>(<button key={mood.label} style={{border:"1px solid",borderRadius:20,padding:"4px 10px",fontSize:11,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:600,background:selectedMood?.label===mood.label?"rgba(200,137,90,0.15)":"transparent",borderColor:selectedMood?.label===mood.label?"#c8895a":"rgba(200,180,160,0.3)",color:selectedMood?.label===mood.label?"#7a4a1e":"#b08060"}} onClick={()=>setSelectedMood(selectedMood?.label===mood.label?null:mood)}>{mood.emoji} {mood.label}</button>))}</div>
+        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:10}}>
+          <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:12,color:"#9a7050"}}><input type="checkbox" checked={isAnon} onChange={e=>setIsAnon(e.target.checked)} style={{accentColor:"#c8895a",width:14,height:14}}/>Post anonymously</label>
+          <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:12,color:"#7a4a1e",background:"rgba(122,74,30,0.05)",padding:"8px 10px",borderRadius:10,border:"1px solid rgba(122,74,30,0.12)"}}><input type="checkbox" checked={submitToMonth} onChange={e=>setSubmitToMonth(e.target.checked)} style={{accentColor:"#c8895a",width:14,height:14}}/><span>🎙️ <strong>Submit for Story of the Month</strong> — Hallie may feature this on My Sister's Closet</span></label>
+        </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           {selectedMood&&<span style={{fontSize:12,color:"#c8895a",fontWeight:600,fontStyle:"italic"}}>{selectedMood.emoji} {selectedMood.label}</span>}
           <button style={{background:cfg.color,color:"white",border:"none",borderRadius:20,padding:"8px 22px",fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700,marginLeft:"auto",opacity:!newPost.trim()||submitting?0.5:1}} disabled={!newPost.trim()||submitting} onClick={submitPost}>{submitting?"Sharing...":"Share 🌿"}</button>
@@ -411,10 +435,11 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
         <div style={{padding:"0 16px"}}>
           {posts.map(post=>(
             <div key={post.id} style={{background:"rgba(255,252,246,0.95)",borderRadius:18,padding:"16px",marginBottom:10,border:"1px solid rgba(200,137,90,0.12)",boxShadow:"0 2px 10px rgba(160,100,50,0.07)"}}>
+              {post.submit_to_sotm&&<div style={{fontSize:10,fontWeight:700,color:"#7a4a1e",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",padding:"3px 10px",borderRadius:8,marginBottom:10,display:"inline-block"}}>🎙️ Submitted for Story of the Month</div>}
               {post.is_prompt_response&&<div style={{fontSize:10,fontWeight:700,letterSpacing:"0.5px",textTransform:"uppercase",padding:"3px 10px",borderRadius:8,border:`1px solid ${cfg.border}`,marginBottom:10,display:"inline-block",color:cfg.color,background:cfg.bg}}>✦ Prompt response</div>}
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                <div style={{width:34,height:34,borderRadius:"50%",background:`linear-gradient(135deg,${cfg.color}88,${cfg.color})`,color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>{(post.users?.username||"?")[0].toUpperCase()}</div>
-                <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:"#5a2e0e"}}>{post.users?.username||"Anonymous"}</div><div style={{fontSize:11,color:"#b08060",marginTop:1}}>{timeAgo(post.created_at)}</div></div>
+                <div style={{width:34,height:34,borderRadius:"50%",background:post.is_anonymous?"linear-gradient(135deg,#b0a090,#9a8878)":`linear-gradient(135deg,${cfg.color}88,${cfg.color})`,color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>{post.is_anonymous?"👤":(post.users?.username||"?")[0].toUpperCase()}</div>
+                <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:"#5a2e0e"}}>{post.is_anonymous?"Anonymous":post.users?.username||"Anonymous"}</div><div style={{fontSize:11,color:"#b08060",marginTop:1}}>{timeAgo(post.created_at)}</div></div>
                 {post.mood_tag&&<div style={{fontSize:11,color:"#9a7050",background:"rgba(200,137,90,0.08)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:12,padding:"3px 10px",flexShrink:0,fontWeight:600}}>{post.mood_tag}</div>}
               </div>
               <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",lineHeight:1.8,marginBottom:12,fontStyle:"italic"}}>{post.content}</p>
@@ -424,7 +449,7 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
             </div>
           ))}
         </div>
-      )}
+      )}</>}
     </div>
   );
 }
@@ -487,5 +512,90 @@ function NestCard({icon,title,subtitle,color,onOpen,children}){return(<div style
 function BreathworkPlayer({exercise}){const [phase,setPhase]=useState("ready");const [count,setCount]=useState(0);const [cycle,setCycle]=useState(0);const [running,setRunning]=useState(false);const [size,setSize]=useState(120);useEffect(()=>{if(!running)return;const phases=[{name:"Breathe in",duration:exercise.inhale,size:180},...(exercise.hold1?[{name:"Hold",duration:exercise.hold1,size:180}]:[]),{name:"Breathe out",duration:exercise.exhale,size:120},...(exercise.hold2?[{name:"Hold",duration:exercise.hold2,size:120}]:[])];let phaseIdx=0,elapsed=0;setPhase(phases[0].name);setSize(phases[0].size);const interval=setInterval(()=>{elapsed++;setCount(phases[phaseIdx].duration-elapsed);if(elapsed>=phases[phaseIdx].duration){elapsed=0;phaseIdx=(phaseIdx+1)%phases.length;if(phaseIdx===0){setCycle(c=>{if(c+1>=exercise.cycles){setRunning(false);setPhase("done");clearInterval(interval);return 0;}return c+1;});}setPhase(phases[phaseIdx].name);setSize(phases[phaseIdx].size);}},1000);return()=>clearInterval(interval);},[running]);return(<div style={{textAlign:"center",padding:"16px 0"}}><div style={{position:"relative",width:200,height:200,margin:"0 auto 20px"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:size,height:size,borderRadius:"50%",background:`${exercise.color}22`,border:`3px solid ${exercise.color}`,transition:"all 1s ease-in-out",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column"}}><div style={{fontSize:13,fontWeight:700,color:exercise.color,textAlign:"center",lineHeight:1.3}}>{phase==="done"?"Done ✓":phase==="ready"?"Tap to begin":phase}</div>{running&&<div style={{fontSize:24,fontWeight:800,color:exercise.color}}>{count}</div>}</div></div></div><div style={{fontSize:12,color:"#b08060",marginBottom:14}}>Cycle {cycle+1} of {exercise.cycles}</div>{!running&&phase!=="done"&&<button onClick={()=>{setRunning(true);setCycle(0);}} style={{...S.saveBtn,padding:"10px 28px"}}>Begin →</button>}{running&&<button onClick={()=>{setRunning(false);setPhase("ready");setCycle(0);}} style={S.ghostBtn}>Stop</button>}{phase==="done"&&<div style={{fontSize:16,color:"#7a4a1e",fontFamily:"'Lora',serif",fontStyle:"italic"}}>Well done 🌿 Take a moment to notice how you feel.</div>}</div>);}
 
 function MeditationPlayer({isOTR}){const [selected,setSelected]=useState(null);const [stepIdx,setStepIdx]=useState(0);const available=isOTR?MEDITATIONS:MEDITATIONS.filter(m=>m.free);if(selected){const step=selected.steps[stepIdx];const isLast=stepIdx===selected.steps.length-1;return(<div style={{padding:"8px 0"}}><div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",borderRadius:16,padding:"20px",marginBottom:14,minHeight:100,display:"flex",alignItems:"center",justifyContent:"center"}}><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,textAlign:"center"}}>{step}</p></div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{fontSize:12,color:"#b08060"}}>{stepIdx+1} / {selected.steps.length}</div><div style={{display:"flex",gap:8}}><button onClick={()=>{setSelected(null);setStepIdx(0);}} style={S.ghostBtn}>← Back</button>{!isLast?<button onClick={()=>setStepIdx(i=>i+1)} style={S.saveBtn}>Next →</button>:<button onClick={()=>{setSelected(null);setStepIdx(0);}} style={{...S.saveBtn,background:"linear-gradient(135deg,#7a8c6e,#6a7c5e)"}}>Complete ✓</button>}</div></div></div>);}return(<div style={{display:"flex",flexDirection:"column",gap:10,paddingTop:8}}>{available.map(m=>(<button key={m.id} onClick={()=>{setSelected(m);setStepIdx(0);}} style={{background:"rgba(155,126,184,0.08)",border:"1px solid rgba(155,126,184,0.2)",borderRadius:14,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",textAlign:"left"}}><div><div style={{fontWeight:700,color:"#5a2e0e",fontSize:14}}>{m.name}</div><div style={{fontSize:12,color:"#b08060",marginTop:2}}>{m.duration}</div></div><span style={{fontSize:18}}>›</span></button>))}{!isOTR&&<div style={{fontSize:12,color:"#b08060",textAlign:"center",fontStyle:"italic",padding:"4px 0"}}>✨ Upgrade to Off the Record for the full meditation library</div>}</div>);}
+
+function JournalingTimeBanner(){
+  const [dismissed,setDismissed]=useState(()=>localStorage.getItem("journaling_banner_dismissed")==="true");
+  if(dismissed)return null;
+  return(
+    <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.07),rgba(155,126,184,0.06))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:18,padding:"16px 20px",display:"flex",gap:14,alignItems:"flex-start"}}>
+      <span style={{fontSize:28,flexShrink:0}}>⏱️</span>
+      <div style={{flex:1}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:5}}>The sweet spot</div>
+        <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.65,marginBottom:4}}>"5 to 15 minutes is all it takes — and 10 is the sweet spot. Enough time to get past the surface and into something real. Not a task, just presence."</p>
+        <p style={{fontSize:11,color:"#b08060"}}>— Hallie 🌿</p>
+      </div>
+      <button onClick={()=>{localStorage.setItem("journaling_banner_dismissed","true");setDismissed(true);}} style={{background:"none",border:"none",fontSize:16,color:"#c8b896",cursor:"pointer",flexShrink:0,padding:2}}>×</button>
+    </div>
+  );
+}
+
+function StoryOfTheMonth({communityId,cfg}){
+  const [stories,setStories]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [anonContent,setAnonContent]=useState("");
+  const [submitting,setSubmitting]=useState(false);
+  const [submitted,setSubmitted]=useState(false);
+
+  useEffect(()=>{loadStories();},[communityId]);
+
+  async function loadStories(){
+    setLoading(true);
+    try{
+      const filters=communityId?`submit_to_sotm=eq.true&community_id=eq.${communityId}&order=created_at.desc`:`submit_to_sotm=eq.true&order=created_at.desc`;
+      const data=await sbGet("community_posts",`${filters}&select=*,users(username)`);
+      if(Array.isArray(data))setStories(data);
+    }catch(e){console.error(e);}
+    setLoading(false);
+  }
+
+  async function submitAnon(){
+    if(!anonContent.trim())return;
+    setSubmitting(true);
+    try{
+      await sbInsert("community_posts",{
+        user_id:"anonymous",
+        community_id:communityId,
+        content:anonContent.trim(),
+        is_anonymous:true,
+        submit_to_sotm:true,
+      });
+      setSubmitted(true);setAnonContent("");
+    }catch(e){console.error(e);}
+    setSubmitting(false);
+  }
+
+  return(
+    <div style={{padding:"0 16px"}}>
+      <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:18,padding:"20px",marginBottom:16,textAlign:"center"}}>
+        <div style={{fontSize:32,marginBottom:8}}>🎙️</div>
+        <h3 style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",marginBottom:6,fontWeight:600}}>Story of the Month</h3>
+        <p style={{fontSize:13,color:"#b08060",lineHeight:1.6,marginBottom:16,fontStyle:"italic",fontFamily:"'Lora',serif"}}>Hallie reads every submission and may feature your story — anonymously — on the My Sister's Closet podcast. No account needed.</p>
+        {!submitted?(
+          <div style={{textAlign:"left"}}>
+            <textarea style={{width:"100%",padding:"12px 14px",border:"1.5px solid rgba(200,137,90,0.2)",borderRadius:12,fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",resize:"none",outline:"none",lineHeight:1.7,marginBottom:10,background:"rgba(253,248,242,0.9)",boxSizing:"border-box",fontStyle:"italic",minHeight:100}} placeholder="Share something from your heart. It will always be kept anonymous." value={anonContent} onChange={e=>setAnonContent(e.target.value)} rows={4}/>
+            <button style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"white",border:"none",borderRadius:20,padding:"11px",fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700,opacity:!anonContent.trim()||submitting?0.5:1}} disabled={!anonContent.trim()||submitting} onClick={submitAnon}>{submitting?"Submitting...":"Submit Anonymously 🎙️"}</button>
+          </div>
+        ):(
+          <div style={{background:"rgba(122,74,30,0.06)",borderRadius:14,padding:"16px"}}>
+            <div style={{fontSize:28,marginBottom:6}}>💛</div>
+            <p style={{fontFamily:"'Lora',serif",fontStyle:"italic",color:"#7a4a1e",fontSize:14,lineHeight:1.6}}>Your story has been submitted. Thank you for trusting us with it. Hallie will read it. 🌿</p>
+          </div>
+        )}
+      </div>
+      {loading?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic"}}>Loading submissions...</div>:stories.length===0?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif"}}>No submissions yet — be the first. 🌿</div>:(
+        stories.map(s=>(
+          <div key={s.id} style={{background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px",marginBottom:10,border:"1px solid rgba(122,74,30,0.1)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+              <div style={{width:30,height:30,borderRadius:"50%",background:"linear-gradient(135deg,#b0a090,#9a8878)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700}}>👤</div>
+              <div><div style={{fontSize:12,fontWeight:700,color:"#5a2e0e"}}>Anonymous</div><div style={{fontSize:10,color:"#b08060"}}>Submitted for Story of the Month</div></div>
+              <span style={{marginLeft:"auto",fontSize:10,color:"#7a4a1e",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",padding:"2px 8px",borderRadius:10,fontWeight:700}}>🎙️ SOTM</span>
+            </div>
+            <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",lineHeight:1.8,fontStyle:"italic"}}>{s.content}</p>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
 
 function AmbientPlayer({isOTR}){const [playing,setPlaying]=useState(null);const sound=useAmbientSound();const available=isOTR?AMBIENT_SOUNDS:AMBIENT_SOUNDS.filter(s=>s.free);function toggle(s){if(playing===s.id){sound.stop();setPlaying(null);}else{sound.play(s);setPlaying(s.id);}}return(<div style={{paddingTop:8}}><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:8,marginBottom:8}}>{available.map(s=>(<button key={s.id} onClick={()=>toggle(s)} style={{background:playing===s.id?"rgba(91,143,168,0.2)":"rgba(91,143,168,0.06)",border:`1px solid ${playing===s.id?"#5b8fa8":"rgba(91,143,168,0.2)"}`,borderRadius:14,padding:"12px 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer"}}><span style={{fontSize:24}}>{s.icon}</span><span style={{fontSize:11,fontWeight:600,color:playing===s.id?"#5b8fa8":"#9a7050"}}>{s.name}</span>{playing===s.id&&<span style={{fontSize:9,color:"#5b8fa8",fontWeight:700}}>PLAYING</span>}</button>))}</div>{!isOTR&&<div style={{fontSize:12,color:"#b08060",textAlign:"center",fontStyle:"italic"}}>✨ Upgrade to Off the Record to unlock Fireplace & Café sounds</div>}</div>);}
