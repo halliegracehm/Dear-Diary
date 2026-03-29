@@ -197,7 +197,7 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
             </div>
           </div>
           <nav style={{display:"flex",gap:2,width:"100%",justifyContent:"space-around"}}>
-            {[["journal","📖"],["nest","🪹"],["journey","🌱"],["letters","💌"],["community","🌿"],...(user.email===ADMIN_EMAIL?[["admin","🔐"]]:[])].map(([t,icon])=>(
+            {[["journal","📖"],["nest","🪹"],["journey","🌱"],["challenges","🏆"],["letters","💌"],["community","🌿"],...(user.email===ADMIN_EMAIL?[["admin","🔐"]]:[])].map(([t,icon])=>(
               <button key={t} onClick={()=>{setTab(t);setView("list");}} style={{...S.navBtn,...(tab===t?S.navBtnActive:{}),padding:"5px 8px",fontSize:11,display:"flex",flexDirection:"column",alignItems:"center",gap:2,flex:1}}>
                 <span style={{fontSize:18}}>{icon}</span>
                 <span style={{fontSize:9,textTransform:"capitalize",fontWeight:tab===t?700:500}}>{t}</span>
@@ -255,7 +255,7 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
         {tab==="nest"&&<NestTab user={user} isPro={isPro} isOTR={isOTR} aiPrompt={aiPrompt} promptLoading={promptLoading} onWrite={(prefill)=>{setTab("journal");startNew(prefill);}} theme={T}/>}
         {tab==="journey"&&<JourneyTab entries={entries} user={user}/>}
         {tab==="letters"&&<LettersTab user={user}/>}
-        {tab==="community"&&<CommunitiesTab user={user} userTier={user.plan} onUpgrade={()=>setTab("pricing")}/>}
+        {tab==="challenges"&&<ChallengesTab entries={entries} user={user} onWrite={(prefill)=>{setTab("journal");startNew(prefill);}}/>}
         {tab==="pricing"&&<PricingTab currentPlan={user.plan} userEmail={user.email} onUpgrade={onUpgradePlan}/>}
       </main>
       {!pwaDismissed&&<PWABanner prompt={pwaPrompt} onDismiss={()=>{setPwaDismissed(true);onPwaInstalled();}}/>}
@@ -451,6 +451,283 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
           ))}
         </div>
       )}</>}
+    </div>
+  );
+}
+
+// ── CHALLENGES ──────────────────────────────────────────────────────────
+
+const MINI_CHALLENGES = [
+  {
+    id:"healing7", icon:"🌱", title:"7-Day Healing Series", duration:7, color:"#7a9e7e",
+    desc:"A gentle week of turning inward. Release, restore, and come back to yourself.",
+    days:[
+      {day:1,prompt:"What are you carrying right now that isn't yours to carry? Write it out and then write: I release this."},
+      {day:2,prompt:"Describe a wound that has taught you something beautiful. How did that pain shape you?"},
+      {day:3,prompt:"Write a letter to a younger version of yourself who needed to hear something they never got to hear."},
+      {day:4,prompt:"What does healing look like for you — not what it's supposed to look like, but what it actually feels like?"},
+      {day:5,prompt:"Who in your life makes you feel most like yourself? What do they see in you that you sometimes forget?"},
+      {day:6,prompt:"Name three ways you have grown in the last year that no one else would notice but you."},
+      {day:7,prompt:"Write yourself a blessing. Something you wish someone had said to you. Say it to yourself now."},
+    ]
+  },
+  {
+    id:"gratitude5", icon:"🙏", title:"5-Day Gratitude Reset", duration:5, color:"#c8895a",
+    desc:"Not toxic positivity — real, specific gratitude that rewires how you see your life.",
+    days:[
+      {day:1,prompt:"Write about something you almost missed today — a small moment that could have gone unnoticed but didn't."},
+      {day:2,prompt:"Who is someone in your life who shows up quietly? Write them a thank you they'll never see."},
+      {day:3,prompt:"What is something about your body you are grateful for today? Not how it looks — what it does."},
+      {day:4,prompt:"Write about a hard season that gave you something you wouldn't trade. What did difficulty teach you?"},
+      {day:5,prompt:"Write a love letter to your own life — exactly as it is right now, imperfect and in process."},
+    ]
+  },
+  {
+    id:"confidence10", icon:"🔥", title:"10-Day Confidence Builder", duration:10, color:"#c47c2a",
+    desc:"Call yourself back. Rebuild your belief in who you are and what you're capable of.",
+    days:[
+      {day:1,prompt:"Write about a time you did something that scared you. How did it feel on the other side?"},
+      {day:2,prompt:"What is something you are actually really good at that you rarely let yourself claim?"},
+      {day:3,prompt:"Write about a version of yourself you've been afraid to become. What's stopping you?"},
+      {day:4,prompt:"Describe your dream life in present tense — as if it's already happening. How does she live?"},
+      {day:5,prompt:"What would you do this week if you weren't afraid of what people thought?"},
+      {day:6,prompt:"Write about a compliment you've received that you dismissed. Receive it now."},
+      {day:7,prompt:"What are three things you've built, created, or overcome that prove you are more capable than you think?"},
+      {day:8,prompt:"What boundary would change your life if you set it? Write it out as a declaration."},
+      {day:9,prompt:"Who are you becoming? Describe her in detail. What does she believe about herself?"},
+      {day:10,prompt:"Write a manifesto for yourself. Five things you believe about who you are and what you deserve."},
+    ]
+  },
+  {
+    id:"letters7", icon:"💌", title:"7-Day Letters to Yourself", duration:7, color:"#9b7eb8",
+    desc:"One letter a day. To your past, your future, your fears, your dreams, your people.",
+    days:[
+      {day:1,prompt:"Write a letter to 16-year-old you. What did she need to know that no one told her?"},
+      {day:2,prompt:"Write a letter to the person you were a year ago. How far have you come since then?"},
+      {day:3,prompt:"Write a letter to your fear. Not to fight it — to understand it."},
+      {day:4,prompt:"Write a letter to someone you need to forgive — even if you're not ready. Just start."},
+      {day:5,prompt:"Write a letter to your future self five years from now. What do you hope she feels?"},
+      {day:6,prompt:"Write a letter to your body. Everything you've put it through and everything it's carried for you."},
+      {day:7,prompt:"Write a letter from your future self back to you — right now, today. What does she want you to know?"},
+    ]
+  },
+  {
+    id:"lettinggo5", icon:"🌊", title:"5-Day Letting Go", duration:5, color:"#5b8fa8",
+    desc:"Release what no longer serves you. Five days to lighten the load you've been carrying.",
+    days:[
+      {day:1,prompt:"What is the story about yourself that you keep telling — and is it actually true?"},
+      {day:2,prompt:"What relationship (past or present) are you still carrying? What would it feel like to set it down?"},
+      {day:3,prompt:"Write about a version of yourself you've outgrown. Say goodbye to her with love."},
+      {day:4,prompt:"What expectation — of yourself or your life — is causing you the most pain right now?"},
+      {day:5,prompt:"Write a release ritual. Everything you are choosing to leave in this season. Then write: I am free."},
+    ]
+  },
+];
+
+function ChallengesTab({entries, user, onWrite}) {
+  const [activeChallenge, setActiveChallenge] = useState(null);
+  const [joined, setJoined] = useState(()=>{
+    try { return JSON.parse(localStorage.getItem(`challenges_joined_${user.email}`) || '{}'); } catch { return {}; }
+  });
+  const [view, setView] = useState("list"); // list | detail
+
+  const thisMonth = new Date().toISOString().slice(0,7);
+  const monthEntries = entries.filter(e=>e.date?.startsWith(thisMonth));
+  const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth()+1, 0).getDate();
+  const today = new Date().getDate();
+  const journaledDays = new Set(monthEntries.map(e=>new Date(e.date).getDate()));
+
+  function joinChallenge(id) {
+    const updated = {...joined, [id]: { joinedDate: getTodayStr(), daysCompleted: [] }};
+    setJoined(updated);
+    localStorage.setItem(`challenges_joined_${user.email}`, JSON.stringify(updated));
+  }
+
+  function getChallengeDay(id) {
+    if (!joined[id]) return 0;
+    const start = new Date(joined[id].joinedDate);
+    const now = new Date();
+    return Math.floor((now - start) / (24*60*60*1000)) + 1;
+  }
+
+  function getCompletedDays(id) {
+    return joined[id]?.daysCompleted || [];
+  }
+
+  function markDayComplete(challengeId, day) {
+    const updated = {
+      ...joined,
+      [challengeId]: {
+        ...joined[challengeId],
+        daysCompleted: [...new Set([...(joined[challengeId]?.daysCompleted||[]), day])]
+      }
+    };
+    setJoined(updated);
+    localStorage.setItem(`challenges_joined_${user.email}`, JSON.stringify(updated));
+  }
+
+  if (view === "detail" && activeChallenge) {
+    const c = activeChallenge;
+    const isJoined = !!joined[c.id];
+    const currentDay = Math.min(getChallengeDay(c.id), c.duration);
+    const completedDays = getCompletedDays(c.id);
+    const todayPrompt = c.days[currentDay - 1];
+    const progress = completedDays.length / c.duration;
+
+    return (
+      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        <button onClick={()=>{setView("list");setActiveChallenge(null);}} style={{...S.ghostBtn,alignSelf:"flex-start"}}>← Challenges</button>
+
+        <div style={{background:`linear-gradient(135deg,${c.color}15,${c.color}05)`,border:`1px solid ${c.color}30`,borderRadius:24,padding:"24px"}}>
+          <div style={{fontSize:40,marginBottom:8}}>{c.icon}</div>
+          <h2 style={{fontFamily:"'Lora',serif",fontSize:24,color:"#5a2e0e",marginBottom:6,fontWeight:600}}>{c.title}</h2>
+          <p style={{fontSize:14,color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif",lineHeight:1.6,marginBottom:16}}>{c.desc}</p>
+
+          {/* Progress bar */}
+          {isJoined && (
+            <div style={{marginBottom:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#b08060",marginBottom:6}}>
+                <span>Day {currentDay} of {c.duration}</span>
+                <span>{completedDays.length} completed</span>
+              </div>
+              <div style={{background:"rgba(200,137,90,0.15)",borderRadius:20,height:8,overflow:"hidden"}}>
+                <div style={{background:`linear-gradient(90deg,${c.color},${c.color}cc)`,height:"100%",width:`${progress*100}%`,borderRadius:20,transition:"width 0.5s"}}/>
+              </div>
+            </div>
+          )}
+
+          {/* Day dots */}
+          {isJoined && (
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+              {c.days.map(d=>(
+                <div key={d.day} style={{width:32,height:32,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,background:completedDays.includes(d.day)?c.color:d.day===currentDay?"rgba(200,137,90,0.15)":"rgba(200,137,90,0.06)",color:completedDays.includes(d.day)?"white":d.day===currentDay?"#7a4a1e":"#b08060",border:`1px solid ${completedDays.includes(d.day)?c.color:d.day===currentDay?"#c8895a":"rgba(200,137,90,0.2)"}`}}>
+                  {completedDays.includes(d.day) ? "✓" : d.day}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!isJoined && (
+            <button onClick={()=>joinChallenge(c.id)} style={{...S.saveBtn,background:`linear-gradient(135deg,${c.color}cc,${c.color})`}}>
+              Start This Challenge →
+            </button>
+          )}
+        </div>
+
+        {/* Today's prompt */}
+        {isJoined && todayPrompt && (
+          <div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:20,padding:"22px"}}>
+            <div style={{fontSize:11,fontWeight:700,color:c.color,textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:10}}>
+              {completedDays.includes(currentDay) ? "✓ Day " + currentDay + " Complete" : "✦ Day " + currentDay + " — Today's Prompt"}
+            </div>
+            <p style={{fontFamily:"'Lora',serif",fontSize:17,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,marginBottom:16}}>
+              "{todayPrompt.prompt}"
+            </p>
+            {!completedDays.includes(currentDay) ? (
+              <button onClick={()=>{markDayComplete(c.id, currentDay);onWrite(todayPrompt.prompt);}}
+                style={{...S.saveBtn,background:`linear-gradient(135deg,${c.color}cc,${c.color})`}}>
+                Write Today's Entry →
+              </button>
+            ) : (
+              <div style={{display:"flex",alignItems:"center",gap:8,color:c.color,fontSize:14,fontWeight:600}}>
+                <span>✓</span><span>You wrote today. Come back tomorrow. 🌿</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* All prompts preview */}
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>All {c.duration} Days</div>
+          {c.days.map(d=>(
+            <div key={d.day} style={{background:"rgba(255,252,246,0.9)",border:`1px solid ${completedDays.includes(d.day)?"rgba(200,137,90,0.3)":"rgba(200,137,90,0.12)"}`,borderRadius:14,padding:"14px 16px",marginBottom:8,display:"flex",gap:12,alignItems:"flex-start",opacity:isJoined&&d.day>currentDay?0.5:1}}>
+              <div style={{width:28,height:28,borderRadius:"50%",background:completedDays.includes(d.day)?c.color:"rgba(200,137,90,0.1)",color:completedDays.includes(d.day)?"white":"#b08060",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>
+                {completedDays.includes(d.day)?"✓":d.day}
+              </div>
+              <p style={{fontFamily:"'Lora',serif",fontSize:13,color:"#6a4020",fontStyle:"italic",lineHeight:1.6,margin:0}}>{d.prompt}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+      <div>
+        <h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🏆 Challenges</h2>
+        <p style={{color:"#b08060",fontSize:13,marginTop:4,fontStyle:"italic"}}>Push a little deeper. Grow a little more.</p>
+      </div>
+
+      {/* Monthly streak challenge */}
+      <div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(245,158,11,0.25)",borderRadius:22,padding:"22px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+          <span style={{fontSize:32}}>🔥</span>
+          <div>
+            <div style={{fontFamily:"'Lora',serif",fontSize:18,fontWeight:600,color:"#5a2e0e"}}>Monthly Streak Challenge</div>
+            <div style={{fontSize:12,color:"#b08060",marginTop:2}}>Journal every day this month — keep the chain alive</div>
+          </div>
+        </div>
+
+        {/* Calendar grid */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:12}}>
+          {["S","M","T","W","T","F","S"].map((d,i)=>(
+            <div key={i} style={{textAlign:"center",fontSize:10,color:"#b08060",fontWeight:700,padding:"2px 0"}}>{d}</div>
+          ))}
+          {/* Empty cells for start of month */}
+          {Array.from({length: new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay()}).map((_,i)=>(
+            <div key={`empty-${i}`}/>
+          ))}
+          {Array.from({length: daysInMonth}).map((_,i)=>{
+            const day = i+1;
+            const done = journaledDays.has(day);
+            const isToday = day === today;
+            const future = day > today;
+            return(
+              <div key={day} style={{aspectRatio:"1",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:done?"#c8895a":isToday?"rgba(200,137,90,0.15)":future?"rgba(200,137,90,0.04)":"rgba(200,137,90,0.08)",color:done?"white":isToday?"#7a4a1e":"#b08060",border:isToday?"1px solid #c8895a":"1px solid transparent"}}>
+                {done?"✓":day}
+              </div>
+            );
+          })}
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#b08060"}}>
+          <span>🔥 {calcStreak(entries)} day streak</span>
+          <span>{journaledDays.size}/{today} days this month</span>
+        </div>
+      </div>
+
+      {/* Mini challenges */}
+      <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px"}}>Themed Challenges</div>
+      {MINI_CHALLENGES.map(c=>{
+        const isJoined = !!joined[c.id];
+        const completed = getCompletedDays(c.id).length;
+        const done = completed >= c.duration;
+        return(
+          <div key={c.id} style={{background:"rgba(255,252,246,0.95)",border:`1px solid ${isJoined?"rgba(200,137,90,0.25)":"rgba(200,137,90,0.12)"}`,borderRadius:20,padding:"18px 20px",cursor:"pointer",transition:"all 0.2s",boxShadow:"0 2px 12px rgba(160,100,50,0.08)"}}
+            onClick={()=>{setActiveChallenge(c);setView("detail");}}>
+            <div style={{display:"flex",alignItems:"center",gap:14}}>
+              <div style={{width:52,height:52,borderRadius:16,background:`${c.color}15`,border:`1px solid ${c.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0}}>{c.icon}</div>
+              <div style={{flex:1}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                  <div style={{fontFamily:"'Lora',serif",fontSize:16,fontWeight:600,color:"#5a2e0e"}}>{c.title}</div>
+                  {done&&<span style={{fontSize:10,fontWeight:800,background:c.color,color:"white",padding:"2px 8px",borderRadius:10,textTransform:"uppercase"}}>Complete!</span>}
+                  {isJoined&&!done&&<span style={{fontSize:10,fontWeight:700,background:`${c.color}20`,color:c.color,padding:"2px 8px",borderRadius:10}}>In progress</span>}
+                </div>
+                <div style={{fontSize:12,color:"#b08060",lineHeight:1.4,marginBottom:isJoined?8:0}}>{c.desc}</div>
+                {isJoined&&(
+                  <div style={{background:"rgba(200,137,90,0.12)",borderRadius:10,height:5,overflow:"hidden"}}>
+                    <div style={{background:`linear-gradient(90deg,${c.color},${c.color}cc)`,height:"100%",width:`${(completed/c.duration)*100}%`,borderRadius:10,transition:"width 0.5s"}}/>
+                  </div>
+                )}
+              </div>
+              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0}}>
+                <span style={{fontSize:11,fontWeight:700,color:"#b08060"}}>{c.duration}d</span>
+                <span style={{fontSize:16,color:"#c8b896"}}>→</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
