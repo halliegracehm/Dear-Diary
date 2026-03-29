@@ -21,7 +21,43 @@ const HALLIE_PROMPTS = [
   {week:11,prompt:"Describe a moment recently when you felt truly like yourself.",note:"From Hallie 🌿"},
   {week:12,prompt:"What's the kindest thing you could do for yourself this week?",note:"From Hallie 🌿"},
 ];
-function getWeeklyHalliePrompt(){const w=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000));return HALLIE_PROMPTS[w%HALLIE_PROMPTS.length];}
+function getTimeGreeting(){
+  const h=new Date().getHours();
+  if(h>=5&&h<12)return{greeting:"Good morning, love. 🌸",sub:"What's stirring in you today?"};
+  if(h>=12&&h<17)return{greeting:"Hey, beautiful. 🌿",sub:"How's your heart doing this afternoon?"};
+  if(h>=17&&h<20)return{greeting:"Welcome back. 🍂",sub:"You made it through the day. How are you feeling?"};
+  return{greeting:"Hey you. 🌙",sub:"You made it through another day. That counts."};
+}
+
+const HALLIE_DESK_NOTES=[
+  "I've been thinking about how we apologize for taking up space even in our own journals. You don't have to do that here. Write messy. Write honest. Write like nobody's watching. 🌿",
+  "Something I keep coming back to: healing isn't linear, and neither is growth. Some weeks you'll write every day. Some weeks you won't. Both are okay. You're still in it either way. 💛",
+  "A gentle reminder that the entries that feel small — 'I was tired today. I made tea. I watched the rain.' — those are the ones you'll treasure most someday. Don't edit your life. Just write it. 🌿",
+  "I made this app because I needed it. A space that felt soft. That didn't rush me. That felt like a friend who actually listens. I hope it feels that way for you too. 💌",
+  "This week I want you to try writing without a prompt. Just open a new entry and see what comes out. The first sentence is always the hardest. After that, you'll surprise yourself. ✨",
+  "You are not behind. Not in your healing, not in your life, not in your journaling practice. You're exactly where you need to be. Now write about it. 🌸",
+  "Something I've learned: the feelings we avoid writing about are usually the ones that need the most space. What have you been skirting around lately? Today might be the day. 🌿",
+];
+function getWeeklyDeskNote(){const w=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000));return HALLIE_DESK_NOTES[w%HALLIE_DESK_NOTES.length];}
+
+function spawnConfetti(){
+  const emojis=["🌸","✨","🌿","💛","🌟","💫","🍃","🌺","⭐","💕"];
+  for(let i=0;i<18;i++){
+    setTimeout(()=>{
+      const el=document.createElement("div");
+      el.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+      el.style.cssText=`position:fixed;pointer-events:none;z-index:9999;font-size:${14+Math.random()*18}px;left:${10+Math.random()*80}%;top:${20+Math.random()*40}%;transition:all ${0.8+Math.random()*1}s ease-out;opacity:1;transform:translate(0,0) rotate(0deg)`;
+      document.body.appendChild(el);
+      requestAnimationFrame(()=>{
+        el.style.transform=`translate(${-80+Math.random()*160}px,${-120-Math.random()*120}px) rotate(${-180+Math.random()*360}deg)`;
+        el.style.opacity="0";
+      });
+      setTimeout(()=>el.remove(),2000);
+    },i*60);
+  }
+}
+
+
 
 async function sbQuery(path,options={}){
   const res=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json","Prefer":options.prefer||"return=representation",...options.headers},...options});
@@ -177,7 +213,7 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
   useEffect(()=>{loadEntries();loadAiPrompt();const recapKey=`myinnermind_recap_${new Date().toISOString().slice(0,7)}`;const lastRecap=sessionStorage.getItem(`myinnermind_lastrecap_${user.email}`);if(lastRecap!==recapKey){const now=new Date();if(now.getDate()<=3){setShowRecap(true);sessionStorage.setItem(`myinnermind_lastrecap_${user.email}`,recapKey);}}},[]);
   async function loadEntries(){setLoading(true);try{const data=await sbGet("entries",`user_email=eq.${encodeURIComponent(user.email)}&order=date.desc`);setEntries(Array.isArray(data)?data:[]);}catch{setEntries([]);}finally{setLoading(false);}}
   async function loadAiPrompt(){const cached=sessionStorage.getItem("myinnermindPrompt_"+getTodayStr());if(cached){setAiPrompt(cached);return;}setPromptLoading(true);try{const p=await getAIPrompt();setAiPrompt(p);sessionStorage.setItem("myinnermindPrompt_"+getTodayStr(),p);}catch{setAiPrompt("What is one small thing that brought you comfort today?");}finally{setPromptLoading(false);}}
-  async function saveEntry(){if(!form.title.trim()&&!form.content.trim())return;const thisMonth=getTodayStr().slice(0,7);const monthCount=entries.filter(e=>e.date?.startsWith(thisMonth)).length;if(user.plan==="free"&&monthCount>=30&&!form.id){alert("You've reached 30 entries this month — upgrade to Community for unlimited journaling! 🌿");return;}const entry={id:form.id||`${user.email}_${Date.now()}`,user_email:user.email,date:form.date,title:form.title,content:form.content,mood:form.mood,tags:form.tags,shared:form.shared,submit_to_feature:form.submitToFeature,author_name:user.username,updated_at:Date.now()};await sbUpsert("entries",entry);await loadEntries();setView("list");}
+  async function saveEntry(){if(!form.title.trim()&&!form.content.trim())return;const thisMonth=getTodayStr().slice(0,7);const monthCount=entries.filter(e=>e.date?.startsWith(thisMonth)).length;if(user.plan==="free"&&monthCount>=30&&!form.id){alert("You've reached 30 entries this month — upgrade to Community for unlimited journaling! 🌿");return;}const entry={id:form.id||`${user.email}_${Date.now()}`,user_email:user.email,date:form.date,title:form.title,content:form.content,mood:form.mood,tags:form.tags,shared:form.shared,submit_to_feature:form.submitToFeature,author_name:user.username,updated_at:Date.now()};await sbUpsert("entries",entry);await loadEntries();setView("list");if(!form.id)spawnConfetti();}
   async function deleteEntry(entry){await sbDelete("entries",`id=eq.${entry.id}`);await loadEntries();setView("list");}
   async function fetchInsight(entry){if(!isOTR)return;setInsight("");setInsightLoading(true);try{setInsight(await getAIInsight(entry));}catch{setInsight("Couldn't load insight right now.");}finally{setInsightLoading(false);}}
   function startNew(prefill=""){setForm({id:null,date:getTodayStr(),title:"",content:prefill,mood:null,tags:[],shared:false,submitToFeature:false});setEditMode(false);setView("write");}
@@ -211,12 +247,16 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
         {tab==="journal"&&view==="list"&&(
           <div style={{display:"flex",flexDirection:"column",gap:20}}>
             {showRecap&&<MonthlyRecap entries={entries} user={user} onDismiss={()=>setShowRecap(false)}/>}
+            {/* Time-aware greeting */}
+            {(()=>{const g=getTimeGreeting();return(<div style={{textAlign:"center",padding:"8px 0 4px"}}><div style={{fontFamily:"'Lora',serif",fontSize:22,color:T.accentDark,fontWeight:600,marginBottom:4}}>{g.greeting}</div><div style={{fontSize:13,color:T.subtext,fontStyle:"italic"}}>{g.sub}</div></div>);})()}
             <IntentionBanner user={user} onWrite={startNew} theme={T}/>
             {entries.length>0&&!loading&&<GentleNudge entries={entries} theme={T}/>}
             <MoodChart entries={entries} theme={T}/>
             <BadgesSection entries={entries} user={user} theme={T}/>
             {reward&&(<div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.12),rgba(200,137,90,0.08))",border:"1px solid rgba(245,158,11,0.3)",borderRadius:16,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:32}}>🔥</span><div style={{flex:1}}><div style={{fontWeight:700,color:"#92400e",fontSize:14}}>{reward.label} — {streak} days in a row!</div><div style={{fontSize:13,color:"#b45309",marginTop:3}}>Use code <strong>{reward.discount}</strong> for {reward.pct} off any gratitude journal at halliewho.com</div></div></div>)}
             <JournalingTimeBanner/>
+            {/* Hallie's Desk Note */}
+            <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(155,126,184,0.2)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🖊️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>From Hallie's Desk</span></div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:T.text,fontStyle:"italic",lineHeight:1.75,margin:0}}>{getWeeklyDeskNote()}</p></div>
             <div style={{...S.promptCard,background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.18)"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:18}}>💌</span><span style={{fontWeight:700,color:"#7a4a1e",fontSize:12,textTransform:"uppercase",letterSpacing:"0.6px"}}>Hallie's Prompt This Week</span></div><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.7,marginBottom:6}}>"{halliePrompt.prompt}"</p><div style={{fontSize:12,color:"#b08060",marginBottom:12}}>{halliePrompt.note}</div><button onClick={()=>startNew(halliePrompt.prompt)} style={S.softBtn}>Write to this →</button></div>
             <div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{flex:1,position:"relative"}}><span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",opacity:0.35,fontSize:15}}>🔍</span><input style={{...S.input,paddingLeft:38,width:"100%"}} placeholder="Search your entries..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}/></div>{isOTR&&<button onClick={()=>exportToPDF(entries,user.username)} style={S.ghostBtn}>📄 PDF</button>}<button onClick={()=>startNew()} style={S.newBtn}>+ New</button></div>
             <div style={{display:"flex",flexWrap:"wrap",gap:7}}><Chip active={!filterTag} onClick={()=>setFilterTag(null)}>All</Chip>{TAG_OPTIONS.map(t=><Chip key={t} active={filterTag===t} activeColor={TAG_COLORS[t]} onClick={()=>setFilterTag(filterTag===t?null:t)}>{t}</Chip>)}</div>
@@ -418,7 +458,8 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
 
       {communityView==="stories"&&<StoryOfTheMonth communityId={activeCommunity?.id} cfg={cfg}/>}
 
-      {communityView==="feed"&&<>{prompt&&(<div style={{margin:"0 16px 12px",background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px 18px",border:"1px solid rgba(200,137,90,0.15)",boxShadow:"0 2px 12px rgba(160,100,50,0.08)"}}><div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",fontWeight:700,marginBottom:8,color:cfg.color}}>✦ Today's Prompt</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:14,color:"#5a3a1a",lineHeight:1.7,marginBottom:12}}>"{prompt}"</p><button style={{background:"transparent",border:`1px solid ${cfg.color}`,borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",color:cfg.color}} onClick={()=>{setIsPromptMode(true);setNewPost("");}}>Answer this →</button></div>)}
+      {communityView==="feed"&&<>{/* Today's activity count */}
+      {posts.length>0&&<div style={{textAlign:"center",fontSize:12,color:"#b08060",fontStyle:"italic",padding:"4px 0 8px"}}>{posts.filter(p=>p.created_at?.startsWith(getTodayStr())).length>0?`${posts.filter(p=>p.created_at?.startsWith(getTodayStr())).length} ${posts.filter(p=>p.created_at?.startsWith(getTodayStr())).length===1?"person has":"people have"} shared here today 🌿`:""}</div>}{prompt&&(<div style={{margin:"0 16px 12px",background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px 18px",border:"1px solid rgba(200,137,90,0.15)",boxShadow:"0 2px 12px rgba(160,100,50,0.08)"}}><div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",fontWeight:700,marginBottom:8,color:cfg.color}}>✦ Today's Prompt</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:14,color:"#5a3a1a",lineHeight:1.7,marginBottom:12}}>"{prompt}"</p><button style={{background:"transparent",border:`1px solid ${cfg.color}`,borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",color:cfg.color}} onClick={()=>{setIsPromptMode(true);setNewPost("");}}>Answer this →</button></div>)}
       {hasAccess&&(<div style={{margin:"0 16px 12px",background:"rgba(255,252,246,0.97)",borderRadius:18,padding:"16px",boxShadow:"0 2px 16px rgba(160,100,50,0.1)",border:"1px solid rgba(200,137,90,0.15)"}}>
         {isPromptMode&&(<div style={{fontSize:11,color:"#c8895a",fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(200,137,90,0.07)",padding:"6px 10px",borderRadius:8}}>✦ Answering today's prompt<button style={{background:"none",border:"none",fontSize:12,color:"#b08060",cursor:"pointer"}} onClick={()=>setIsPromptMode(false)}>✕</button></div>)}
         <textarea style={{width:"100%",padding:"12px 14px",border:"1.5px solid rgba(200,137,90,0.2)",borderRadius:12,fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",resize:"none",outline:"none",lineHeight:1.7,marginBottom:10,background:"rgba(253,248,242,0.8)",boxSizing:"border-box",fontStyle:"italic"}} placeholder={isPromptMode?"Share your thoughts here...":"What's on your heart today?"} value={newPost} onChange={e=>setNewPost(e.target.value)} rows={3}/>
@@ -624,7 +665,7 @@ function ChallengesTab({entries, user, onWrite}) {
               "{todayPrompt.prompt}"
             </p>
             {!completedDays.includes(currentDay) ? (
-              <button onClick={()=>{markDayComplete(c.id, currentDay);onWrite(todayPrompt.prompt);}}
+              <button onClick={()=>{markDayComplete(c.id, currentDay);spawnConfetti();onWrite(todayPrompt.prompt);}}
                 style={{...S.saveBtn,background:`linear-gradient(135deg,${c.color}cc,${c.color})`}}>
                 Write Today's Entry →
               </button>
@@ -741,7 +782,10 @@ function PricingTab({currentPlan,userEmail,onUpgrade}){
 
 function EntryCard({entry,onClick,showAuthor}){
   const [hovered,setHovered]=useState(false);
-  return(<div style={{...S.card,cursor:onClick?"pointer":"default",transform:hovered?"translateY(-3px)":"",boxShadow:hovered?"0 10px 30px rgba(160,100,50,0.18)":"0 2px 12px rgba(160,100,50,0.10)"}} onClick={onClick} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}><div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><span style={{fontSize:11,color:"#b08060",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.3px"}}>{formatDate(entry.date)}</span><div style={{display:"flex",gap:5,alignItems:"center"}}>{entry.submit_to_feature&&<span style={{fontSize:11}}>🎙️</span>}{entry.shared&&<span style={{fontSize:11,opacity:0.5}}>🌿</span>}{entry.mood&&<span style={{fontSize:18}}>{entry.mood.emoji}</span>}</div></div>{showAuthor&&<div style={{fontSize:12,color:"#c8895a",fontWeight:700,marginBottom:4}}>by {entry.author_name}</div>}<h3 style={{fontFamily:"'Lora',serif",fontSize:17,color:"#5a2e0e",fontWeight:600,marginBottom:8,lineHeight:1.3}}>{entry.title||"Untitled"}</h3><p style={{fontSize:14,color:"#8a6040",lineHeight:1.65,fontStyle:"italic",fontFamily:"'Lora',serif"}}>{(entry.content||"").slice(0,110)}{(entry.content||"").length>110?"…":""}</p>{entry.tags?.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:10}}>{entry.tags.map(t=><TagPill key={t} tag={t}/>)}</div>}</div>);
+  const moodColor=entry.mood?.color;
+  const moodBg=moodColor?`linear-gradient(160deg,rgba(255,252,246,0.97) 0%,${moodColor}11 100%)`:"rgba(255,252,246,0.93)";
+  const moodBorder=moodColor?`1px solid ${moodColor}33`:"1px solid rgba(200,137,90,0.15)";
+  return(<div style={{...S.card,background:moodBg,border:moodBorder,cursor:onClick?"pointer":"default",transform:hovered?"translateY(-3px)":"",boxShadow:hovered?"0 10px 30px rgba(160,100,50,0.18)":"0 2px 12px rgba(160,100,50,0.10)"}} onClick={onClick} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}><div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><span style={{fontSize:11,color:"#b08060",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.3px"}}>{formatDate(entry.date)}</span><div style={{display:"flex",gap:5,alignItems:"center"}}>{entry.submit_to_feature&&<span style={{fontSize:11}}>🎙️</span>}{entry.shared&&<span style={{fontSize:11,opacity:0.5}}>🌿</span>}{entry.mood&&<span style={{fontSize:18}}>{entry.mood.emoji}</span>}</div></div>{showAuthor&&<div style={{fontSize:12,color:"#c8895a",fontWeight:700,marginBottom:4}}>by {entry.author_name}</div>}<h3 style={{fontFamily:"'Lora',serif",fontSize:17,color:"#5a2e0e",fontWeight:600,marginBottom:8,lineHeight:1.3}}>{entry.title||"Untitled"}</h3><p style={{fontSize:14,color:"#8a6040",lineHeight:1.65,fontStyle:"italic",fontFamily:"'Lora',serif"}}>{(entry.content||"").slice(0,110)}{(entry.content||"").length>110?"…":""}</p>{entry.tags?.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:10}}>{entry.tags.map(t=><TagPill key={t} tag={t}/>)}</div>}</div>);
 }
 
 function TagPill({tag}){return <span style={{padding:"3px 10px",borderRadius:12,fontSize:11,fontWeight:700,fontFamily:"'Nunito',sans-serif",letterSpacing:"0.3px",background:TAG_COLORS[tag]+"22",color:TAG_COLORS[tag],border:`1px solid ${TAG_COLORS[tag]}44`}}>{tag}</span>;}
