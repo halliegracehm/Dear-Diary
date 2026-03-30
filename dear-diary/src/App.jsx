@@ -40,8 +40,8 @@ const HALLIE_DESK_NOTES=[
 ];
 function getWeeklyDeskNote(){const w=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000));return HALLIE_DESK_NOTES[w%HALLIE_DESK_NOTES.length];}
 function getWeeklyHalliePrompt(){
-  const w = Math.ceil((new Date() - new Date(new Date().getFullYear(),0,1)) / (7*24*60*60*1000));
-  return HALLIE_PROMPTS[(w - 1) % HALLIE_PROMPTS.length];
+  const w=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000));
+  return HALLIE_PROMPTS[(w-1)%HALLIE_PROMPTS.length];
 }
 function spawnConfetti(){
   const emojis=["🌸","✨","🌿","💛","🌟","💫","🍃","🌺","⭐","💕"];
@@ -59,8 +59,6 @@ function spawnConfetti(){
     },i*60);
   }
 }
-
-
 
 async function sbQuery(path,options={}){
   const res=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json","Prefer":options.prefer||"return=representation",...options.headers},...options});
@@ -101,6 +99,14 @@ const COMMUNITY_TIER_ORDER={free:0,community:1,premium:2};
 const COMMUNITY_MOOD_TAGS=[{emoji:"🌸",label:"Blooming"},{emoji:"🌱",label:"Growing"},{emoji:"☁️",label:"Cloudy"},{emoji:"🔥",label:"Fired Up"},{emoji:"🌊",label:"Overwhelmed"},{emoji:"✨",label:"Grateful"},{emoji:"💪",label:"Strong"},{emoji:"🌙",label:"Tired"},{emoji:"😂",label:"Joyful"},{emoji:"🙏",label:"At Peace"}];
 const COMMUNITY_REACTIONS=["❤️","🙌","✨","🫂","💛","🌿"];
 const DAILY_PROMPTS={"daily-checkin":"How are you showing up today? What's on your heart right now?","gratitude":"Name three things — big or small — that you're grateful for today.","big-wins":"What's a win you had recently that you haven't celebrated yet?","healing":"What's one thing you're releasing this week?","morning":"What does your ideal morning look like? What did you do today?","anxiety":"What's something that's been living in your head rent-free? Let it out here.","manifesting":"Write it like it's already happened. What are you calling in?","motherhood":"What's a moment with your kid(s) recently that made your heart full?","single":"What's something you love about your life right now, just as it is?","career":"What are you building? What step are you taking this week?"};
+
+// ── NEW: 4 ambient sounds, all free ──
+const AMBIENT_SOUNDS=[
+  {id:"birds",name:"Birds Chirping",icon:"🐦",free:true,type:"birds"},
+  {id:"leaves",name:"Leaves Rustling",icon:"🍃",free:true,type:"leaves"},
+  {id:"waves",name:"Waves Crashing",icon:"🌊",free:true,type:"waves"},
+  {id:"static",name:"White Noise",icon:"📻",free:true,type:"static"},
+];
 
 export default function App() {
   const [screen,setScreen]=useState("splash");
@@ -250,7 +256,6 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
         {tab==="journal"&&view==="list"&&(
           <div style={{display:"flex",flexDirection:"column",gap:20}}>
             {showRecap&&<MonthlyRecap entries={entries} user={user} onDismiss={()=>setShowRecap(false)}/>}
-            {/* Time-aware greeting */}
             {(()=>{const g=getTimeGreeting();return(<div style={{textAlign:"center",padding:"8px 0 4px"}}><div style={{fontFamily:"'Lora',serif",fontSize:22,color:T.accentDark,fontWeight:600,marginBottom:4}}>{g.greeting}</div><div style={{fontSize:13,color:T.subtext,fontStyle:"italic"}}>{g.sub}</div></div>);})()}
             <IntentionBanner user={user} onWrite={startNew} theme={T}/>
             {entries.length>0&&!loading&&<GentleNudge entries={entries} theme={T}/>}
@@ -258,8 +263,7 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
             <BadgesSection entries={entries} user={user} theme={T}/>
             {reward&&(<div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.12),rgba(200,137,90,0.08))",border:"1px solid rgba(245,158,11,0.3)",borderRadius:16,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:32}}>🔥</span><div style={{flex:1}}><div style={{fontWeight:700,color:"#92400e",fontSize:14}}>{reward.label} — {streak} days in a row!</div><div style={{fontSize:13,color:"#b45309",marginTop:3}}>Use code <strong>{reward.discount}</strong> for {reward.pct} off any gratitude journal at halliewho.com</div></div></div>)}
             <JournalingTimeBanner/>
-            {/* Hallie's Desk Note */}
-            <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(155,126,184,0.2)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🖊️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>From Hallie's Desk</span></div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:T.text,fontStyle:"italic",lineHeight:1.75,margin:0}}>{getWeeklyDeskNote()}</p></div>
+            {/* Hallie's Prompt — stays on journal home */}
             <div style={{...S.promptCard,background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.18)"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:18}}>💌</span><span style={{fontWeight:700,color:"#7a4a1e",fontSize:12,textTransform:"uppercase",letterSpacing:"0.6px"}}>Hallie's Prompt This Week</span></div><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.7,marginBottom:6}}>"{halliePrompt.prompt}"</p><div style={{fontSize:12,color:"#b08060",marginBottom:12}}>{halliePrompt.note}</div><button onClick={()=>startNew(halliePrompt.prompt)} style={S.softBtn}>Write to this →</button></div>
             <div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{flex:1,position:"relative"}}><span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",opacity:0.35,fontSize:15}}>🔍</span><input style={{...S.input,paddingLeft:38,width:"100%"}} placeholder="Search your entries..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}/></div>{isOTR&&<button onClick={()=>exportToPDF(entries,user.username)} style={S.ghostBtn}>📄 PDF</button>}<button onClick={()=>startNew()} style={S.newBtn}>+ New</button></div>
             <div style={{display:"flex",flexWrap:"wrap",gap:7}}><Chip active={!filterTag} onClick={()=>setFilterTag(null)}>All</Chip>{TAG_OPTIONS.map(t=><Chip key={t} active={filterTag===t} activeColor={TAG_COLORS[t]} onClick={()=>setFilterTag(filterTag===t?null:t)}>{t}</Chip>)}</div>
@@ -307,7 +311,7 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
   );
 }
 
-// ── COMMUNITIES TAB (built right in) ──
+// ── COMMUNITIES TAB ──
 function CommunitiesTab({user,userTier="free",onUpgrade}){
   const [communities,setCommunities]=useState([]);
   const [activeCommunity,setActiveCommunity]=useState(null);
@@ -326,7 +330,7 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
   const userTierLevel=COMMUNITY_TIER_ORDER[userTier]??0;
   const [isAnon,setIsAnon]=useState(false);
   const [submitToMonth,setSubmitToMonth]=useState(false);
-  const [communityView,setCommunityView]=useState("feed"); // feed | stories
+  const [communityView,setCommunityView]=useState("feed");
   const userKey=user?.email||null;
 
   useEffect(()=>{loadCommunities();},[]);
@@ -462,8 +466,9 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
 
       {communityView==="stories"&&<StoryOfTheMonth communityId={activeCommunity?.id} cfg={cfg}/>}
 
-      {communityView==="feed"&&<>{/* Today's activity count */}
-      {posts.length>0&&<div style={{textAlign:"center",fontSize:12,color:"#b08060",fontStyle:"italic",padding:"4px 0 8px"}}>{posts.filter(p=>p.created_at?.startsWith(getTodayStr())).length>0?`${posts.filter(p=>p.created_at?.startsWith(getTodayStr())).length} ${posts.filter(p=>p.created_at?.startsWith(getTodayStr())).length===1?"person has":"people have"} shared here today 🌿`:""}</div>}{prompt&&(<div style={{margin:"0 16px 12px",background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px 18px",border:"1px solid rgba(200,137,90,0.15)",boxShadow:"0 2px 12px rgba(160,100,50,0.08)"}}><div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",fontWeight:700,marginBottom:8,color:cfg.color}}>✦ Today's Prompt</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:14,color:"#5a3a1a",lineHeight:1.7,marginBottom:12}}>"{prompt}"</p><button style={{background:"transparent",border:`1px solid ${cfg.color}`,borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",color:cfg.color}} onClick={()=>{setIsPromptMode(true);setNewPost("");}}>Answer this →</button></div>)}
+      {communityView==="feed"&&<>
+      {posts.length>0&&<div style={{textAlign:"center",fontSize:12,color:"#b08060",fontStyle:"italic",padding:"4px 0 8px"}}>{posts.filter(p=>p.created_at?.startsWith(getTodayStr())).length>0?`${posts.filter(p=>p.created_at?.startsWith(getTodayStr())).length} ${posts.filter(p=>p.created_at?.startsWith(getTodayStr())).length===1?"person has":"people have"} shared here today 🌿`:""}</div>}
+      {prompt&&(<div style={{margin:"0 16px 12px",background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px 18px",border:"1px solid rgba(200,137,90,0.15)",boxShadow:"0 2px 12px rgba(160,100,50,0.08)"}}><div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",fontWeight:700,marginBottom:8,color:cfg.color}}>✦ Today's Prompt</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:14,color:"#5a3a1a",lineHeight:1.7,marginBottom:12}}>"{prompt}"</p><button style={{background:"transparent",border:`1px solid ${cfg.color}`,borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",color:cfg.color}} onClick={()=>{setIsPromptMode(true);setNewPost("");}}>Answer this →</button></div>)}
       {hasAccess&&(<div style={{margin:"0 16px 12px",background:"rgba(255,252,246,0.97)",borderRadius:18,padding:"16px",boxShadow:"0 2px 16px rgba(160,100,50,0.1)",border:"1px solid rgba(200,137,90,0.15)"}}>
         {isPromptMode&&(<div style={{fontSize:11,color:"#c8895a",fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(200,137,90,0.07)",padding:"6px 10px",borderRadius:8}}>✦ Answering today's prompt<button style={{background:"none",border:"none",fontSize:12,color:"#b08060",cursor:"pointer"}} onClick={()=>setIsPromptMode(false)}>✕</button></div>)}
         <textarea style={{width:"100%",padding:"12px 14px",border:"1.5px solid rgba(200,137,90,0.2)",borderRadius:12,fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",resize:"none",outline:"none",lineHeight:1.7,marginBottom:10,background:"rgba(253,248,242,0.8)",boxSizing:"border-box",fontStyle:"italic"}} placeholder={isPromptMode?"Share your thoughts here...":"What's on your heart today?"} value={newPost} onChange={e=>setNewPost(e.target.value)} rows={3}/>
@@ -500,278 +505,79 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
   );
 }
 
-// ── CHALLENGES ──────────────────────────────────────────────────────────
-
+// ── CHALLENGES ──
 const MINI_CHALLENGES = [
-  {
-    id:"healing7", icon:"🌱", title:"7-Day Healing Series", duration:7, color:"#7a9e7e",
-    desc:"A gentle week of turning inward. Release, restore, and come back to yourself.",
-    days:[
-      {day:1,prompt:"What are you carrying right now that isn't yours to carry? Write it out and then write: I release this."},
-      {day:2,prompt:"Describe a wound that has taught you something beautiful. How did that pain shape you?"},
-      {day:3,prompt:"Write a letter to a younger version of yourself who needed to hear something they never got to hear."},
-      {day:4,prompt:"What does healing look like for you — not what it's supposed to look like, but what it actually feels like?"},
-      {day:5,prompt:"Who in your life makes you feel most like yourself? What do they see in you that you sometimes forget?"},
-      {day:6,prompt:"Name three ways you have grown in the last year that no one else would notice but you."},
-      {day:7,prompt:"Write yourself a blessing. Something you wish someone had said to you. Say it to yourself now."},
-    ]
-  },
-  {
-    id:"gratitude5", icon:"🙏", title:"5-Day Gratitude Reset", duration:5, color:"#c8895a",
-    desc:"Not toxic positivity — real, specific gratitude that rewires how you see your life.",
-    days:[
-      {day:1,prompt:"Write about something you almost missed today — a small moment that could have gone unnoticed but didn't."},
-      {day:2,prompt:"Who is someone in your life who shows up quietly? Write them a thank you they'll never see."},
-      {day:3,prompt:"What is something about your body you are grateful for today? Not how it looks — what it does."},
-      {day:4,prompt:"Write about a hard season that gave you something you wouldn't trade. What did difficulty teach you?"},
-      {day:5,prompt:"Write a love letter to your own life — exactly as it is right now, imperfect and in process."},
-    ]
-  },
-  {
-    id:"confidence10", icon:"🔥", title:"10-Day Confidence Builder", duration:10, color:"#c47c2a",
-    desc:"Call yourself back. Rebuild your belief in who you are and what you're capable of.",
-    days:[
-      {day:1,prompt:"Write about a time you did something that scared you. How did it feel on the other side?"},
-      {day:2,prompt:"What is something you are actually really good at that you rarely let yourself claim?"},
-      {day:3,prompt:"Write about a version of yourself you've been afraid to become. What's stopping you?"},
-      {day:4,prompt:"Describe your dream life in present tense — as if it's already happening. How does she live?"},
-      {day:5,prompt:"What would you do this week if you weren't afraid of what people thought?"},
-      {day:6,prompt:"Write about a compliment you've received that you dismissed. Receive it now."},
-      {day:7,prompt:"What are three things you've built, created, or overcome that prove you are more capable than you think?"},
-      {day:8,prompt:"What boundary would change your life if you set it? Write it out as a declaration."},
-      {day:9,prompt:"Who are you becoming? Describe her in detail. What does she believe about herself?"},
-      {day:10,prompt:"Write a manifesto for yourself. Five things you believe about who you are and what you deserve."},
-    ]
-  },
-  {
-    id:"letters7", icon:"💌", title:"7-Day Letters to Yourself", duration:7, color:"#9b7eb8",
-    desc:"One letter a day. To your past, your future, your fears, your dreams, your people.",
-    days:[
-      {day:1,prompt:"Write a letter to 16-year-old you. What did she need to know that no one told her?"},
-      {day:2,prompt:"Write a letter to the person you were a year ago. How far have you come since then?"},
-      {day:3,prompt:"Write a letter to your fear. Not to fight it — to understand it."},
-      {day:4,prompt:"Write a letter to someone you need to forgive — even if you're not ready. Just start."},
-      {day:5,prompt:"Write a letter to your future self five years from now. What do you hope she feels?"},
-      {day:6,prompt:"Write a letter to your body. Everything you've put it through and everything it's carried for you."},
-      {day:7,prompt:"Write a letter from your future self back to you — right now, today. What does she want you to know?"},
-    ]
-  },
-  {
-    id:"lettinggo5", icon:"🌊", title:"5-Day Letting Go", duration:5, color:"#5b8fa8",
-    desc:"Release what no longer serves you. Five days to lighten the load you've been carrying.",
-    days:[
-      {day:1,prompt:"What is the story about yourself that you keep telling — and is it actually true?"},
-      {day:2,prompt:"What relationship (past or present) are you still carrying? What would it feel like to set it down?"},
-      {day:3,prompt:"Write about a version of yourself you've outgrown. Say goodbye to her with love."},
-      {day:4,prompt:"What expectation — of yourself or your life — is causing you the most pain right now?"},
-      {day:5,prompt:"Write a release ritual. Everything you are choosing to leave in this season. Then write: I am free."},
-    ]
-  },
+  {id:"healing7",icon:"🌱",title:"7-Day Healing Series",duration:7,color:"#7a9e7e",desc:"A gentle week of turning inward. Release, restore, and come back to yourself.",days:[{day:1,prompt:"What are you carrying right now that isn't yours to carry? Write it out and then write: I release this."},{day:2,prompt:"Describe a wound that has taught you something beautiful. How did that pain shape you?"},{day:3,prompt:"Write a letter to a younger version of yourself who needed to hear something they never got to hear."},{day:4,prompt:"What does healing look like for you — not what it's supposed to look like, but what it actually feels like?"},{day:5,prompt:"Who in your life makes you feel most like yourself? What do they see in you that you sometimes forget?"},{day:6,prompt:"Name three ways you have grown in the last year that no one else would notice but you."},{day:7,prompt:"Write yourself a blessing. Something you wish someone had said to you. Say it to yourself now."}]},
+  {id:"gratitude5",icon:"🙏",title:"5-Day Gratitude Reset",duration:5,color:"#c8895a",desc:"Not toxic positivity — real, specific gratitude that rewires how you see your life.",days:[{day:1,prompt:"Write about something you almost missed today — a small moment that could have gone unnoticed but didn't."},{day:2,prompt:"Who is someone in your life who shows up quietly? Write them a thank you they'll never see."},{day:3,prompt:"What is something about your body you are grateful for today? Not how it looks — what it does."},{day:4,prompt:"Write about a hard season that gave you something you wouldn't trade. What did difficulty teach you?"},{day:5,prompt:"Write a love letter to your own life — exactly as it is right now, imperfect and in process."}]},
+  {id:"confidence10",icon:"🔥",title:"10-Day Confidence Builder",duration:10,color:"#c47c2a",desc:"Call yourself back. Rebuild your belief in who you are and what you're capable of.",days:[{day:1,prompt:"Write about a time you did something that scared you. How did it feel on the other side?"},{day:2,prompt:"What is something you are actually really good at that you rarely let yourself claim?"},{day:3,prompt:"Write about a version of yourself you've been afraid to become. What's stopping you?"},{day:4,prompt:"Describe your dream life in present tense — as if it's already happening. How does she live?"},{day:5,prompt:"What would you do this week if you weren't afraid of what people thought?"},{day:6,prompt:"Write about a compliment you've received that you dismissed. Receive it now."},{day:7,prompt:"What are three things you've built, created, or overcome that prove you are more capable than you think?"},{day:8,prompt:"What boundary would change your life if you set it? Write it out as a declaration."},{day:9,prompt:"Who are you becoming? Describe her in detail. What does she believe about herself?"},{day:10,prompt:"Write a manifesto for yourself. Five things you believe about who you are and what you deserve."}]},
+  {id:"letters7",icon:"💌",title:"7-Day Letters to Yourself",duration:7,color:"#9b7eb8",desc:"One letter a day. To your past, your future, your fears, your dreams, your people.",days:[{day:1,prompt:"Write a letter to 16-year-old you. What did she need to know that no one told her?"},{day:2,prompt:"Write a letter to the person you were a year ago. How far have you come since then?"},{day:3,prompt:"Write a letter to your fear. Not to fight it — to understand it."},{day:4,prompt:"Write a letter to someone you need to forgive — even if you're not ready. Just start."},{day:5,prompt:"Write a letter to your future self five years from now. What do you hope she feels?"},{day:6,prompt:"Write a letter to your body. Everything you've put it through and everything it's carried for you."},{day:7,prompt:"Write a letter from your future self back to you — right now, today. What does she want you to know?"}]},
+  {id:"lettinggo5",icon:"🌊",title:"5-Day Letting Go",duration:5,color:"#5b8fa8",desc:"Release what no longer serves you. Five days to lighten the load you've been carrying.",days:[{day:1,prompt:"What is the story about yourself that you keep telling — and is it actually true?"},{day:2,prompt:"What relationship (past or present) are you still carrying? What would it feel like to set it down?"},{day:3,prompt:"Write about a version of yourself you've outgrown. Say goodbye to her with love."},{day:4,prompt:"What expectation — of yourself or your life — is causing you the most pain right now?"},{day:5,prompt:"Write a release ritual. Everything you are choosing to leave in this season. Then write: I am free."}]},
 ];
 
-function ChallengesTab({entries, user, onWrite}) {
-  const [activeChallenge, setActiveChallenge] = useState(null);
-  const [joined, setJoined] = useState(()=>{
-    try { return JSON.parse(localStorage.getItem(`challenges_joined_${user.email}`) || '{}'); } catch { return {}; }
-  });
-  const [view, setView] = useState("list"); // list | detail
+function ChallengesTab({entries,user,onWrite}){
+  const [activeChallenge,setActiveChallenge]=useState(null);
+  const [joined,setJoined]=useState(()=>{try{return JSON.parse(localStorage.getItem(`challenges_joined_${user.email}`)||'{}');}catch{return{};}});
+  const [view,setView]=useState("list");
+  const thisMonth=new Date().toISOString().slice(0,7);
+  const monthEntries=entries.filter(e=>e.date?.startsWith(thisMonth));
+  const daysInMonth=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
+  const today=new Date().getDate();
+  const journaledDays=new Set(monthEntries.map(e=>new Date(e.date).getDate()));
+  function joinChallenge(id){const updated={...joined,[id]:{joinedDate:getTodayStr(),daysCompleted:[]}};setJoined(updated);localStorage.setItem(`challenges_joined_${user.email}`,JSON.stringify(updated));}
+  function getChallengeDay(id){if(!joined[id])return 0;const start=new Date(joined[id].joinedDate);const now=new Date();return Math.floor((now-start)/(24*60*60*1000))+1;}
+  function getCompletedDays(id){return joined[id]?.daysCompleted||[];}
+  function markDayComplete(challengeId,day){const updated={...joined,[challengeId]:{...joined[challengeId],daysCompleted:[...new Set([...(joined[challengeId]?.daysCompleted||[]),day])]}};setJoined(updated);localStorage.setItem(`challenges_joined_${user.email}`,JSON.stringify(updated));}
 
-  const thisMonth = new Date().toISOString().slice(0,7);
-  const monthEntries = entries.filter(e=>e.date?.startsWith(thisMonth));
-  const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth()+1, 0).getDate();
-  const today = new Date().getDate();
-  const journaledDays = new Set(monthEntries.map(e=>new Date(e.date).getDate()));
-
-  function joinChallenge(id) {
-    const updated = {...joined, [id]: { joinedDate: getTodayStr(), daysCompleted: [] }};
-    setJoined(updated);
-    localStorage.setItem(`challenges_joined_${user.email}`, JSON.stringify(updated));
-  }
-
-  function getChallengeDay(id) {
-    if (!joined[id]) return 0;
-    const start = new Date(joined[id].joinedDate);
-    const now = new Date();
-    return Math.floor((now - start) / (24*60*60*1000)) + 1;
-  }
-
-  function getCompletedDays(id) {
-    return joined[id]?.daysCompleted || [];
-  }
-
-  function markDayComplete(challengeId, day) {
-    const updated = {
-      ...joined,
-      [challengeId]: {
-        ...joined[challengeId],
-        daysCompleted: [...new Set([...(joined[challengeId]?.daysCompleted||[]), day])]
-      }
-    };
-    setJoined(updated);
-    localStorage.setItem(`challenges_joined_${user.email}`, JSON.stringify(updated));
-  }
-
-  if (view === "detail" && activeChallenge) {
-    const c = activeChallenge;
-    const isJoined = !!joined[c.id];
-    const currentDay = Math.min(getChallengeDay(c.id), c.duration);
-    const completedDays = getCompletedDays(c.id);
-    const todayPrompt = c.days[currentDay - 1];
-    const progress = completedDays.length / c.duration;
-
-    return (
+  if(view==="detail"&&activeChallenge){
+    const c=activeChallenge;
+    const isJoined=!!joined[c.id];
+    const currentDay=Math.min(getChallengeDay(c.id),c.duration);
+    const completedDays=getCompletedDays(c.id);
+    const todayPrompt=c.days[currentDay-1];
+    const progress=completedDays.length/c.duration;
+    return(
       <div style={{display:"flex",flexDirection:"column",gap:16}}>
         <button onClick={()=>{setView("list");setActiveChallenge(null);}} style={{...S.ghostBtn,alignSelf:"flex-start"}}>← Challenges</button>
-
         <div style={{background:`linear-gradient(135deg,${c.color}15,${c.color}05)`,border:`1px solid ${c.color}30`,borderRadius:24,padding:"24px"}}>
           <div style={{fontSize:40,marginBottom:8}}>{c.icon}</div>
           <h2 style={{fontFamily:"'Lora',serif",fontSize:24,color:"#5a2e0e",marginBottom:6,fontWeight:600}}>{c.title}</h2>
           <p style={{fontSize:14,color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif",lineHeight:1.6,marginBottom:16}}>{c.desc}</p>
-
-          {/* Progress bar */}
-          {isJoined && (
-            <div style={{marginBottom:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#b08060",marginBottom:6}}>
-                <span>Day {currentDay} of {c.duration}</span>
-                <span>{completedDays.length} completed</span>
-              </div>
-              <div style={{background:"rgba(200,137,90,0.15)",borderRadius:20,height:8,overflow:"hidden"}}>
-                <div style={{background:`linear-gradient(90deg,${c.color},${c.color}cc)`,height:"100%",width:`${progress*100}%`,borderRadius:20,transition:"width 0.5s"}}/>
-              </div>
-            </div>
-          )}
-
-          {/* Day dots */}
-          {isJoined && (
-            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
-              {c.days.map(d=>(
-                <div key={d.day} style={{width:32,height:32,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,background:completedDays.includes(d.day)?c.color:d.day===currentDay?"rgba(200,137,90,0.15)":"rgba(200,137,90,0.06)",color:completedDays.includes(d.day)?"white":d.day===currentDay?"#7a4a1e":"#b08060",border:`1px solid ${completedDays.includes(d.day)?c.color:d.day===currentDay?"#c8895a":"rgba(200,137,90,0.2)"}`}}>
-                  {completedDays.includes(d.day) ? "✓" : d.day}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {!isJoined && (
-            <button onClick={()=>joinChallenge(c.id)} style={{...S.saveBtn,background:`linear-gradient(135deg,${c.color}cc,${c.color})`}}>
-              Start This Challenge →
-            </button>
-          )}
+          {isJoined&&(<div style={{marginBottom:16}}><div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#b08060",marginBottom:6}}><span>Day {currentDay} of {c.duration}</span><span>{completedDays.length} completed</span></div><div style={{background:"rgba(200,137,90,0.15)",borderRadius:20,height:8,overflow:"hidden"}}><div style={{background:`linear-gradient(90deg,${c.color},${c.color}cc)`,height:"100%",width:`${progress*100}%`,borderRadius:20,transition:"width 0.5s"}}/></div></div>)}
+          {isJoined&&(<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>{c.days.map(d=>(<div key={d.day} style={{width:32,height:32,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,background:completedDays.includes(d.day)?c.color:d.day===currentDay?"rgba(200,137,90,0.15)":"rgba(200,137,90,0.06)",color:completedDays.includes(d.day)?"white":d.day===currentDay?"#7a4a1e":"#b08060",border:`1px solid ${completedDays.includes(d.day)?c.color:d.day===currentDay?"#c8895a":"rgba(200,137,90,0.2)"}`}}>{completedDays.includes(d.day)?"✓":d.day}</div>))}</div>)}
+          {!isJoined&&(<button onClick={()=>joinChallenge(c.id)} style={{...S.saveBtn,background:`linear-gradient(135deg,${c.color}cc,${c.color})`}}>Start This Challenge →</button>)}
         </div>
-
-        {/* Today's prompt */}
-        {isJoined && todayPrompt && (
-          <div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:20,padding:"22px"}}>
-            <div style={{fontSize:11,fontWeight:700,color:c.color,textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:10}}>
-              {completedDays.includes(currentDay) ? "✓ Day " + currentDay + " Complete" : "✦ Day " + currentDay + " — Today's Prompt"}
-            </div>
-            <p style={{fontFamily:"'Lora',serif",fontSize:17,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,marginBottom:16}}>
-              "{todayPrompt.prompt}"
-            </p>
-            {!completedDays.includes(currentDay) ? (
-              <button onClick={()=>{markDayComplete(c.id, currentDay);spawnConfetti();onWrite(todayPrompt.prompt);}}
-                style={{...S.saveBtn,background:`linear-gradient(135deg,${c.color}cc,${c.color})`}}>
-                Write Today's Entry →
-              </button>
-            ) : (
-              <div style={{display:"flex",alignItems:"center",gap:8,color:c.color,fontSize:14,fontWeight:600}}>
-                <span>✓</span><span>You wrote today. Come back tomorrow. 🌿</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* All prompts preview */}
-        <div>
-          <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>All {c.duration} Days</div>
-          {c.days.map(d=>(
-            <div key={d.day} style={{background:"rgba(255,252,246,0.9)",border:`1px solid ${completedDays.includes(d.day)?"rgba(200,137,90,0.3)":"rgba(200,137,90,0.12)"}`,borderRadius:14,padding:"14px 16px",marginBottom:8,display:"flex",gap:12,alignItems:"flex-start",opacity:isJoined&&d.day>currentDay?0.5:1}}>
-              <div style={{width:28,height:28,borderRadius:"50%",background:completedDays.includes(d.day)?c.color:"rgba(200,137,90,0.1)",color:completedDays.includes(d.day)?"white":"#b08060",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>
-                {completedDays.includes(d.day)?"✓":d.day}
-              </div>
-              <p style={{fontFamily:"'Lora',serif",fontSize:13,color:"#6a4020",fontStyle:"italic",lineHeight:1.6,margin:0}}>{d.prompt}</p>
-            </div>
-          ))}
-        </div>
+        {isJoined&&todayPrompt&&(<div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:20,padding:"22px"}}><div style={{fontSize:11,fontWeight:700,color:c.color,textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:10}}>{completedDays.includes(currentDay)?"✓ Day "+currentDay+" Complete":"✦ Day "+currentDay+" — Today's Prompt"}</div><p style={{fontFamily:"'Lora',serif",fontSize:17,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,marginBottom:16}}>"{todayPrompt.prompt}"</p>{!completedDays.includes(currentDay)?(<button onClick={()=>{markDayComplete(c.id,currentDay);spawnConfetti();onWrite(todayPrompt.prompt);}} style={{...S.saveBtn,background:`linear-gradient(135deg,${c.color}cc,${c.color})`}}>Write Today's Entry →</button>):(<div style={{display:"flex",alignItems:"center",gap:8,color:c.color,fontSize:14,fontWeight:600}}><span>✓</span><span>You wrote today. Come back tomorrow. 🌿</span></div>)}</div>)}
+        <div><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>All {c.duration} Days</div>{c.days.map(d=>(<div key={d.day} style={{background:"rgba(255,252,246,0.9)",border:`1px solid ${completedDays.includes(d.day)?"rgba(200,137,90,0.3)":"rgba(200,137,90,0.12)"}`,borderRadius:14,padding:"14px 16px",marginBottom:8,display:"flex",gap:12,alignItems:"flex-start",opacity:isJoined&&d.day>currentDay?0.5:1}}><div style={{width:28,height:28,borderRadius:"50%",background:completedDays.includes(d.day)?c.color:"rgba(200,137,90,0.1)",color:completedDays.includes(d.day)?"white":"#b08060",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{completedDays.includes(d.day)?"✓":d.day}</div><p style={{fontFamily:"'Lora',serif",fontSize:13,color:"#6a4020",fontStyle:"italic",lineHeight:1.6,margin:0}}>{d.prompt}</p></div>))}</div>
       </div>
     );
   }
 
-  return (
+  return(
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
-      <div>
-        <h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🏆 Challenges</h2>
-        <p style={{color:"#b08060",fontSize:13,marginTop:4,fontStyle:"italic"}}>Push a little deeper. Grow a little more.</p>
-      </div>
-
-      {/* Monthly streak challenge */}
+      <div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🏆 Challenges</h2><p style={{color:"#b08060",fontSize:13,marginTop:4,fontStyle:"italic"}}>Push a little deeper. Grow a little more.</p></div>
       <div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(245,158,11,0.25)",borderRadius:22,padding:"22px"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
-          <span style={{fontSize:32}}>🔥</span>
-          <div>
-            <div style={{fontFamily:"'Lora',serif",fontSize:18,fontWeight:600,color:"#5a2e0e"}}>Monthly Streak Challenge</div>
-            <div style={{fontSize:12,color:"#b08060",marginTop:2}}>Journal every day this month — keep the chain alive</div>
-          </div>
-        </div>
-
-        {/* Calendar grid */}
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}><span style={{fontSize:32}}>🔥</span><div><div style={{fontFamily:"'Lora',serif",fontSize:18,fontWeight:600,color:"#5a2e0e"}}>Monthly Streak Challenge</div><div style={{fontSize:12,color:"#b08060",marginTop:2}}>Journal every day this month — keep the chain alive</div></div></div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:12}}>
-          {["S","M","T","W","T","F","S"].map((d,i)=>(
-            <div key={i} style={{textAlign:"center",fontSize:10,color:"#b08060",fontWeight:700,padding:"2px 0"}}>{d}</div>
-          ))}
-          {/* Empty cells for start of month */}
-          {Array.from({length: new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay()}).map((_,i)=>(
-            <div key={`empty-${i}`}/>
-          ))}
-          {Array.from({length: daysInMonth}).map((_,i)=>{
-            const day = i+1;
-            const done = journaledDays.has(day);
-            const isToday = day === today;
-            const future = day > today;
-            return(
-              <div key={day} style={{aspectRatio:"1",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:done?"#c8895a":isToday?"rgba(200,137,90,0.15)":future?"rgba(200,137,90,0.04)":"rgba(200,137,90,0.08)",color:done?"white":isToday?"#7a4a1e":"#b08060",border:isToday?"1px solid #c8895a":"1px solid transparent"}}>
-                {done?"✓":day}
-              </div>
-            );
-          })}
+          {["S","M","T","W","T","F","S"].map((d,i)=>(<div key={i} style={{textAlign:"center",fontSize:10,color:"#b08060",fontWeight:700,padding:"2px 0"}}>{d}</div>))}
+          {Array.from({length:new Date(new Date().getFullYear(),new Date().getMonth(),1).getDay()}).map((_,i)=>(<div key={`empty-${i}`}/>))}
+          {Array.from({length:daysInMonth}).map((_,i)=>{const day=i+1;const done=journaledDays.has(day);const isToday=day===today;const future=day>today;return(<div key={day} style={{aspectRatio:"1",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:done?"#c8895a":isToday?"rgba(200,137,90,0.15)":future?"rgba(200,137,90,0.04)":"rgba(200,137,90,0.08)",color:done?"white":isToday?"#7a4a1e":"#b08060",border:isToday?"1px solid #c8895a":"1px solid transparent"}}>{done?"✓":day}</div>);})}
         </div>
-        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#b08060"}}>
-          <span>🔥 {calcStreak(entries)} day streak</span>
-          <span>{journaledDays.size}/{today} days this month</span>
-        </div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#b08060"}}><span>🔥 {calcStreak(entries)} day streak</span><span>{journaledDays.size}/{today} days this month</span></div>
       </div>
-
-      {/* Mini challenges */}
       <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px"}}>Themed Challenges</div>
       {MINI_CHALLENGES.map(c=>{
-        const isJoined = !!joined[c.id];
-        const completed = getCompletedDays(c.id).length;
-        const done = completed >= c.duration;
-        return(
-          <div key={c.id} style={{background:"rgba(255,252,246,0.95)",border:`1px solid ${isJoined?"rgba(200,137,90,0.25)":"rgba(200,137,90,0.12)"}`,borderRadius:20,padding:"18px 20px",cursor:"pointer",transition:"all 0.2s",boxShadow:"0 2px 12px rgba(160,100,50,0.08)"}}
-            onClick={()=>{setActiveChallenge(c);setView("detail");}}>
-            <div style={{display:"flex",alignItems:"center",gap:14}}>
-              <div style={{width:52,height:52,borderRadius:16,background:`${c.color}15`,border:`1px solid ${c.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0}}>{c.icon}</div>
-              <div style={{flex:1}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
-                  <div style={{fontFamily:"'Lora',serif",fontSize:16,fontWeight:600,color:"#5a2e0e"}}>{c.title}</div>
-                  {done&&<span style={{fontSize:10,fontWeight:800,background:c.color,color:"white",padding:"2px 8px",borderRadius:10,textTransform:"uppercase"}}>Complete!</span>}
-                  {isJoined&&!done&&<span style={{fontSize:10,fontWeight:700,background:`${c.color}20`,color:c.color,padding:"2px 8px",borderRadius:10}}>In progress</span>}
-                </div>
-                <div style={{fontSize:12,color:"#b08060",lineHeight:1.4,marginBottom:isJoined?8:0}}>{c.desc}</div>
-                {isJoined&&(
-                  <div style={{background:"rgba(200,137,90,0.12)",borderRadius:10,height:5,overflow:"hidden"}}>
-                    <div style={{background:`linear-gradient(90deg,${c.color},${c.color}cc)`,height:"100%",width:`${(completed/c.duration)*100}%`,borderRadius:10,transition:"width 0.5s"}}/>
-                  </div>
-                )}
-              </div>
-              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0}}>
-                <span style={{fontSize:11,fontWeight:700,color:"#b08060"}}>{c.duration}d</span>
-                <span style={{fontSize:16,color:"#c8b896"}}>→</span>
-              </div>
+        const isJoined=!!joined[c.id];const completed=getCompletedDays(c.id).length;const done=completed>=c.duration;
+        return(<div key={c.id} style={{background:"rgba(255,252,246,0.95)",border:`1px solid ${isJoined?"rgba(200,137,90,0.25)":"rgba(200,137,90,0.12)"}`,borderRadius:20,padding:"18px 20px",cursor:"pointer",transition:"all 0.2s",boxShadow:"0 2px 12px rgba(160,100,50,0.08)"}} onClick={()=>{setActiveChallenge(c);setView("detail");}}>
+          <div style={{display:"flex",alignItems:"center",gap:14}}>
+            <div style={{width:52,height:52,borderRadius:16,background:`${c.color}15`,border:`1px solid ${c.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0}}>{c.icon}</div>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}><div style={{fontFamily:"'Lora',serif",fontSize:16,fontWeight:600,color:"#5a2e0e"}}>{c.title}</div>{done&&<span style={{fontSize:10,fontWeight:800,background:c.color,color:"white",padding:"2px 8px",borderRadius:10,textTransform:"uppercase"}}>Complete!</span>}{isJoined&&!done&&<span style={{fontSize:10,fontWeight:700,background:`${c.color}20`,color:c.color,padding:"2px 8px",borderRadius:10}}>In progress</span>}</div>
+              <div style={{fontSize:12,color:"#b08060",lineHeight:1.4,marginBottom:isJoined?8:0}}>{c.desc}</div>
+              {isJoined&&(<div style={{background:"rgba(200,137,90,0.12)",borderRadius:10,height:5,overflow:"hidden"}}><div style={{background:`linear-gradient(90deg,${c.color},${c.color}cc)`,height:"100%",width:`${(completed/c.duration)*100}%`,borderRadius:10,transition:"width 0.5s"}}/></div>)}
             </div>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0}}><span style={{fontSize:11,fontWeight:700,color:"#b08060"}}>{c.duration}d</span><span style={{fontSize:16,color:"#c8b896"}}>→</span></div>
           </div>
-        );
+        </div>);
       })}
     </div>
   );
@@ -815,7 +621,47 @@ function MonthlyRecap({entries,user,onDismiss}){const now=new Date();const lastM
 
 function IntentionBanner({user,onWrite}){const weekKey=`intention_${user.email}_${Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000))}`;const [intention,setIntention]=useState(()=>localStorage.getItem(weekKey)||"");const [editing,setEditing]=useState(false);const [draft,setDraft]=useState("");function save(){localStorage.setItem(weekKey,draft);setIntention(draft);setEditing(false);}if(editing)return(<div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:20,padding:"20px 24px"}}><div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🎯 This Week's Intention</div><input style={{width:"100%",padding:"10px 14px",borderRadius:12,border:"1px solid rgba(155,126,184,0.3)",background:"rgba(255,255,255,0.8)",fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",outline:"none",marginBottom:12,boxSizing:"border-box"}} placeholder="I intend to..." value={draft} onChange={e=>setDraft(e.target.value)} autoFocus onKeyDown={e=>e.key==="Enter"&&save()}/><div style={{display:"flex",gap:8}}><button onClick={()=>setEditing(false)} style={{background:"none",border:"1px solid rgba(155,126,184,0.3)",borderRadius:14,padding:"7px 16px",color:"#9b7eb8",fontFamily:"'Nunito',sans-serif",fontSize:13,cursor:"pointer"}}>Cancel</button><button onClick={save} style={{background:"#9b7eb8",border:"none",borderRadius:14,padding:"7px 20px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Set Intention ✓</button></div></div>);return(<div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:20,padding:"18px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div style={{flex:1}}><div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:4}}>🎯 This Week's Intention</div>{intention?<p style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",fontStyle:"italic"}}>{intention}</p>:<p style={{fontSize:13,color:"#b08060"}}>Set an intention for this week — something to come back to.</p>}</div><button onClick={()=>{setDraft(intention);setEditing(true);}} style={{background:"rgba(155,126,184,0.15)",border:"1px solid rgba(155,126,184,0.3)",borderRadius:14,padding:"7px 14px",color:"#9b7eb8",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{intention?"Edit":"Set →"}</button></div>);}
 
-function JourneyTab({entries,user}){const streak=calcStreak(entries);const thisMonth=new Date().toISOString().slice(0,7);const monthEntries=entries.filter(e=>e.date?.startsWith(thisMonth));const topMood=(()=>{const counts={};entries.forEach(e=>{if(e.mood?.label)counts[e.mood.label]=(counts[e.mood.label]||0)+1;});const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];return top?MOODS.find(m=>m.label===top[0]):null;})();return(<div style={{display:"flex",flexDirection:"column",gap:20}}><div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🌱 My Journey</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Your growth, all in one place</p></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:14}}>{[{icon:"📖",label:"Total Entries",value:entries.length},{icon:"🔥",label:"Current Streak",value:`${streak}d`},{icon:"📅",label:"This Month",value:monthEntries.length},{icon:"💭",label:"Top Mood",value:topMood?`${topMood.emoji} ${topMood.label}`:"—"}].map(s=>(<div key={s.label} style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:18,padding:"18px",textAlign:"center"}}><div style={{fontSize:26,marginBottom:6}}>{s.icon}</div><div style={{fontSize:22,fontWeight:800,color:"#7a4a1e",fontFamily:"'Lora',serif"}}>{s.value}</div><div style={{fontSize:11,color:"#b08060",marginTop:3,textTransform:"uppercase",letterSpacing:"0.4px"}}>{s.label}</div></div>))}</div><MoodChart entries={entries}/><GrowthTree entries={entries}/><BadgesSection entries={entries} user={user}/><div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:20,padding:"20px 24px"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>This Month at a Glance</div><div style={{display:"flex",flexWrap:"wrap",gap:10}}>{(()=>{const tagCounts={};monthEntries.forEach(e=>e.tags?.forEach(t=>{tagCounts[t]=(tagCounts[t]||0)+1;}));return Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([tag,count])=>(<div key={tag} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:TAG_COLORS[tag]+"22",border:`1px solid ${TAG_COLORS[tag]}44`,borderRadius:12}}><span style={{fontSize:12,fontWeight:700,color:TAG_COLORS[tag]}}>{tag}</span><span style={{fontSize:11,color:"#b08060"}}>×{count}</span></div>));})()}{monthEntries.length===0&&<p style={{fontSize:13,color:"#b08060",fontStyle:"italic"}}>No entries yet this month — start writing! 🌱</p>}</div></div></div>);}
+// ── JOURNEY TAB — now includes Hallie's Desk Note ──
+function JourneyTab({entries,user}){
+  const streak=calcStreak(entries);
+  const thisMonth=new Date().toISOString().slice(0,7);
+  const monthEntries=entries.filter(e=>e.date?.startsWith(thisMonth));
+  const topMood=(()=>{const counts={};entries.forEach(e=>{if(e.mood?.label)counts[e.mood.label]=(counts[e.mood.label]||0)+1;});const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];return top?MOODS.find(m=>m.label===top[0]):null;})();
+
+  // "On this day" — entry from exactly 1 year ago
+  const oneYearAgo=new Date();oneYearAgo.setFullYear(oneYearAgo.getFullYear()-1);
+  const oneYearAgoStr=oneYearAgo.toISOString().split("T")[0];
+  const onThisDay=entries.find(e=>e.date===oneYearAgoStr);
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+      <div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🌱 My Journey</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Your growth, all in one place</p></div>
+
+      {/* Hallie's Desk Note — moved here from journal home */}
+      <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(155,126,184,0.2)",borderRadius:18,padding:"18px 20px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🖊️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>A note for your journey</span></div>
+        <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,margin:0}}>{getWeeklyDeskNote()}</p>
+        <p style={{fontSize:11,color:"#b08060",marginTop:8}}>— Hallie 🌿</p>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:14}}>{[{icon:"📖",label:"Total Entries",value:entries.length},{icon:"🔥",label:"Current Streak",value:`${streak}d`},{icon:"📅",label:"This Month",value:monthEntries.length},{icon:"💭",label:"Top Mood",value:topMood?`${topMood.emoji} ${topMood.label}`:"—"}].map(s=>(<div key={s.label} style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:18,padding:"18px",textAlign:"center"}}><div style={{fontSize:26,marginBottom:6}}>{s.icon}</div><div style={{fontSize:22,fontWeight:800,color:"#7a4a1e",fontFamily:"'Lora',serif"}}>{s.value}</div><div style={{fontSize:11,color:"#b08060",marginTop:3,textTransform:"uppercase",letterSpacing:"0.4px"}}>{s.label}</div></div>))}</div>
+
+      {/* On this day */}
+      {onThisDay&&(
+        <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:18,padding:"18px 20px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🗓️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>On this day, one year ago</span></div>
+          <p style={{fontFamily:"'Lora',serif",fontSize:15,fontWeight:600,color:"#5a2e0e",marginBottom:6}}>{onThisDay.title||"Untitled"}</p>
+          <p style={{fontFamily:"'Lora',serif",fontSize:13,color:"#7a5030",fontStyle:"italic",lineHeight:1.65}}>{(onThisDay.content||"").slice(0,160)}{(onThisDay.content||"").length>160?"…":""}</p>
+        </div>
+      )}
+
+      <MoodChart entries={entries}/>
+      <GrowthTree entries={entries}/>
+      <BadgesSection entries={entries} user={user}/>
+      <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:20,padding:"20px 24px"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>This Month at a Glance</div><div style={{display:"flex",flexWrap:"wrap",gap:10}}>{(()=>{const tagCounts={};monthEntries.forEach(e=>e.tags?.forEach(t=>{tagCounts[t]=(tagCounts[t]||0)+1;}));return Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([tag,count])=>(<div key={tag} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:TAG_COLORS[tag]+"22",border:`1px solid ${TAG_COLORS[tag]}44`,borderRadius:12}}><span style={{fontSize:12,fontWeight:700,color:TAG_COLORS[tag]}}>{tag}</span><span style={{fontSize:11,color:"#b08060"}}>×{count}</span></div>));})()}{monthEntries.length===0&&<p style={{fontSize:13,color:"#b08060",fontStyle:"italic"}}>No entries yet this month — start writing! 🌱</p>}</div></div>
+    </div>
+  );
+}
 
 function GentleNudge({entries,theme}){const T=theme||THEMES.original;const [dismissed,setDismissed]=useState(false);if(dismissed)return null;const lastEntry=entries[0];if(!lastEntry)return null;const daysSince=Math.floor((Date.now()-new Date(lastEntry.date).getTime())/(24*60*60*1000));if(daysSince<5)return null;return(<div style={{background:`linear-gradient(135deg,${T.accent}10,${T.accent}06)`,border:`1px dashed ${T.accent}40`,borderRadius:18,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:28}}>🌱</span><div style={{flex:1}}><div style={{fontWeight:700,color:T.accentDark,fontSize:14}}>We've missed you</div><div style={{fontSize:13,color:T.subtext,marginTop:2}}>It's been {daysSince} days since your last entry. No pressure — just here when you're ready. 🌿</div></div><button onClick={()=>setDismissed(true)} style={{background:"none",border:"none",color:T.subtext,fontSize:18,cursor:"pointer",padding:4}}>×</button></div>);}
 
@@ -827,11 +673,146 @@ function ProfileMenu({user,theme,T,onLogout,onTheme,onUpgradeTab}){const [open,s
 
 const WEEKLY_BREATHWORK=[{id:"box",name:"Box Breathing",desc:"Calm your nervous system",inhale:4,hold1:4,exhale:4,hold2:4,cycles:4,color:"#7a8c6e"},{id:"478",name:"4-7-8 Breathing",desc:"For sleep & deep calm",inhale:4,hold1:7,exhale:8,hold2:0,cycles:3,color:"#9b7eb8"},{id:"belly",name:"Belly Breathing",desc:"Deep grounding breath",inhale:5,hold1:2,exhale:6,hold2:1,cycles:4,color:"#c8895a"},{id:"reset",name:"Quick Reset",desc:"1-minute instant calm",inhale:3,hold1:1,exhale:5,hold2:0,cycles:5,color:"#5b8fa8"}];
 const MEDITATIONS=[{id:"return",name:"Return to Calm",duration:"2 min",free:true,steps:["Find a comfortable position and gently close your eyes.","Take a slow breath in through your nose... and release it through your mouth.","Notice where your body is holding tension right now. Just notice — no need to fix anything.","With your next exhale, imagine that tension softening. Just a little.","You are safe in this moment. Nothing needs your attention right now.","Breathe in what you need... breathe out what you don't.","Rest here for a moment. You are allowed to simply be.","When you're ready, slowly open your eyes. Carry this calm with you."]},{id:"morning",name:"Morning Intention",duration:"2 min",free:false,steps:["Begin your day by arriving fully in your body.","Take three deep breaths before you do anything else.","Ask yourself: what do I want to feel today?","Not what you want to accomplish — how you want to feel.","Let that feeling settle into your chest like warmth.","You get to choose your energy today, even when things feel uncertain.","Set one gentle intention. Just one. Something that honors you.","Carry it like a quiet thread through your whole day."]},{id:"release",name:"Let It Go",duration:"2 min",free:false,steps:["Think of one thing you've been holding onto today.","It could be a worry, a conversation, a feeling — anything weighing on you.","Breathe it in fully. Really acknowledge it.","Now with your exhale, imagine placing it down. Not throwing it away — just setting it down.","You don't have to carry everything all the time.","Some things aren't yours to solve tonight.","Breathe in peace. Breathe out weight.","You are lighter than you think. Rest now."]}];
-const AMBIENT_SOUNDS=[{id:"rain",name:"Soft Rain",icon:"🌧️",free:true,type:"rain"},{id:"forest",name:"Forest",icon:"🌲",free:true,type:"forest"},{id:"piano",name:"Gentle Piano",icon:"🎹",free:true,type:"piano"},{id:"ocean",name:"Ocean Waves",icon:"🌊",free:true,type:"ocean"},{id:"fire",name:"Fireplace",icon:"🔥",free:false,type:"fire"},{id:"cafe",name:"Café Hum",icon:"☕",free:false,type:"cafe"}];
 
-function useAmbientSound(){const ctxRef=useRef(null);const nodesRef=useRef([]);function stop(){nodesRef.current.forEach(n=>{try{n.stop?.();n.disconnect?.();}catch(e){}});nodesRef.current=[];if(ctxRef.current){ctxRef.current.close();ctxRef.current=null;}}function makeNoise(ctx,color="white"){const bufSize=ctx.sampleRate*3;const buf=ctx.createBuffer(1,bufSize,ctx.sampleRate);const data=buf.getChannelData(0);let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;for(let i=0;i<bufSize;i++){const white=Math.random()*2-1;if(color==="pink"){b0=0.99886*b0+white*0.0555179;b1=0.99332*b1+white*0.0750759;b2=0.96900*b2+white*0.1538520;b3=0.86650*b3+white*0.3104856;b4=0.55000*b4+white*0.5329522;b5=-0.7616*b5-white*0.0168980;data[i]=(b0+b1+b2+b3+b4+b5+b6+white*0.5362)/7;b6=white*0.115926;}else{data[i]=white;}}const src=ctx.createBufferSource();src.buffer=buf;src.loop=true;return src;}function play(sound){stop();const ctx=new(window.AudioContext||window.webkitAudioContext)();ctxRef.current=ctx;const master=ctx.createGain();master.gain.value=0.35;master.connect(ctx.destination);const nodes=[];if(sound.type==="rain"){const src=makeNoise(ctx,"pink");const hi=ctx.createBiquadFilter();hi.type="highpass";hi.frequency.value=1200;const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=6000;const g=ctx.createGain();g.gain.value=1.2;src.connect(hi);hi.connect(lo);lo.connect(g);g.connect(master);src.start();nodes.push(src);function drip(){if(!ctxRef.current)return;const osc=ctx.createOscillator();const eg=ctx.createGain();osc.frequency.value=800+Math.random()*600;osc.type="sine";eg.gain.setValueAtTime(0.08,ctx.currentTime);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.18);osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+0.18);setTimeout(drip,200+Math.random()*600);}drip();}else if(sound.type==="ocean"){const src=makeNoise(ctx,"pink");const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=400;const mid=ctx.createBiquadFilter();mid.type="bandpass";mid.frequency.value=200;mid.Q.value=0.5;const g=ctx.createGain();g.gain.value=1.4;src.connect(lo);lo.connect(mid);mid.connect(g);g.connect(master);src.start();nodes.push(src);const lfo=ctx.createOscillator();const lfoG=ctx.createGain();lfoG.gain.value=0.4;lfo.frequency.value=0.14;lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start();nodes.push(lfo);}else if(sound.type==="forest"){const src=makeNoise(ctx,"pink");const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=800;bp.Q.value=0.4;const g=ctx.createGain();g.gain.value=0.7;src.connect(bp);bp.connect(g);g.connect(master);src.start();nodes.push(src);function chirp(){if(!ctxRef.current)return;const n=2+Math.floor(Math.random()*3);for(let i=0;i<n;i++){setTimeout(()=>{const osc=ctx.createOscillator();const eg=ctx.createGain();const bf=1800+Math.random()*1400;osc.frequency.setValueAtTime(bf,ctx.currentTime);osc.frequency.linearRampToValueAtTime(bf*1.3,ctx.currentTime+0.06);osc.type="sine";eg.gain.setValueAtTime(0.06,ctx.currentTime);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.12);osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+0.12);},i*120);}setTimeout(chirp,2500+Math.random()*5000);}chirp();}else if(sound.type==="piano"){[261.63,329.63,392.00,523.25].forEach((freq,i)=>{const osc=ctx.createOscillator();const gain=ctx.createGain();osc.type="sine";osc.frequency.value=freq;gain.gain.value=0.07/(i+1);osc.connect(gain);gain.connect(master);osc.start();nodes.push(osc);});const pluck=[261.63,329.63,392.00,493.88,523.25];let ni=0;function p(){if(!ctxRef.current)return;const osc=ctx.createOscillator();const eg=ctx.createGain();osc.type="triangle";osc.frequency.value=pluck[ni%pluck.length];ni++;eg.gain.setValueAtTime(0.12,ctx.currentTime);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+2.5);osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+2.5);setTimeout(p,1800+Math.random()*1200);}p();}else if(sound.type==="fire"){const s1=makeNoise(ctx,"white");const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=180;const g1=ctx.createGain();g1.gain.value=1.1;s1.connect(lo);lo.connect(g1);g1.connect(master);s1.start();nodes.push(s1);const s2=makeNoise(ctx,"white");const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=600;bp.Q.value=2;const g2=ctx.createGain();g2.gain.value=0.3;s2.connect(bp);bp.connect(g2);g2.connect(master);s2.start();nodes.push(s2);function pop(){if(!ctxRef.current)return;const osc=ctx.createOscillator();const eg=ctx.createGain();osc.type="sawtooth";osc.frequency.value=60+Math.random()*80;eg.gain.setValueAtTime(0.15,ctx.currentTime);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.05);osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+0.05);setTimeout(pop,300+Math.random()*1200);}pop();}else if(sound.type==="cafe"){[[300,0.8,0.4],[900,1.5,0.2],[2000,2,0.08]].forEach(([freq,Q,gain])=>{const src=makeNoise(ctx,"pink");const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=freq;bp.Q.value=Q;const g=ctx.createGain();g.gain.value=gain;src.connect(bp);bp.connect(g);g.connect(master);src.start();nodes.push(src);});function murmur(){if(!ctxRef.current)return;const src=makeNoise(ctx,"pink");const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=400+Math.random()*300;bp.Q.value=3;const eg=ctx.createGain();const dur=0.3+Math.random()*0.6;eg.gain.setValueAtTime(0,ctx.currentTime);eg.gain.linearRampToValueAtTime(0.18,ctx.currentTime+0.05);eg.gain.linearRampToValueAtTime(0,ctx.currentTime+dur);src.connect(bp);bp.connect(eg);eg.connect(master);src.start();src.stop(ctx.currentTime+dur+0.1);setTimeout(murmur,400+Math.random()*1500);}murmur();function clink(){if(!ctxRef.current)return;if(Math.random()>0.4){const osc=ctx.createOscillator();const eg=ctx.createGain();osc.frequency.value=2200+Math.random()*600;osc.type="sine";eg.gain.setValueAtTime(0.06,ctx.currentTime);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+0.4);}setTimeout(clink,3000+Math.random()*7000);}clink();}nodesRef.current=nodes;}return{play,stop};}
+// ── NEW useAmbientSound — birds, leaves, waves, static ──
+function useAmbientSound(){
+  const ctxRef=useRef(null);
+  const nodesRef=useRef([]);
 
-function NestTab({user,isPro,isOTR,aiPrompt,promptLoading,onWrite,theme}){const T=theme||THEMES.original;const [section,setSection]=useState(null);const affirmation=getDailyAffirmation();const weekIndex=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000))%WEEKLY_BREATHWORK.length;const weeklyBreath=WEEKLY_BREATHWORK[weekIndex];const nightTime=isNightTime();return(<div style={{display:"flex",flexDirection:"column",gap:0}}><div style={{textAlign:"center",padding:"28px 0 20px"}}><div style={{fontSize:48,marginBottom:8}}>🪹</div><h2 style={{fontFamily:"'Lora',serif",fontSize:28,color:T.accentDark,marginBottom:6,fontWeight:600}}>Welcome to your Nest</h2><p style={{fontSize:14,color:T.subtext,fontStyle:"italic",maxWidth:340,margin:"0 auto",lineHeight:1.6}}>A place to pause, breathe, and return to yourself.</p></div><div style={{display:"flex",flexDirection:"column",gap:14}}><NestCard icon="💫" title="Daily Affirmation" subtitle="Your daily reminder to soften and center" color={T.accent} onOpen={()=>setSection(section==="affirmation"?null:"affirmation")}>{section==="affirmation"&&(<div style={{textAlign:"center",padding:"16px 0 8px"}}><p style={{fontFamily:"'Lora',serif",fontSize:18,color:T.text,fontStyle:"italic",lineHeight:1.65}}>"{affirmation}"</p></div>)}</NestCard><NestCard icon="🌬️" title="Breathwork" subtitle={`This week: ${weeklyBreath.name} — ${weeklyBreath.desc}`} color="#7a8c6e" onOpen={()=>setSection(section==="breath"?null:"breath")}>{section==="breath"&&<BreathworkPlayer exercise={weeklyBreath}/>}</NestCard><NestCard icon="🧘" title="2-min Meditation" subtitle="Pause for 2 minutes. Sit back, settle in, return to calm." color="#9b7eb8" onOpen={()=>setSection(section==="meditation"?null:"meditation")}>{section==="meditation"&&<MeditationPlayer isOTR={isOTR} onUpgrade={()=>setSection(null)}/>}</NestCard><NestCard icon="🎵" title="Ambient Sounds" subtitle="Let the sounds carry you to your calm space." color="#5b8fa8" onOpen={()=>setSection(section==="sound"?null:"sound")}>{section==="sound"&&<AmbientPlayer isOTR={isOTR}/>}</NestCard><NestCard icon={nightTime?"🌙":"✨"} title={nightTime?"Tonight's Reflection":"Today's Prompt"} subtitle={nightTime?"Softly close the day with intention.":"A gentle nudge for self-reflection."} color={nightTime?"#6b5ba8":"#c8895a"} onOpen={()=>setSection(section==="prompt"?null:"prompt")}>{section==="prompt"&&(<div style={{padding:"12px 0 4px"}}><p style={{fontFamily:"'Lora',serif",fontSize:15,color:T.text,fontStyle:"italic",lineHeight:1.7,marginBottom:14}}>{nightTime?getNightPrompt():(promptLoading?"Finding your prompt...":aiPrompt||"What are you grateful for right now?")}</p><button onClick={(e)=>{e.stopPropagation();onWrite(nightTime?getNightPrompt():aiPrompt);}} style={S.softBtn}>Write to this →</button></div>)}</NestCard></div></div>);}
+  function stop(){
+    nodesRef.current.forEach(n=>{try{n.stop?.();n.disconnect?.();}catch(e){}});
+    nodesRef.current=[];
+    if(ctxRef.current){ctxRef.current.close();ctxRef.current=null;}
+  }
+
+  function makeNoise(ctx,color="white"){
+    const bufSize=ctx.sampleRate*3;
+    const buf=ctx.createBuffer(1,bufSize,ctx.sampleRate);
+    const data=buf.getChannelData(0);
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for(let i=0;i<bufSize;i++){
+      const white=Math.random()*2-1;
+      if(color==="pink"){
+        b0=0.99886*b0+white*0.0555179;b1=0.99332*b1+white*0.0750759;
+        b2=0.96900*b2+white*0.1538520;b3=0.86650*b3+white*0.3104856;
+        b4=0.55000*b4+white*0.5329522;b5=-0.7616*b5-white*0.0168980;
+        data[i]=(b0+b1+b2+b3+b4+b5+b6+white*0.5362)/7;b6=white*0.115926;
+      }else{data[i]=white;}
+    }
+    const src=ctx.createBufferSource();src.buffer=buf;src.loop=true;return src;
+  }
+
+  function play(sound){
+    stop();
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    ctxRef.current=ctx;
+    const master=ctx.createGain();
+    master.gain.value=0.4;
+    master.connect(ctx.destination);
+    const nodes=[];
+
+    if(sound.type==="birds"){
+      // Soft background forest hiss
+      const src=makeNoise(ctx,"pink");
+      const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1200;bp.Q.value=0.3;
+      const g=ctx.createGain();g.gain.value=0.2;
+      src.connect(bp);bp.connect(g);g.connect(master);src.start();nodes.push(src);
+      // Bird chirp layers
+      function chirp(){
+        if(!ctxRef.current)return;
+        const numBirds=2+Math.floor(Math.random()*3);
+        for(let i=0;i<numBirds;i++){
+          setTimeout(()=>{
+            const sweeps=2+Math.floor(Math.random()*3);
+            for(let s=0;s<sweeps;s++){
+              setTimeout(()=>{
+                const osc=ctx.createOscillator();
+                const eg=ctx.createGain();
+                const baseFreq=2000+Math.random()*2000;
+                osc.frequency.setValueAtTime(baseFreq,ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(baseFreq*(1.1+Math.random()*0.3),ctx.currentTime+0.05);
+                osc.frequency.linearRampToValueAtTime(baseFreq*0.95,ctx.currentTime+0.1);
+                osc.type="sine";
+                eg.gain.setValueAtTime(0,ctx.currentTime);
+                eg.gain.linearRampToValueAtTime(0.1,ctx.currentTime+0.01);
+                eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.12);
+                osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+0.15);
+              },s*110);
+            }
+          },i*400+Math.random()*300);
+        }
+        setTimeout(chirp,2000+Math.random()*4000);
+      }
+      chirp();
+
+    }else if(sound.type==="leaves"){
+      // Layered rustling noise
+      const src=makeNoise(ctx,"pink");
+      const hi=ctx.createBiquadFilter();hi.type="highpass";hi.frequency.value=800;
+      const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=5000;
+      const g=ctx.createGain();g.gain.value=0.85;
+      src.connect(hi);hi.connect(lo);lo.connect(g);g.connect(master);src.start();nodes.push(src);
+      // Wind swell LFO
+      const lfo=ctx.createOscillator();
+      const lfoG=ctx.createGain();lfoG.gain.value=0.3;
+      lfo.frequency.value=0.08+Math.random()*0.05;
+      lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start();nodes.push(lfo);
+      // Occasional gust
+      function gust(){
+        if(!ctxRef.current)return;
+        const src2=makeNoise(ctx,"pink");
+        const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=2000+Math.random()*1000;bp.Q.value=0.5;
+        const eg=ctx.createGain();const dur=0.6+Math.random()*1.2;
+        eg.gain.setValueAtTime(0,ctx.currentTime);
+        eg.gain.linearRampToValueAtTime(0.45,ctx.currentTime+0.2);
+        eg.gain.linearRampToValueAtTime(0,ctx.currentTime+dur);
+        src2.connect(bp);bp.connect(eg);eg.connect(master);src2.start();src2.stop(ctx.currentTime+dur+0.1);
+        setTimeout(gust,3000+Math.random()*6000);
+      }
+      gust();
+
+    }else if(sound.type==="waves"){
+      // Deep ocean base
+      const src=makeNoise(ctx,"pink");
+      const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=350;
+      const mid=ctx.createBiquadFilter();mid.type="bandpass";mid.frequency.value=180;mid.Q.value=0.4;
+      const g=ctx.createGain();g.gain.value=1.4;
+      src.connect(lo);lo.connect(mid);mid.connect(g);g.connect(master);src.start();nodes.push(src);
+      // Wave swell LFO
+      const lfo=ctx.createOscillator();
+      const lfoG=ctx.createGain();lfoG.gain.value=0.5;
+      lfo.frequency.value=0.12;
+      lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start();nodes.push(lfo);
+      // Crash layer
+      function crash(){
+        if(!ctxRef.current)return;
+        const s=makeNoise(ctx,"white");
+        const hp=ctx.createBiquadFilter();hp.type="highpass";hp.frequency.value=600;
+        const eg=ctx.createGain();const dur=1.5+Math.random()*1.5;
+        eg.gain.setValueAtTime(0,ctx.currentTime);
+        eg.gain.linearRampToValueAtTime(0.4,ctx.currentTime+0.15);
+        eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+        s.connect(hp);hp.connect(eg);eg.connect(master);s.start();s.stop(ctx.currentTime+dur+0.1);
+        setTimeout(crash,4000+Math.random()*3000);
+      }
+      crash();
+
+    }else if(sound.type==="static"){
+      // Clean white noise — steady, grounding static
+      const src=makeNoise(ctx,"white");
+      const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=8000;
+      const hi=ctx.createBiquadFilter();hi.type="highpass";hi.frequency.value=200;
+      const g=ctx.createGain();g.gain.value=0.75;
+      src.connect(lo);lo.connect(hi);hi.connect(g);g.connect(master);src.start();nodes.push(src);
+    }
+
+    nodesRef.current=nodes;
+  }
+
+  return{play,stop};
+}
+
+function NestTab({user,isPro,isOTR,aiPrompt,promptLoading,onWrite,theme}){const T=theme||THEMES.original;const [section,setSection]=useState(null);const affirmation=getDailyAffirmation();const weekIndex=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000))%WEEKLY_BREATHWORK.length;const weeklyBreath=WEEKLY_BREATHWORK[weekIndex];const nightTime=isNightTime();return(<div style={{display:"flex",flexDirection:"column",gap:0}}><div style={{textAlign:"center",padding:"28px 0 20px"}}><div style={{fontSize:48,marginBottom:8}}>🪹</div><h2 style={{fontFamily:"'Lora',serif",fontSize:28,color:T.accentDark,marginBottom:6,fontWeight:600}}>Welcome to your Nest</h2><p style={{fontSize:14,color:T.subtext,fontStyle:"italic",maxWidth:340,margin:"0 auto",lineHeight:1.6}}>A place to pause, breathe, and return to yourself.</p></div><div style={{display:"flex",flexDirection:"column",gap:14}}><NestCard icon="💫" title="Daily Affirmation" subtitle="Your daily reminder to soften and center" color={T.accent} onOpen={()=>setSection(section==="affirmation"?null:"affirmation")}>{section==="affirmation"&&(<div style={{textAlign:"center",padding:"16px 0 8px"}}><p style={{fontFamily:"'Lora',serif",fontSize:18,color:T.text,fontStyle:"italic",lineHeight:1.65}}>"{affirmation}"</p></div>)}</NestCard><NestCard icon="🌬️" title="Breathwork" subtitle={`This week: ${weeklyBreath.name} — ${weeklyBreath.desc}`} color="#7a8c6e" onOpen={()=>setSection(section==="breath"?null:"breath")}>{section==="breath"&&<BreathworkPlayer exercise={weeklyBreath}/>}</NestCard><NestCard icon="🧘" title="2-min Meditation" subtitle="Pause for 2 minutes. Sit back, settle in, return to calm." color="#9b7eb8" onOpen={()=>setSection(section==="meditation"?null:"meditation")}>{section==="meditation"&&<MeditationPlayer isOTR={isOTR} onUpgrade={()=>setSection(null)}/>}</NestCard><NestCard icon="🎵" title="Ambient Sounds" subtitle="Birds, leaves, waves, or white noise — find your calm." color="#5b8fa8" onOpen={()=>setSection(section==="sound"?null:"sound")}>{section==="sound"&&<AmbientPlayer/>}</NestCard><NestCard icon={nightTime?"🌙":"✨"} title={nightTime?"Tonight's Reflection":"Today's Prompt"} subtitle={nightTime?"Softly close the day with intention.":"A gentle nudge for self-reflection."} color={nightTime?"#6b5ba8":"#c8895a"} onOpen={()=>setSection(section==="prompt"?null:"prompt")}>{section==="prompt"&&(<div style={{padding:"12px 0 4px"}}><p style={{fontFamily:"'Lora',serif",fontSize:15,color:T.text,fontStyle:"italic",lineHeight:1.7,marginBottom:14}}>{nightTime?getNightPrompt():(promptLoading?"Finding your prompt...":aiPrompt||"What are you grateful for right now?")}</p><button onClick={(e)=>{e.stopPropagation();onWrite(nightTime?getNightPrompt():aiPrompt);}} style={S.softBtn}>Write to this →</button></div>)}</NestCard></div></div>);}
 
 function NestCard({icon,title,subtitle,color,onOpen,children}){return(<div style={{background:"rgba(255,252,246,0.93)",border:"1px solid rgba(200,137,90,0.12)",borderRadius:20,overflow:"hidden"}}><button onClick={onOpen} style={{width:"100%",background:"none",border:"none",padding:"18px 20px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",textAlign:"left"}} type="button"><div style={{width:44,height:44,borderRadius:14,background:`${color}18`,border:`1px solid ${color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{icon}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#5a2e0e",fontSize:15,fontFamily:"'Nunito',sans-serif"}}>{title}</div><div style={{fontSize:12,color:"#b08060",marginTop:2,lineHeight:1.4}}>{subtitle}</div></div><span style={{fontSize:16,color:"#b08060"}}>›</span></button>{children&&<div style={{padding:"0 20px 18px"}}>{children}</div>}</div>);}
 
@@ -861,67 +842,42 @@ function StoryOfTheMonth({communityId,cfg}){
   const [anonContent,setAnonContent]=useState("");
   const [submitting,setSubmitting]=useState(false);
   const [submitted,setSubmitted]=useState(false);
-
   useEffect(()=>{loadStories();},[communityId]);
-
-  async function loadStories(){
-    setLoading(true);
-    try{
-      const filters=communityId?`submit_to_sotm=eq.true&community_id=eq.${communityId}&order=created_at.desc`:`submit_to_sotm=eq.true&order=created_at.desc`;
-      const data=await sbGet("community_posts",`${filters}&select=*`);
-      if(Array.isArray(data))setStories(data);
-    }catch(e){console.error(e);}
-    setLoading(false);
-  }
-
-  async function submitAnon(){
-    if(!anonContent.trim())return;
-    setSubmitting(true);
-    try{
-      await sbInsert("community_posts",{
-        user_id:"anonymous",
-        community_id:communityId,
-        content:anonContent.trim(),
-        is_anonymous:true,
-        submit_to_sotm:true,
-      });
-      setSubmitted(true);setAnonContent("");
-    }catch(e){console.error(e);}
-    setSubmitting(false);
-  }
-
+  async function loadStories(){setLoading(true);try{const filters=communityId?`submit_to_sotm=eq.true&community_id=eq.${communityId}&order=created_at.desc`:`submit_to_sotm=eq.true&order=created_at.desc`;const data=await sbGet("community_posts",`${filters}&select=*`);if(Array.isArray(data))setStories(data);}catch(e){console.error(e);}setLoading(false);}
+  async function submitAnon(){if(!anonContent.trim())return;setSubmitting(true);try{await sbInsert("community_posts",{user_id:"anonymous",community_id:communityId,content:anonContent.trim(),is_anonymous:true,submit_to_sotm:true,});setSubmitted(true);setAnonContent("");}catch(e){console.error(e);}setSubmitting(false);}
   return(
     <div style={{padding:"0 16px"}}>
       <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:18,padding:"20px",marginBottom:16,textAlign:"center"}}>
         <div style={{fontSize:32,marginBottom:8}}>🎙️</div>
         <h3 style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",marginBottom:6,fontWeight:600}}>Story of the Month</h3>
         <p style={{fontSize:13,color:"#b08060",lineHeight:1.6,marginBottom:16,fontStyle:"italic",fontFamily:"'Lora',serif"}}>Hallie reads every submission and may feature your story — anonymously — on the My Sister's Closet podcast. No account needed.</p>
-        {!submitted?(
-          <div style={{textAlign:"left"}}>
-            <textarea style={{width:"100%",padding:"12px 14px",border:"1.5px solid rgba(200,137,90,0.2)",borderRadius:12,fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",resize:"none",outline:"none",lineHeight:1.7,marginBottom:10,background:"rgba(253,248,242,0.9)",boxSizing:"border-box",fontStyle:"italic",minHeight:100}} placeholder="Share something from your heart. It will always be kept anonymous." value={anonContent} onChange={e=>setAnonContent(e.target.value)} rows={4}/>
-            <button style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"white",border:"none",borderRadius:20,padding:"11px",fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700,opacity:!anonContent.trim()||submitting?0.5:1}} disabled={!anonContent.trim()||submitting} onClick={submitAnon}>{submitting?"Submitting...":"Submit Anonymously 🎙️"}</button>
-          </div>
-        ):(
-          <div style={{background:"rgba(122,74,30,0.06)",borderRadius:14,padding:"16px"}}>
-            <div style={{fontSize:28,marginBottom:6}}>💛</div>
-            <p style={{fontFamily:"'Lora',serif",fontStyle:"italic",color:"#7a4a1e",fontSize:14,lineHeight:1.6}}>Your story has been submitted. Thank you for trusting us with it. Hallie will read it. 🌿</p>
-          </div>
-        )}
+        {!submitted?(<div style={{textAlign:"left"}}><textarea style={{width:"100%",padding:"12px 14px",border:"1.5px solid rgba(200,137,90,0.2)",borderRadius:12,fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",resize:"none",outline:"none",lineHeight:1.7,marginBottom:10,background:"rgba(253,248,242,0.9)",boxSizing:"border-box",fontStyle:"italic",minHeight:100}} placeholder="Share something from your heart. It will always be kept anonymous." value={anonContent} onChange={e=>setAnonContent(e.target.value)} rows={4}/><button style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"white",border:"none",borderRadius:20,padding:"11px",fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700,opacity:!anonContent.trim()||submitting?0.5:1}} disabled={!anonContent.trim()||submitting} onClick={submitAnon}>{submitting?"Submitting...":"Submit Anonymously 🎙️"}</button></div>):(<div style={{background:"rgba(122,74,30,0.06)",borderRadius:14,padding:"16px"}}><div style={{fontSize:28,marginBottom:6}}>💛</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",color:"#7a4a1e",fontSize:14,lineHeight:1.6}}>Your story has been submitted. Thank you for trusting us with it. Hallie will read it. 🌿</p></div>)}
       </div>
-      {loading?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic"}}>Loading submissions...</div>:stories.length===0?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif"}}>No submissions yet — be the first. 🌿</div>:(
-        stories.map(s=>(
-          <div key={s.id} style={{background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px",marginBottom:10,border:"1px solid rgba(122,74,30,0.1)"}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-              <div style={{width:30,height:30,borderRadius:"50%",background:"linear-gradient(135deg,#b0a090,#9a8878)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700}}>👤</div>
-              <div><div style={{fontSize:12,fontWeight:700,color:"#5a2e0e"}}>Anonymous</div><div style={{fontSize:10,color:"#b08060"}}>Submitted for Story of the Month</div></div>
-              <span style={{marginLeft:"auto",fontSize:10,color:"#7a4a1e",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",padding:"2px 8px",borderRadius:10,fontWeight:700}}>🎙️ SOTM</span>
-            </div>
-            <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",lineHeight:1.8,fontStyle:"italic"}}>{s.content}</p>
-          </div>
-        ))
-      )}
+      {loading?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic"}}>Loading submissions...</div>:stories.length===0?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif"}}>No submissions yet — be the first. 🌿</div>:(stories.map(s=>(<div key={s.id} style={{background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px",marginBottom:10,border:"1px solid rgba(122,74,30,0.1)"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><div style={{width:30,height:30,borderRadius:"50%",background:"linear-gradient(135deg,#b0a090,#9a8878)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700}}>👤</div><div><div style={{fontSize:12,fontWeight:700,color:"#5a2e0e"}}>Anonymous</div><div style={{fontSize:10,color:"#b08060"}}>Submitted for Story of the Month</div></div><span style={{marginLeft:"auto",fontSize:10,color:"#7a4a1e",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",padding:"2px 8px",borderRadius:10,fontWeight:700}}>🎙️ SOTM</span></div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",lineHeight:1.8,fontStyle:"italic"}}>{s.content}</p></div>)))}
     </div>
   );
 }
 
-function AmbientPlayer({isOTR}){const [playing,setPlaying]=useState(null);const sound=useAmbientSound();const available=isOTR?AMBIENT_SOUNDS:AMBIENT_SOUNDS.filter(s=>s.free);function toggle(s){if(playing===s.id){sound.stop();setPlaying(null);}else{sound.play(s);setPlaying(s.id);}}return(<div style={{paddingTop:8}}><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:8,marginBottom:8}}>{available.map(s=>(<button key={s.id} onClick={()=>toggle(s)} style={{background:playing===s.id?"rgba(91,143,168,0.2)":"rgba(91,143,168,0.06)",border:`1px solid ${playing===s.id?"#5b8fa8":"rgba(91,143,168,0.2)"}`,borderRadius:14,padding:"12px 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer"}}><span style={{fontSize:24}}>{s.icon}</span><span style={{fontSize:11,fontWeight:600,color:playing===s.id?"#5b8fa8":"#9a7050"}}>{s.name}</span>{playing===s.id&&<span style={{fontSize:9,color:"#5b8fa8",fontWeight:700}}>PLAYING</span>}</button>))}</div>{!isOTR&&<div style={{fontSize:12,color:"#b08060",textAlign:"center",fontStyle:"italic"}}>✨ Upgrade to Off the Record to unlock Fireplace & Café sounds</div>}</div>);}
+// ── NEW AmbientPlayer — all 4 sounds, all free, 2x2 grid ──
+function AmbientPlayer(){
+  const [playing,setPlaying]=useState(null);
+  const sound=useAmbientSound();
+  function toggle(s){
+    if(playing===s.id){sound.stop();setPlaying(null);}
+    else{sound.play(s);setPlaying(s.id);}
+  }
+  return(
+    <div style={{paddingTop:8}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
+        {AMBIENT_SOUNDS.map(s=>(
+          <button key={s.id} onClick={()=>toggle(s)} style={{background:playing===s.id?"rgba(91,143,168,0.18)":"rgba(91,143,168,0.05)",border:`1.5px solid ${playing===s.id?"#5b8fa8":"rgba(91,143,168,0.18)"}`,borderRadius:16,padding:"16px 10px",display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",transition:"all 0.2s"}}>
+            <span style={{fontSize:28}}>{s.icon}</span>
+            <span style={{fontSize:12,fontWeight:700,color:playing===s.id?"#5b8fa8":"#7a5030",fontFamily:"'Nunito',sans-serif",textAlign:"center",lineHeight:1.3}}>{s.name}</span>
+            {playing===s.id&&<span style={{fontSize:9,color:"#5b8fa8",fontWeight:700,letterSpacing:"1px"}}>▶ PLAYING</span>}
+          </button>
+        ))}
+      </div>
+      <p style={{fontSize:11,color:"#b08060",textAlign:"center",fontStyle:"italic",marginTop:6}}>Tap a sound to play • Tap again to stop</p>
+    </div>
+  );
+}
