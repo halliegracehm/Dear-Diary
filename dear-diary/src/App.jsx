@@ -39,7 +39,10 @@ const HALLIE_DESK_NOTES=[
   "Something I've learned: the feelings we avoid writing about are usually the ones that need the most space. What have you been skirting around lately? Today might be the day. 🌿",
 ];
 function getWeeklyDeskNote(){const w=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000));return HALLIE_DESK_NOTES[w%HALLIE_DESK_NOTES.length];}
-
+function getWeeklyHalliePrompt(){
+  const w = Math.ceil((new Date() - new Date(new Date().getFullYear(),0,1)) / (7*24*60*60*1000));
+  return HALLIE_PROMPTS[(w - 1) % HALLIE_PROMPTS.length];
+}
 function spawnConfetti(){
   const emojis=["🌸","✨","🌿","💛","🌟","💫","🍃","🌺","⭐","💕"];
   for(let i=0;i<18;i++){
@@ -297,6 +300,7 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
         {tab==="letters"&&<LettersTab user={user}/>}
         {tab==="challenges"&&<ChallengesTab entries={entries} user={user} onWrite={(prefill)=>{setTab("journal");startNew(prefill);}}/>}
         {tab==="pricing"&&<PricingTab currentPlan={user.plan} userEmail={user.email} onUpgrade={onUpgradePlan}/>}
+        {tab==="community"&&<CommunitiesTab user={user} userTier={user.plan} onUpgrade={()=>setTab("pricing")}/>}
       </main>
       {!pwaDismissed&&<PWABanner prompt={pwaPrompt} onDismiss={()=>{setPwaDismissed(true);onPwaInstalled();}}/>}
     </div>
