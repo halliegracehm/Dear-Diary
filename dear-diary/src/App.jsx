@@ -7,6 +7,116 @@ const STRIPE_PUBLISHABLE_KEY = "pk_live_51TBmTBDC5IHfzeBkp5DgUYOdkSUiMYebP36KU3w
 const STRIPE_PRICES = { community:"price_1TBmxqDC5IHfzeBkFuxyZPfX", offtherecord:"price_1TDFaiDC5IHfzeBkH1kqn47G" };
 const ADMIN_EMAIL = "halliegracehm@gmail.com";
 
+// ── SET IT DOWN SATURDAY — self-contained, no login required ──
+function SetItDownPage() {
+  const [step, setStep] = useState("context");
+  const [word, setWord] = useState("");
+  const [status, setStatus] = useState("idle");
+  const [charCount, setCharCount] = useState(0);
+
+  const handleChange = (e) => {
+    const val = e.target.value.replace(/\s/g, "");
+    if (val.length <= 40) { setWord(val); setCharCount(val.length); }
+  };
+
+  const handleSubmit = async () => {
+    const trimmed = word.trim();
+    if (!trimmed) return;
+    setStatus("submitting");
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/set_it_down_submissions`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=minimal"
+        },
+        body: JSON.stringify({ word: trimmed.toLowerCase(), event_tag: "set-it-down-saturday" })
+      });
+      if (!res.ok) throw new Error("Failed");
+      setStep("success"); setStatus("idle"); setWord(""); setCharCount(0);
+    } catch (e) {
+      console.error(e); setStatus("error");
+    }
+  };
+
+  const SID = {
+    page: { minHeight:"100vh", background:"linear-gradient(160deg,#2d1b4e 0%,#1a0f36 60%,#0f0820 100%)", display:"flex", alignItems:"center", justifyContent:"center", padding:"24px 16px", fontFamily:"'Georgia',serif", position:"relative", overflow:"hidden" },
+    glow1: { position:"absolute", top:"-10%", left:"-10%", width:"60%", height:"60%", background:"radial-gradient(circle,rgba(157,127,224,0.12) 0%,transparent 70%)", pointerEvents:"none" },
+    glow2: { position:"absolute", bottom:"-10%", right:"-10%", width:"60%", height:"60%", background:"radial-gradient(circle,rgba(196,181,244,0.07) 0%,transparent 70%)", pointerEvents:"none" },
+    card: { position:"relative", background:"rgba(255,255,255,0.04)", backdropFilter:"blur(12px)", border:"1px solid rgba(196,181,244,0.15)", borderRadius:"24px", padding:"48px 36px", maxWidth:"460px", width:"100%", textAlign:"center", boxShadow:"0 24px 60px rgba(0,0,0,0.45)" },
+    eyebrow: { color:"#c4b5f4", fontSize:"11px", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"12px", opacity:0.75, margin:"0 0 12px" },
+    title: { color:"#fff", fontSize:"clamp(26px,6vw,36px)", fontWeight:"normal", lineHeight:1.25, marginBottom:"24px", letterSpacing:"-0.5px" },
+    subtitle: { color:"rgba(255,255,255,0.5)", fontSize:"15px", lineHeight:1.65, marginBottom:"28px" },
+    contextBox: { background:"rgba(255,255,255,0.04)", border:"1px solid rgba(196,181,244,0.12)", borderRadius:"16px", padding:"20px 22px", marginBottom:"18px", textAlign:"left", display:"flex", flexDirection:"column", gap:"14px" },
+    contextLine: { color:"rgba(255,255,255,0.75)", fontSize:"15px", lineHeight:1.55, margin:0, display:"flex", gap:"12px", alignItems:"flex-start" },
+    contextNum: { color:"#c4b5f4", fontWeight:"normal", flexShrink:0, marginTop:"1px", opacity:0.8 },
+    contextNote: { color:"rgba(255,255,255,0.35)", fontSize:"13px", lineHeight:1.6, marginBottom:"28px", fontStyle:"italic" },
+    formArea: { display:"flex", flexDirection:"column", gap:"14px", alignItems:"center" },
+    inputWrapper: { position:"relative", width:"100%" },
+    input: { width:"100%", padding:"18px 48px 18px 20px", fontSize:"20px", fontFamily:"'Georgia',serif", color:"#fff", background:"rgba(255,255,255,0.07)", border:"1px solid rgba(196,181,244,0.3)", borderRadius:"14px", outline:"none", textAlign:"center", letterSpacing:"2px", boxSizing:"border-box" },
+    charCount: { position:"absolute", right:"14px", top:"50%", transform:"translateY(-50%)", fontSize:"11px", color:"rgba(196,181,244,0.45)", fontFamily:"monospace" },
+    errorMsg: { color:"#f87171", fontSize:"13px", margin:0 },
+    backBtn: { background:"transparent", border:"none", color:"rgba(255,255,255,0.25)", fontSize:"13px", fontFamily:"'Georgia',serif", cursor:"pointer", padding:"4px 8px", letterSpacing:"0.5px" },
+    btn: { background:"linear-gradient(135deg,#9d7fe0,#7c5cbf)", color:"#fff", border:"none", borderRadius:"50px", padding:"16px 40px", fontSize:"16px", fontFamily:"'Georgia',serif", letterSpacing:"0.5px", cursor:"pointer", boxShadow:"0 8px 24px rgba(157,127,224,0.3)", width:"100%", maxWidth:"320px" },
+    successIcon: { fontSize:"52px", marginBottom:"16px" },
+    successTitle: { color:"#fff", fontSize:"30px", fontWeight:"normal", marginBottom:"12px", letterSpacing:"-0.3px" },
+    successSub: { color:"rgba(255,255,255,0.5)", fontSize:"15px", lineHeight:1.65, marginBottom:"8px" },
+    successEncourage: { color:"#c4b5f4", fontSize:"16px", marginBottom:"28px", opacity:0.85 },
+    ghostBtn: { background:"transparent", border:"1px solid rgba(196,181,244,0.25)", color:"#c4b5f4", borderRadius:"50px", padding:"10px 28px", fontSize:"13px", fontFamily:"'Georgia',serif", cursor:"pointer", letterSpacing:"0.5px", marginBottom:"8px" },
+    footer: { marginTop:"32px", color:"rgba(255,255,255,0.18)", fontSize:"10px", letterSpacing:"1.5px", textTransform:"uppercase" },
+  };
+
+  return (
+    <div style={SID.page}>
+      <div style={SID.glow1}/><div style={SID.glow2}/>
+      <div style={SID.card}>
+        {step === "context" && <>
+          <div style={{fontSize:"40px",marginBottom:"16px"}}>🍃</div>
+          <p style={SID.eyebrow}>Set It Down Saturday</p>
+          <h1 style={SID.title}>Before we walk,<br/>we set it down.</h1>
+          <div style={SID.contextBox}>
+            <p style={SID.contextLine}><span style={SID.contextNum}>1.</span>Think of one thing weighing on you today — a worry, a feeling, a name, anything.</p>
+            <p style={SID.contextLine}><span style={SID.contextNum}>2.</span>Give it one word.</p>
+            <p style={SID.contextLine}><span style={SID.contextNum}>3.</span>Set it down here — anonymously — before we take our walk.</p>
+          </div>
+          <p style={SID.contextNote}>You don't have to explain it. No one will know it's yours.</p>
+          <button style={SID.btn} onClick={() => setStep("input")}>I'm ready → Set It Down</button>
+          <p style={SID.footer}>Anonymous · My Inner Mind · Set It Down Saturday</p>
+        </>}
+
+        {step === "input" && <>
+          <p style={SID.eyebrow}>Set It Down Saturday</p>
+          <h1 style={SID.title}>What are you<br/>setting down today?</h1>
+          <p style={SID.subtitle}>One word. No name. No explanation.<br/>Just let it go.</p>
+          <div style={SID.formArea}>
+            <div style={SID.inputWrapper}>
+              <input type="text" value={word} onChange={handleChange} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} placeholder="one word..." style={SID.input} disabled={status==="submitting"} autoFocus autoCapitalize="none" autoCorrect="off" spellCheck={false}/>
+              <span style={SID.charCount}>{charCount}/40</span>
+            </div>
+            {status==="error" && <p style={SID.errorMsg}>Something went wrong. Try again.</p>}
+            <button onClick={handleSubmit} disabled={!word.trim()||status==="submitting"} style={{...SID.btn, opacity:!word.trim()||status==="submitting"?0.4:1}}>
+              {status==="submitting"?"Setting it down...":"Set It Down ↓"}
+            </button>
+            <button onClick={()=>setStep("context")} style={SID.backBtn}>← Back</button>
+          </div>
+          <p style={SID.footer}>Anonymous · My Inner Mind</p>
+        </>}
+
+        {step === "success" && <>
+          <div style={SID.successIcon}>🍃</div>
+          <h1 style={SID.successTitle}>It's set down.</h1>
+          <p style={SID.successSub}>You don't have to carry it on the walk.<br/>Just breathe, move, and be here.</p>
+          <p style={SID.successEncourage}>Now go enjoy the walk. 🌿</p>
+          <button onClick={()=>setStep("input")} style={SID.ghostBtn}>Set down another word</button>
+          <p style={SID.footer}>Anonymous · My Inner Mind · Set It Down Saturday</p>
+        </>}
+      </div>
+    </div>
+  );
+}
+
 const HALLIE_PROMPTS = [
   {week:1,prompt:"What's one thing you've been carrying lately that you're ready to set down?",note:"From Hallie 🌿"},
   {week:2,prompt:"Where in your life are you being too hard on yourself right now?",note:"From Hallie 🌿"},
@@ -21,6 +131,7 @@ const HALLIE_PROMPTS = [
   {week:11,prompt:"Describe a moment recently when you felt truly like yourself.",note:"From Hallie 🌿"},
   {week:12,prompt:"What's the kindest thing you could do for yourself this week?",note:"From Hallie 🌿"},
 ];
+
 function getTimeGreeting(){
   const h=new Date().getHours();
   if(h>=5&&h<12)return{greeting:"Good morning, love. 🌸",sub:"What's stirring in you today?"};
@@ -38,6 +149,7 @@ const HALLIE_DESK_NOTES=[
   "You are not behind. Not in your healing, not in your life, not in your journaling practice. You're exactly where you need to be. Now write about it. 🌸",
   "Something I've learned: the feelings we avoid writing about are usually the ones that need the most space. What have you been skirting around lately? Today might be the day. 🌿",
 ];
+
 function getWeeklyDeskNote(){const w=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000));return HALLIE_DESK_NOTES[w%HALLIE_DESK_NOTES.length];}
 function getWeeklyHalliePrompt(){
   const w=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000));
@@ -61,9 +173,15 @@ function spawnConfetti(){
 }
 
 async function sbQuery(path,options={}){
-  const res=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json","Prefer":options.prefer||"return=representation",...options.headers},...options});
+  const res=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{
+    headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json","Prefer":options.prefer||"return=representation",...(options.headers||{})},
+    ...options
+  });
   if(res.status===204)return[];
-  return res.json();
+  const data=await res.json();
+  // surface Supabase errors gracefully
+  if(data?.code||data?.error){console.error("Supabase error:",data);return[];}
+  return data;
 }
 async function sbGet(table,filters=""){return sbQuery(`${table}?${filters}`);}
 async function sbInsert(table,data){return sbQuery(table,{method:"POST",body:JSON.stringify(data)});}
@@ -91,21 +209,28 @@ function exportToPDF(entries,username){const win=window.open("","_blank");const 
 async function callClaude(messages,system=""){const body={model:"claude-sonnet-4-20250514",max_tokens:1000,messages};if(system)body.system=system;const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const data=await res.json();return data.content?.map(b=>b.text||"").join("")||"";}
 async function getAIInsight(entry){return callClaude([{role:"user",content:`Journal entry titled "${entry.title}":\n\n${entry.content}\n\nMood: ${entry.mood?.label||"not set"}`}],"You are a warm, thoughtful journaling companion. In 3-4 sentences, offer a gentle, insightful reflection on this journal entry. Be encouraging and kind. Do not ask questions. Write in second person.");}
 async function getAIPrompt(){const day=new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});return callClaude([{role:"user",content:`Today is ${day}. Give me a single thoughtful journaling prompt. Just the prompt itself, no preamble.`}],"You generate warm, introspective daily journaling prompts. 1-2 sentences max.");}
-async function startStripeCheckout(priceId,userEmail){if(!window.Stripe){await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="https://js.stripe.com/v3/";s.onload=resolve;s.onerror=reject;document.head.appendChild(s);});}const stripe=window.Stripe(STRIPE_PUBLISHABLE_KEY);const res=await fetch("/api/create-checkout-session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({priceId,email:userEmail})});if(!res.ok)throw new Error("Checkout failed");const{sessionId}=await res.json();await stripe.redirectToCheckout({sessionId});}
+async function startStripeCheckout(priceId,userEmail){
+  if(!window.Stripe){
+    await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="https://js.stripe.com/v3/";s.onload=resolve;s.onerror=reject;document.head.appendChild(s);});
+  }
+  const stripe=window.Stripe(STRIPE_PUBLISHABLE_KEY);
+  const res=await fetch("/api/create-checkout-session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({priceId,email:userEmail})});
+  if(!res.ok)throw new Error("Checkout failed");
+  const{sessionId}=await res.json();
+  await stripe.redirectToCheckout({sessionId});
+}
 
-// ── COMMUNITIES DATA ──
 const COMMUNITY_TIER_CONFIG={free:{label:"Free",color:"#7a9e7e",bg:"rgba(122,158,126,0.08)",border:"rgba(122,158,126,0.2)"},community:{label:"Community",color:"#c8895a",bg:"rgba(200,137,90,0.08)",border:"rgba(200,137,90,0.2)"},premium:{label:"Off the Record",color:"#9b7eb8",bg:"rgba(155,126,184,0.08)",border:"rgba(155,126,184,0.2)"}};
 const COMMUNITY_TIER_ORDER={free:0,community:1,premium:2};
 const COMMUNITY_MOOD_TAGS=[{emoji:"🌸",label:"Blooming"},{emoji:"🌱",label:"Growing"},{emoji:"☁️",label:"Cloudy"},{emoji:"🔥",label:"Fired Up"},{emoji:"🌊",label:"Overwhelmed"},{emoji:"✨",label:"Grateful"},{emoji:"💪",label:"Strong"},{emoji:"🌙",label:"Tired"},{emoji:"😂",label:"Joyful"},{emoji:"🙏",label:"At Peace"}];
 const COMMUNITY_REACTIONS=["❤️","🙌","✨","🫂","💛","🌿"];
 const DAILY_PROMPTS={"daily-checkin":"How are you showing up today? What's on your heart right now?","gratitude":"Name three things — big or small — that you're grateful for today.","big-wins":"What's a win you had recently that you haven't celebrated yet?","healing":"What's one thing you're releasing this week?","morning":"What does your ideal morning look like? What did you do today?","anxiety":"What's something that's been living in your head rent-free? Let it out here.","manifesting":"Write it like it's already happened. What are you calling in?","motherhood":"What's a moment with your kid(s) recently that made your heart full?","single":"What's something you love about your life right now, just as it is?","career":"What are you building? What step are you taking this week?"};
 
-// ── NEW: 4 ambient sounds, all free ──
 const AMBIENT_SOUNDS=[
-  {id:"birds",name:"Birds Chirping",icon:"🐦",free:true,type:"birds"},
-  {id:"leaves",name:"Leaves Rustling",icon:"🍃",free:true,type:"leaves"},
-  {id:"waves",name:"Waves Crashing",icon:"🌊",free:true,type:"waves"},
-  {id:"static",name:"White Noise",icon:"📻",free:true,type:"static"},
+  {id:"birds",name:"Birds Chirping",icon:"🐦",type:"birds"},
+  {id:"leaves",name:"Leaves Rustling",icon:"🍃",type:"leaves"},
+  {id:"waves",name:"Waves Crashing",icon:"🌊",type:"waves"},
+  {id:"static",name:"White Noise",icon:"📻",type:"static"},
 ];
 
 export default function App() {
@@ -117,16 +242,46 @@ export default function App() {
   const [authLoading,setAuthLoading]=useState(false);
   const [pwaPrompt,setPwaPrompt]=useState(null);
 
-  useEffect(()=>{const handler=(e)=>{e.preventDefault();setPwaPrompt(e);};window.addEventListener("beforeinstallprompt",handler);return()=>window.removeEventListener("beforeinstallprompt",handler);},[]);
   useEffect(()=>{
+    const handler=(e)=>{e.preventDefault();setPwaPrompt(e);};
+    window.addEventListener("beforeinstallprompt",handler);
+    return()=>window.removeEventListener("beforeinstallprompt",handler);
+  },[]);
+
+  useEffect(()=>{
+    // ── Set It Down Saturday public route — no login needed ──
+    if(window.location.pathname==="/set-it-down"){
+      setScreen("setitdown");
+      return;
+    }
+
     const params=new URLSearchParams(window.location.search);
     const justUpgraded=params.get("upgraded")==="true";
     const saved=sessionStorage.getItem("myinnerminduser");
+
     if(saved){
-      const user=JSON.parse(saved);
-      if(justUpgraded){sbGet("users",`email=eq.${encodeURIComponent(user.email)}`).then(result=>{if(result?.length){const fresh=result[0];sessionStorage.setItem("myinnerminduser",JSON.stringify(fresh));setCurrentUser(fresh);}else{setCurrentUser(user);}setScreen("app");window.history.replaceState({},"","/");});}
-      else{setCurrentUser(user);setScreen("app");}
-    }else setTimeout(()=>setScreen("landing"),1800);
+      try {
+        const user=JSON.parse(saved);
+        if(justUpgraded){
+          sbGet("users",`email=eq.${encodeURIComponent(user.email)}`).then(result=>{
+            const fresh=result?.length?result[0]:user;
+            sessionStorage.setItem("myinnerminduser",JSON.stringify(fresh));
+            setCurrentUser(fresh);
+            setScreen("app");
+            window.history.replaceState({},"","/");
+          }).catch(()=>{ setCurrentUser(user); setScreen("app"); });
+        } else {
+          setCurrentUser(user);
+          setScreen("app");
+        }
+      } catch(e) {
+        // Corrupt session — clear and go to landing
+        sessionStorage.removeItem("myinnerminduser");
+        setTimeout(()=>setScreen("landing"),1800);
+      }
+    } else {
+      setTimeout(()=>setScreen("landing"),1800);
+    }
   },[]);
 
   async function handleAuth(){
@@ -139,24 +294,49 @@ export default function App() {
         const existing=await sbGet("users",`email=eq.${encodeURIComponent(email)}`);
         if(existing?.length>0){setAuthError("An account with that email already exists.");return;}
         const result=await sbInsert("users",{email,username:authForm.username,password_hash:hashStr(authForm.password),plan:"free"});
-        if(result?.length>0){const u=result[0];sessionStorage.setItem("myinnerminduser",JSON.stringify(u));fetch("/api/add-to-mailchimp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,name:authForm.username})}).catch(()=>{});setCurrentUser(u);setScreen("onboarding");}
-        else setAuthError("Something went wrong. Please try again.");
-      }else{
+        if(result?.length>0){
+          const u=result[0];
+          sessionStorage.setItem("myinnerminduser",JSON.stringify(u));
+          fetch("/api/add-to-mailchimp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,name:authForm.username})}).catch(()=>{});
+          setCurrentUser(u);setScreen("onboarding");
+        } else {
+          setAuthError("Something went wrong. Please try again.");
+        }
+      } else {
         if(!email||!authForm.password){setAuthError("Email and password are required.");return;}
         const result=await sbGet("users",`email=eq.${encodeURIComponent(email)}`);
         if(!result?.length){setAuthError("No account found with that email.");return;}
         const user=result[0];
         if(user.password_hash!==hashStr(authForm.password)){setAuthError("Incorrect password.");return;}
-        sessionStorage.setItem("myinnerminduser",JSON.stringify(user));setCurrentUser(user);setScreen("app");
+        sessionStorage.setItem("myinnerminduser",JSON.stringify(user));
+        setCurrentUser(user);setScreen("app");
       }
-    }catch{setAuthError("Connection error. Please try again.");}
-    finally{setAuthLoading(false);}
+    } catch(e) {
+      setAuthError("Connection error. Please try again.");
+    } finally {
+      setAuthLoading(false);
+    }
   }
 
-  function handleLogout(){sessionStorage.removeItem("myinnerminduser");setCurrentUser(null);setScreen("landing");setAuthForm({username:"",email:"",password:""});}
-  async function upgradePlan(plan){if(!currentUser)return;await sbUpdate("users",`email=eq.${encodeURIComponent(currentUser.email)}`,{plan});const updated={...currentUser,plan};sessionStorage.setItem("myinnerminduser",JSON.stringify(updated));setCurrentUser(updated);}
+  function handleLogout(){
+    sessionStorage.removeItem("myinnerminduser");
+    setCurrentUser(null);
+    setScreen("landing");
+    setAuthForm({username:"",email:"",password:""});
+    // Return to root path if on a public route
+    if(window.location.pathname!=="/"){window.history.replaceState({},"","/");}
+  }
+
+  async function upgradePlan(plan){
+    if(!currentUser)return;
+    await sbUpdate("users",`email=eq.${encodeURIComponent(currentUser.email)}`,{plan});
+    const updated={...currentUser,plan};
+    sessionStorage.setItem("myinnerminduser",JSON.stringify(updated));
+    setCurrentUser(updated);
+  }
 
   if(screen==="splash")return <Splash/>;
+  if(screen==="setitdown")return <SetItDownPage/>;
   if(screen==="landing")return <LandingScreen onGetStarted={()=>{setAuthMode("register");setScreen("auth");}} onSignIn={()=>{setAuthMode("login");setScreen("auth");}}/>;
   if(screen==="onboarding")return <OnboardingScreen user={currentUser} onDone={()=>setScreen("app")}/>;
   if(screen==="auth")return <AuthScreen mode={authMode} form={authForm} error={authError} loading={authLoading} pwaPrompt={pwaPrompt} onChange={f=>setAuthForm(p=>({...p,...f}))} onSubmit={handleAuth} onToggle={()=>{setAuthMode(m=>m==="login"?"register":"login");setAuthError("");}}/>;
@@ -199,7 +379,6 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
   const [view,setView]=useState("list");
   const [entries,setEntries]=useState([]);
   const [selectedEntry,setSelectedEntry]=useState(null);
-  const [editMode,setEditMode]=useState(false);
   const [searchQuery,setSearchQuery]=useState("");
   const [filterTag,setFilterTag]=useState(null);
   const [filterMood,setFilterMood]=useState(null);
@@ -207,6 +386,7 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
   const [promptLoading,setPromptLoading]=useState(false);
   const [loading,setLoading]=useState(true);
   const [form,setForm]=useState({id:null,date:getTodayStr(),title:"",content:"",mood:null,tags:[],shared:false,submitToFeature:false});
+  const [editMode,setEditMode]=useState(false);
   const [insight,setInsight]=useState("");
   const [insightLoading,setInsightLoading]=useState(false);
   const [pwaDismissed,setPwaDismissed]=useState(false);
@@ -219,15 +399,86 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
   const reward=isPro?streakReward(streak):null;
   const halliePrompt=getWeeklyHalliePrompt();
 
-  useEffect(()=>{loadEntries();loadAiPrompt();const recapKey=`myinnermind_recap_${new Date().toISOString().slice(0,7)}`;const lastRecap=sessionStorage.getItem(`myinnermind_lastrecap_${user.email}`);if(lastRecap!==recapKey){const now=new Date();if(now.getDate()<=3){setShowRecap(true);sessionStorage.setItem(`myinnermind_lastrecap_${user.email}`,recapKey);}}},[]);
-  async function loadEntries(){setLoading(true);try{const data=await sbGet("entries",`user_email=eq.${encodeURIComponent(user.email)}&order=date.desc`);setEntries(Array.isArray(data)?data:[]);}catch{setEntries([]);}finally{setLoading(false);}}
-  async function loadAiPrompt(){const cached=sessionStorage.getItem("myinnermindPrompt_"+getTodayStr());if(cached){setAiPrompt(cached);return;}setPromptLoading(true);try{const p=await getAIPrompt();setAiPrompt(p);sessionStorage.setItem("myinnermindPrompt_"+getTodayStr(),p);}catch{setAiPrompt("What is one small thing that brought you comfort today?");}finally{setPromptLoading(false);}}
-  async function saveEntry(){if(!form.title.trim()&&!form.content.trim())return;const thisMonth=getTodayStr().slice(0,7);const monthCount=entries.filter(e=>e.date?.startsWith(thisMonth)).length;if(user.plan==="free"&&monthCount>=30&&!form.id){alert("You've reached 30 entries this month — upgrade to Community for unlimited journaling! 🌿");return;}const entry={id:form.id||`${user.email}_${Date.now()}`,user_email:user.email,date:form.date,title:form.title,content:form.content,mood:form.mood,tags:form.tags,shared:form.shared,submit_to_feature:form.submitToFeature,author_name:user.username,updated_at:Date.now()};await sbUpsert("entries",entry);await loadEntries();setView("list");if(!form.id)spawnConfetti();}
-  async function deleteEntry(entry){await sbDelete("entries",`id=eq.${entry.id}`);await loadEntries();setView("list");}
-  async function fetchInsight(entry){if(!isOTR)return;setInsight("");setInsightLoading(true);try{setInsight(await getAIInsight(entry));}catch{setInsight("Couldn't load insight right now.");}finally{setInsightLoading(false);}}
-  function startNew(prefill=""){setForm({id:null,date:getTodayStr(),title:"",content:prefill,mood:null,tags:[],shared:false,submitToFeature:false});setEditMode(false);setView("write");}
-  function startEdit(entry){setForm({id:entry.id,date:entry.date,title:entry.title,content:entry.content,mood:entry.mood,tags:entry.tags||[],shared:entry.shared||false,submitToFeature:entry.submit_to_feature||false});setEditMode(true);setView("write");}
-  const filtered=entries.filter(e=>{const q=searchQuery.toLowerCase();return(!q||e.title?.toLowerCase().includes(q)||e.content?.toLowerCase().includes(q))&&(!filterTag||e.tags?.includes(filterTag))&&(!filterMood||e.mood?.label===filterMood);});
+  useEffect(()=>{
+    loadEntries();
+    loadAiPrompt();
+    const recapKey=`myinnermind_recap_${new Date().toISOString().slice(0,7)}`;
+    const lastRecap=sessionStorage.getItem(`myinnermind_lastrecap_${user.email}`);
+    if(lastRecap!==recapKey){
+      const now=new Date();
+      if(now.getDate()<=3){setShowRecap(true);sessionStorage.setItem(`myinnermind_lastrecap_${user.email}`,recapKey);}
+    }
+  },[]);
+
+  async function loadEntries(){
+    setLoading(true);
+    try{const data=await sbGet("entries",`user_email=eq.${encodeURIComponent(user.email)}&order=date.desc`);setEntries(Array.isArray(data)?data:[]);}
+    catch{setEntries([]);}
+    finally{setLoading(false);}
+  }
+
+  async function loadAiPrompt(){
+    const cached=sessionStorage.getItem("myinnermindPrompt_"+getTodayStr());
+    if(cached){setAiPrompt(cached);return;}
+    setPromptLoading(true);
+    try{const p=await getAIPrompt();setAiPrompt(p);sessionStorage.setItem("myinnermindPrompt_"+getTodayStr(),p);}
+    catch{setAiPrompt("What is one small thing that brought you comfort today?");}
+    finally{setPromptLoading(false);}
+  }
+
+  async function saveEntry(){
+    if(!form.title.trim()&&!form.content.trim())return;
+    const thisMonth=getTodayStr().slice(0,7);
+    const monthCount=entries.filter(e=>e.date?.startsWith(thisMonth)).length;
+    if(user.plan==="free"&&monthCount>=30&&!form.id){alert("You've reached 30 entries this month — upgrade to Community for unlimited journaling! 🌿");return;}
+    const entry={
+      id:form.id||`${user.email}_${Date.now()}`,
+      user_email:user.email,
+      date:form.date,
+      title:form.title,
+      content:form.content,
+      mood:form.mood,
+      tags:form.tags,
+      shared:form.shared,
+      submit_to_feature:form.submitToFeature,
+      author_name:user.username,
+      updated_at:Date.now()
+    };
+    await sbUpsert("entries",entry);
+    await loadEntries();
+    setView("list");
+    if(!form.id)spawnConfetti();
+  }
+
+  async function deleteEntry(entry){
+    if(!window.confirm("Delete this entry? This can't be undone."))return;
+    await sbDelete("entries",`id=eq.${entry.id}`);
+    await loadEntries();
+    setView("list");
+  }
+
+  async function fetchInsight(entry){
+    if(!isOTR)return;
+    setInsight("");setInsightLoading(true);
+    try{setInsight(await getAIInsight(entry));}
+    catch{setInsight("Couldn't load insight right now.");}
+    finally{setInsightLoading(false);}
+  }
+
+  function startNew(prefill=""){
+    setForm({id:null,date:getTodayStr(),title:"",content:prefill,mood:null,tags:[],shared:false,submitToFeature:false});
+    setEditMode(false);setView("write");
+  }
+
+  function startEdit(entry){
+    setForm({id:entry.id,date:entry.date,title:entry.title,content:entry.content,mood:entry.mood,tags:entry.tags||[],shared:entry.shared||false,submitToFeature:entry.submit_to_feature||false});
+    setEditMode(true);setView("write");
+  }
+
+  const filtered=entries.filter(e=>{
+    const q=searchQuery.toLowerCase();
+    return(!q||e.title?.toLowerCase().includes(q)||e.content?.toLowerCase().includes(q))&&(!filterTag||e.tags?.includes(filterTag))&&(!filterMood||e.mood?.label===filterMood);
+  });
 
   return(
     <div style={{...S.page,background:T.bg}}>
@@ -263,12 +514,15 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
             <BadgesSection entries={entries} user={user} theme={T}/>
             {reward&&(<div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.12),rgba(200,137,90,0.08))",border:"1px solid rgba(245,158,11,0.3)",borderRadius:16,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:32}}>🔥</span><div style={{flex:1}}><div style={{fontWeight:700,color:"#92400e",fontSize:14}}>{reward.label} — {streak} days in a row!</div><div style={{fontSize:13,color:"#b45309",marginTop:3}}>Use code <strong>{reward.discount}</strong> for {reward.pct} off any gratitude journal at halliewho.com</div></div></div>)}
             <JournalingTimeBanner/>
-            {/* Hallie's Prompt — stays on journal home */}
             <div style={{...S.promptCard,background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.18)"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:18}}>💌</span><span style={{fontWeight:700,color:"#7a4a1e",fontSize:12,textTransform:"uppercase",letterSpacing:"0.6px"}}>Hallie's Prompt This Week</span></div><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.7,marginBottom:6}}>"{halliePrompt.prompt}"</p><div style={{fontSize:12,color:"#b08060",marginBottom:12}}>{halliePrompt.note}</div><button onClick={()=>startNew(halliePrompt.prompt)} style={S.softBtn}>Write to this →</button></div>
-            <div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{flex:1,position:"relative"}}><span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",opacity:0.35,fontSize:15}}>🔍</span><input style={{...S.input,paddingLeft:38,width:"100%"}} placeholder="Search your entries..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}/></div>{isOTR&&<button onClick={()=>exportToPDF(entries,user.username)} style={S.ghostBtn}>📄 PDF</button>}<button onClick={()=>startNew()} style={S.newBtn}>+ New</button></div>
+            <div style={{display:"flex",gap:10,alignItems:"center"}}>
+              <div style={{flex:1,position:"relative"}}><span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",opacity:0.35,fontSize:15}}>🔍</span><input style={{...S.input,paddingLeft:38,width:"100%"}} placeholder="Search your entries..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}/></div>
+              {isOTR&&<button onClick={()=>exportToPDF(entries,user.username)} style={S.ghostBtn}>📄 PDF</button>}
+              <button onClick={()=>startNew()} style={S.newBtn}>+ New</button>
+            </div>
             <div style={{display:"flex",flexWrap:"wrap",gap:7}}><Chip active={!filterTag} onClick={()=>setFilterTag(null)}>All</Chip>{TAG_OPTIONS.map(t=><Chip key={t} active={filterTag===t} activeColor={TAG_COLORS[t]} onClick={()=>setFilterTag(filterTag===t?null:t)}>{t}</Chip>)}</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:7,overflowX:"hidden"}}><Chip active={!filterMood} onClick={()=>setFilterMood(null)}>All Moods</Chip>{MOODS.map(m=><Chip key={m.label} active={filterMood===m.label} activeColor={m.color} onClick={()=>setFilterMood(filterMood===m.label?null:m.label)}>{m.emoji} {m.label}</Chip>)}</div>
-            {loading?(<div style={{textAlign:"center",padding:"70px 0",color:"#b08060",fontStyle:"italic"}}>Loading your journal...</div>):filtered.length===0?(<div style={{textAlign:"center",padding:"70px 0"}}><div style={{fontSize:52,marginBottom:14}}>📖</div><p style={{color:"#b08060",fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:16}}>No entries yet — start writing!</p><button onClick={()=>startNew()} style={{...S.newBtn,marginTop:18}}>Write your first entry</button></div>):(<div style={S.grid}>{filtered.map(entry=><EntryCard key={entry.id} entry={entry} onClick={()=>{setSelectedEntry(entry);setInsight("");setView("read");}}/>)}</div>)}
+            <div style={{display:"flex",flexWrap:"wrap",gap:7}}><Chip active={!filterMood} onClick={()=>setFilterMood(null)}>All Moods</Chip>{MOODS.map(m=><Chip key={m.label} active={filterMood===m.label} activeColor={m.color} onClick={()=>setFilterMood(filterMood===m.label?null:m.label)}>{m.emoji} {m.label}</Chip>)}</div>
+            {loading?(<div style={{textAlign:"center",padding:"70px 0",color:"#b08060",fontStyle:"italic"}}>Loading your journal...</div>):filtered.length===0?(<div style={{textAlign:"center",padding:"70px 0"}}><div style={{fontSize:52,marginBottom:14}}>📖</div><p style={{color:"#b08060",fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:16}}>{searchQuery||filterTag||filterMood?"No entries match your search.":"No entries yet — start writing!"}</p><button onClick={()=>startNew()} style={{...S.newBtn,marginTop:18}}>Write your first entry</button></div>):(<div style={S.grid}>{filtered.map(entry=><EntryCard key={entry.id} entry={entry} onClick={()=>{setSelectedEntry(entry);setInsight("");setView("read");}}/>)}</div>)}
           </div>
         )}
         {tab==="journal"&&view==="write"&&(
@@ -283,19 +537,32 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
             {form.content.trim()&&<div style={{fontSize:11,color:"#b08060",textAlign:"right",marginTop:-8}}>{form.content.trim().split(/\s+/).filter(Boolean).length} words</div>}
             {isPro&&(<label style={{display:"flex",alignItems:"center",gap:9,cursor:"pointer",fontSize:14,color:"#8a6040"}}><input type="checkbox" checked={form.shared} onChange={e=>setForm(f=>({...f,shared:e.target.checked}))} style={{accentColor:"#c8895a",width:16,height:16}}/>Share to Community Feed 🌿</label>)}
             <label style={{display:"flex",alignItems:"center",gap:9,cursor:"pointer",fontSize:14,color:"#7a4a1e",background:"rgba(200,137,90,0.06)",padding:"10px 14px",borderRadius:12,border:"1px solid rgba(200,137,90,0.18)"}}><input type="checkbox" checked={form.submitToFeature} onChange={e=>setForm(f=>({...f,submitToFeature:e.target.checked}))} style={{accentColor:"#c8895a",width:16,height:16}}/><div><div style={{fontWeight:700,fontSize:13}}>🎙️ Submit for Story of the Month</div><div style={{fontSize:11,color:"#b08060",marginTop:1}}>Hallie may feature this on the podcast — anonymously unless you say otherwise</div></div></label>
-            <div style={{display:"flex",justifyContent:"space-between",marginTop:8}}><button onClick={()=>setView("list")} style={S.ghostBtn}>Discard</button><button onClick={saveEntry} style={S.saveBtn}>{editMode?"Save Changes ✓":"Save Entry ✨"}</button></div>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:8}}>
+              <button onClick={()=>setView("list")} style={S.ghostBtn}>Discard</button>
+              <button onClick={saveEntry} style={S.saveBtn}>{editMode?"Save Changes ✓":"Save Entry ✨"}</button>
+            </div>
           </div>
         )}
         {tab==="journal"&&view==="read"&&selectedEntry&&(
           <div style={S.readCard}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}><div><div style={{fontSize:12,color:"#b08060",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.4px"}}>{formatDate(selectedEntry.date)}</div>{selectedEntry.mood&&<span style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:8,padding:"4px 13px",borderRadius:12,background:"rgba(200,137,90,0.1)",color:"#9a6a3a",fontSize:13,fontWeight:600}}>{selectedEntry.mood.emoji} {selectedEntry.mood.label}</span>}{selectedEntry.submit_to_feature&&<span style={{display:"inline-flex",alignItems:"center",gap:5,marginTop:8,marginLeft:8,padding:"4px 13px",borderRadius:12,background:"rgba(122,74,30,0.1)",color:"#7a4a1e",fontSize:12,fontWeight:600}}>🎙️ Submitted</span>}</div><button onClick={()=>setView("list")} style={S.ghostBtn}>← Back</button></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+              <div>
+                <div style={{fontSize:12,color:"#b08060",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.4px"}}>{formatDate(selectedEntry.date)}</div>
+                {selectedEntry.mood&&<span style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:8,padding:"4px 13px",borderRadius:12,background:"rgba(200,137,90,0.1)",color:"#9a6a3a",fontSize:13,fontWeight:600}}>{selectedEntry.mood.emoji} {selectedEntry.mood.label}</span>}
+                {selectedEntry.submit_to_feature&&<span style={{display:"inline-flex",alignItems:"center",gap:5,marginTop:8,marginLeft:8,padding:"4px 13px",borderRadius:12,background:"rgba(122,74,30,0.1)",color:"#7a4a1e",fontSize:12,fontWeight:600}}>🎙️ Submitted</span>}
+              </div>
+              <button onClick={()=>setView("list")} style={S.ghostBtn}>← Back</button>
+            </div>
             <h1 style={{fontFamily:"'Lora',serif",fontSize:28,color:"#5a2e0e",marginBottom:14,fontWeight:600,lineHeight:1.2}}>{selectedEntry.title||"Untitled"}</h1>
             {selectedEntry.tags?.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:18}}>{selectedEntry.tags.map(t=><TagPill key={t} tag={t}/>)}</div>}
             <div style={{height:1,background:"linear-gradient(90deg,rgba(200,137,90,0.3),transparent)",marginBottom:24}}/>
             <p style={{fontFamily:"'Lora',serif",fontSize:16,lineHeight:1.9,color:"#6a4020",fontStyle:"italic",whiteSpace:"pre-wrap",marginBottom:32}}>{selectedEntry.content}</p>
             {isOTR&&(<div style={S.insightBox}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:insight?12:0}}><span style={{fontWeight:700,color:"#7a4a1e",fontSize:12,textTransform:"uppercase",letterSpacing:"0.5px"}}>✨ AI Reflection</span>{!insight&&<button onClick={()=>fetchInsight(selectedEntry)} disabled={insightLoading} style={S.softBtn}>{insightLoading?"Reflecting...":"Get Insight"}</button>}</div>{insightLoading&&<p style={{color:"#b08060",fontStyle:"italic",fontSize:14}}>Reading between the lines...</p>}{insight&&<p style={{fontFamily:"'Lora',serif",fontSize:15,lineHeight:1.75,color:"#6a4020",fontStyle:"italic"}}>{insight}</p>}</div>)}
             {!isOTR&&<div style={{...S.insightBox,textAlign:"center",padding:"16px"}}><span style={{fontSize:13,color:"#9a7050"}}>✨ Upgrade to Off the Record to unlock AI Reflections</span></div>}
-            <div style={{display:"flex",justifyContent:"space-between",marginTop:24}}><button onClick={()=>deleteEntry(selectedEntry)} style={S.deleteBtn}>🗑 Delete</button><button onClick={()=>startEdit(selectedEntry)} style={S.saveBtn}>✏️ Edit</button></div>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:24}}>
+              <button onClick={()=>deleteEntry(selectedEntry)} style={S.deleteBtn}>🗑 Delete</button>
+              <button onClick={()=>startEdit(selectedEntry)} style={S.saveBtn}>✏️ Edit</button>
+            </div>
           </div>
         )}
         {tab==="admin"&&user.email===ADMIN_EMAIL&&<AdminTab/>}
@@ -411,6 +678,7 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
       <div style={{fontFamily:"'Nunito',sans-serif"}}>
         <div style={{textAlign:"center",padding:"20px 24px 16px"}}><div style={{fontSize:32,marginBottom:6}}>🌿</div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,fontWeight:600,color:"#5a2e0e",marginBottom:4}}>Communities</h2><p style={{fontSize:13,color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif"}}>Find your people. You don't have to grow alone.</p></div>
         {loading?<div style={{textAlign:"center",padding:"40px",color:"#b08060",fontStyle:"italic"}}>Loading communities...</div>:Object.entries(grouped).map(([tier,list])=>(
+          list.length===0?null:
           <div key={tier} style={{marginBottom:4,padding:"0 16px"}}>
             <div style={{marginBottom:8,marginTop:14}}>
               <div style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,letterSpacing:"0.5px",textTransform:"uppercase",padding:"4px 12px",borderRadius:20,border:"1px solid",background:COMMUNITY_TIER_CONFIG[tier].bg,borderColor:COMMUNITY_TIER_CONFIG[tier].border,color:COMMUNITY_TIER_CONFIG[tier].color}}>
@@ -506,7 +774,7 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
 }
 
 // ── CHALLENGES ──
-const MINI_CHALLENGES = [
+const MINI_CHALLENGES=[
   {id:"healing7",icon:"🌱",title:"7-Day Healing Series",duration:7,color:"#7a9e7e",desc:"A gentle week of turning inward. Release, restore, and come back to yourself.",days:[{day:1,prompt:"What are you carrying right now that isn't yours to carry? Write it out and then write: I release this."},{day:2,prompt:"Describe a wound that has taught you something beautiful. How did that pain shape you?"},{day:3,prompt:"Write a letter to a younger version of yourself who needed to hear something they never got to hear."},{day:4,prompt:"What does healing look like for you — not what it's supposed to look like, but what it actually feels like?"},{day:5,prompt:"Who in your life makes you feel most like yourself? What do they see in you that you sometimes forget?"},{day:6,prompt:"Name three ways you have grown in the last year that no one else would notice but you."},{day:7,prompt:"Write yourself a blessing. Something you wish someone had said to you. Say it to yourself now."}]},
   {id:"gratitude5",icon:"🙏",title:"5-Day Gratitude Reset",duration:5,color:"#c8895a",desc:"Not toxic positivity — real, specific gratitude that rewires how you see your life.",days:[{day:1,prompt:"Write about something you almost missed today — a small moment that could have gone unnoticed but didn't."},{day:2,prompt:"Who is someone in your life who shows up quietly? Write them a thank you they'll never see."},{day:3,prompt:"What is something about your body you are grateful for today? Not how it looks — what it does."},{day:4,prompt:"Write about a hard season that gave you something you wouldn't trade. What did difficulty teach you?"},{day:5,prompt:"Write a love letter to your own life — exactly as it is right now, imperfect and in process."}]},
   {id:"confidence10",icon:"🔥",title:"10-Day Confidence Builder",duration:10,color:"#c47c2a",desc:"Call yourself back. Rebuild your belief in who you are and what you're capable of.",days:[{day:1,prompt:"Write about a time you did something that scared you. How did it feel on the other side?"},{day:2,prompt:"What is something you are actually really good at that you rarely let yourself claim?"},{day:3,prompt:"Write about a version of yourself you've been afraid to become. What's stopping you?"},{day:4,prompt:"Describe your dream life in present tense — as if it's already happening. How does she live?"},{day:5,prompt:"What would you do this week if you weren't afraid of what people thought?"},{day:6,prompt:"Write about a compliment you've received that you dismissed. Receive it now."},{day:7,prompt:"What are three things you've built, created, or overcome that prove you are more capable than you think?"},{day:8,prompt:"What boundary would change your life if you set it? Write it out as a declaration."},{day:9,prompt:"Who are you becoming? Describe her in detail. What does she believe about herself?"},{day:10,prompt:"Write a manifesto for yourself. Five things you believe about who you are and what you deserve."}]},
@@ -523,6 +791,7 @@ function ChallengesTab({entries,user,onWrite}){
   const daysInMonth=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
   const today=new Date().getDate();
   const journaledDays=new Set(monthEntries.map(e=>new Date(e.date).getDate()));
+
   function joinChallenge(id){const updated={...joined,[id]:{joinedDate:getTodayStr(),daysCompleted:[]}};setJoined(updated);localStorage.setItem(`challenges_joined_${user.email}`,JSON.stringify(updated));}
   function getChallengeDay(id){if(!joined[id])return 0;const start=new Date(joined[id].joinedDate);const now=new Date();return Math.floor((now-start)/(24*60*60*1000))+1;}
   function getCompletedDays(id){return joined[id]?.daysCompleted||[];}
@@ -586,7 +855,13 @@ function ChallengesTab({entries,user,onWrite}){
 function PricingTab({currentPlan,userEmail,onUpgrade}){
   const [checkoutLoading,setCheckoutLoading]=useState(null);
   const [checkoutError,setCheckoutError]=useState("");
-  async function handleUpgrade(key){if(key==="free"){onUpgrade("free");return;}setCheckoutError("");setCheckoutLoading(key);try{await startStripeCheckout(STRIPE_PRICES[key],userEmail);}catch{setCheckoutError("Checkout issue — email hello@halliewho.com to upgrade.");onUpgrade(key);}finally{setCheckoutLoading(null);}}
+  async function handleUpgrade(key){
+    if(key==="free"){onUpgrade("free");return;}
+    setCheckoutError("");setCheckoutLoading(key);
+    try{await startStripeCheckout(STRIPE_PRICES[key],userEmail);}
+    catch{setCheckoutError("Checkout issue — email hello@halliewho.com to upgrade.");onUpgrade(key);}
+    finally{setCheckoutLoading(null);}
+  }
   return(<div><div style={{textAlign:"center",marginBottom:36}}><h2 style={{fontFamily:"'Lora',serif",fontSize:30,color:"#5a2e0e",marginBottom:8}}>Choose Your Plan</h2><p style={{color:"#b08060",fontSize:15,fontStyle:"italic"}}>Some thoughts aren't meant for the surface.</p></div>{checkoutError&&<div style={{...S.errorBox,marginBottom:20,textAlign:"center"}}>{checkoutError}</div>}<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:20,marginBottom:40}}>{Object.entries(PLANS).map(([key,plan])=>(<div key={key} style={{...S.pricingCard,...(currentPlan===key?{borderColor:plan.color,boxShadow:`0 4px 24px ${plan.color}33`}:{})}}>{currentPlan===key&&<div style={{position:"absolute",top:-13,left:"50%",transform:"translateX(-50%)",background:plan.color,color:"#fff",fontSize:10,fontWeight:800,padding:"3px 14px",borderRadius:20,textTransform:"uppercase",letterSpacing:"0.5px",whiteSpace:"nowrap"}}>Current Plan</div>}<div style={{fontFamily:"'Lora',serif",fontSize:22,fontWeight:600,color:"#5a2e0e",marginBottom:4}}>{plan.name}</div><div style={{fontSize:30,fontWeight:800,color:plan.color,marginBottom:20,fontFamily:"'Lora',serif"}}>{plan.price}</div><ul style={{listStyle:"none",display:"flex",flexDirection:"column",gap:10,marginBottom:24}}>{plan.features.map(f=><li key={f} style={{fontSize:14,color:"#7a5030",display:"flex",gap:8}}><span style={{color:plan.color,fontWeight:700,flexShrink:0}}>✓</span>{f}</li>)}</ul>{currentPlan!==key&&(<button onClick={()=>handleUpgrade(key)} disabled={checkoutLoading===key} style={{...S.saveBtn,width:"100%",background:`linear-gradient(135deg,${plan.color}cc,${plan.color})`,boxShadow:`0 3px 14px ${plan.color}55`}}>{checkoutLoading===key?"Opening checkout...":key==="free"?"Downgrade":key==="offtherecord"?"Enter Off the Record →":`Join ${plan.name} →`}</button>)}</div>))}</div></div>);
 }
 
@@ -621,40 +896,24 @@ function MonthlyRecap({entries,user,onDismiss}){const now=new Date();const lastM
 
 function IntentionBanner({user,onWrite}){const weekKey=`intention_${user.email}_${Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000))}`;const [intention,setIntention]=useState(()=>localStorage.getItem(weekKey)||"");const [editing,setEditing]=useState(false);const [draft,setDraft]=useState("");function save(){localStorage.setItem(weekKey,draft);setIntention(draft);setEditing(false);}if(editing)return(<div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:20,padding:"20px 24px"}}><div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🎯 This Week's Intention</div><input style={{width:"100%",padding:"10px 14px",borderRadius:12,border:"1px solid rgba(155,126,184,0.3)",background:"rgba(255,255,255,0.8)",fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",outline:"none",marginBottom:12,boxSizing:"border-box"}} placeholder="I intend to..." value={draft} onChange={e=>setDraft(e.target.value)} autoFocus onKeyDown={e=>e.key==="Enter"&&save()}/><div style={{display:"flex",gap:8}}><button onClick={()=>setEditing(false)} style={{background:"none",border:"1px solid rgba(155,126,184,0.3)",borderRadius:14,padding:"7px 16px",color:"#9b7eb8",fontFamily:"'Nunito',sans-serif",fontSize:13,cursor:"pointer"}}>Cancel</button><button onClick={save} style={{background:"#9b7eb8",border:"none",borderRadius:14,padding:"7px 20px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Set Intention ✓</button></div></div>);return(<div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:20,padding:"18px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div style={{flex:1}}><div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:4}}>🎯 This Week's Intention</div>{intention?<p style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",fontStyle:"italic"}}>{intention}</p>:<p style={{fontSize:13,color:"#b08060"}}>Set an intention for this week — something to come back to.</p>}</div><button onClick={()=>{setDraft(intention);setEditing(true);}} style={{background:"rgba(155,126,184,0.15)",border:"1px solid rgba(155,126,184,0.3)",borderRadius:14,padding:"7px 14px",color:"#9b7eb8",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{intention?"Edit":"Set →"}</button></div>);}
 
-// ── JOURNEY TAB — now includes Hallie's Desk Note ──
 function JourneyTab({entries,user}){
   const streak=calcStreak(entries);
   const thisMonth=new Date().toISOString().slice(0,7);
   const monthEntries=entries.filter(e=>e.date?.startsWith(thisMonth));
   const topMood=(()=>{const counts={};entries.forEach(e=>{if(e.mood?.label)counts[e.mood.label]=(counts[e.mood.label]||0)+1;});const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];return top?MOODS.find(m=>m.label===top[0]):null;})();
-
-  // "On this day" — entry from exactly 1 year ago
   const oneYearAgo=new Date();oneYearAgo.setFullYear(oneYearAgo.getFullYear()-1);
   const oneYearAgoStr=oneYearAgo.toISOString().split("T")[0];
   const onThisDay=entries.find(e=>e.date===oneYearAgoStr);
-
   return(
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
       <div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🌱 My Journey</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Your growth, all in one place</p></div>
-
-      {/* Hallie's Desk Note — moved here from journal home */}
       <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(155,126,184,0.2)",borderRadius:18,padding:"18px 20px"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🖊️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>A note for your journey</span></div>
         <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,margin:0}}>{getWeeklyDeskNote()}</p>
         <p style={{fontSize:11,color:"#b08060",marginTop:8}}>— Hallie 🌿</p>
       </div>
-
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:14}}>{[{icon:"📖",label:"Total Entries",value:entries.length},{icon:"🔥",label:"Current Streak",value:`${streak}d`},{icon:"📅",label:"This Month",value:monthEntries.length},{icon:"💭",label:"Top Mood",value:topMood?`${topMood.emoji} ${topMood.label}`:"—"}].map(s=>(<div key={s.label} style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:18,padding:"18px",textAlign:"center"}}><div style={{fontSize:26,marginBottom:6}}>{s.icon}</div><div style={{fontSize:22,fontWeight:800,color:"#7a4a1e",fontFamily:"'Lora',serif"}}>{s.value}</div><div style={{fontSize:11,color:"#b08060",marginTop:3,textTransform:"uppercase",letterSpacing:"0.4px"}}>{s.label}</div></div>))}</div>
-
-      {/* On this day */}
-      {onThisDay&&(
-        <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:18,padding:"18px 20px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🗓️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>On this day, one year ago</span></div>
-          <p style={{fontFamily:"'Lora',serif",fontSize:15,fontWeight:600,color:"#5a2e0e",marginBottom:6}}>{onThisDay.title||"Untitled"}</p>
-          <p style={{fontFamily:"'Lora',serif",fontSize:13,color:"#7a5030",fontStyle:"italic",lineHeight:1.65}}>{(onThisDay.content||"").slice(0,160)}{(onThisDay.content||"").length>160?"…":""}</p>
-        </div>
-      )}
-
+      {onThisDay&&(<div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🗓️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>On this day, one year ago</span></div><p style={{fontFamily:"'Lora',serif",fontSize:15,fontWeight:600,color:"#5a2e0e",marginBottom:6}}>{onThisDay.title||"Untitled"}</p><p style={{fontFamily:"'Lora',serif",fontSize:13,color:"#7a5030",fontStyle:"italic",lineHeight:1.65}}>{(onThisDay.content||"").slice(0,160)}{(onThisDay.content||"").length>160?"…":""}</p></div>)}
       <MoodChart entries={entries}/>
       <GrowthTree entries={entries}/>
       <BadgesSection entries={entries} user={user}/>
@@ -665,7 +924,7 @@ function JourneyTab({entries,user}){
 
 function GentleNudge({entries,theme}){const T=theme||THEMES.original;const [dismissed,setDismissed]=useState(false);if(dismissed)return null;const lastEntry=entries[0];if(!lastEntry)return null;const daysSince=Math.floor((Date.now()-new Date(lastEntry.date).getTime())/(24*60*60*1000));if(daysSince<5)return null;return(<div style={{background:`linear-gradient(135deg,${T.accent}10,${T.accent}06)`,border:`1px dashed ${T.accent}40`,borderRadius:18,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:28}}>🌱</span><div style={{flex:1}}><div style={{fontWeight:700,color:T.accentDark,fontSize:14}}>We've missed you</div><div style={{fontSize:13,color:T.subtext,marginTop:2}}>It's been {daysSince} days since your last entry. No pressure — just here when you're ready. 🌿</div></div><button onClick={()=>setDismissed(true)} style={{background:"none",border:"none",color:T.subtext,fontSize:18,cursor:"pointer",padding:4}}>×</button></div>);}
 
-function GrowthTree({entries}){const count=entries.length;const stage=count===0?0:count<5?1:count<15?2:count<30?3:count<60?4:5;const trees=["🌱","🌿","🪴","🌳","🌲","🎋"];const labels=["Plant your seed","Sprouting","Growing","Rooted","Thriving","Flourishing"];const next=[1,5,15,30,60,Infinity];return(<div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px",textAlign:"center"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>Your Growth</div><div style={{fontSize:64,marginBottom:8}}>{trees[stage]}</div><div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{labels[stage]}</div><div style={{fontSize:13,color:"#b08060",marginBottom:12}}>{count} {count===1?"entry":"entries"} written</div>{stage<5&&(<div style={{background:"rgba(200,137,90,0.1)",borderRadius:12,height:8,overflow:"hidden"}}><div style={{background:"linear-gradient(90deg,#c8895a,#d4956a)",height:"100%",width:`${Math.min(100,((count-(next[stage-1]||0))/(next[stage]-(next[stage-1]||0)))*100)}%`,transition:"width 0.5s",borderRadius:12}}/></div>)}{stage<5&&<div style={{fontSize:11,color:"#b08060",marginTop:6}}>{next[stage]-count} more entries to {labels[stage+1]}</div>}</div>);}
+function GrowthTree({entries}){const count=entries.length;const stage=count===0?0:count<5?1:count<15?2:count<30?3:count<60?4:5;const trees=["🌱","🌿","🪴","🌳","🌲","🎋"];const labels=["Plant your seed","Sprouting","Growing","Rooted","Thriving","Flourishing"];const next=[1,5,15,30,60,Infinity];const prevMilestone=stage>0?next[stage-1]:0;const nextMilestone=next[stage];const progress=stage>=5?1:Math.min(1,(count-prevMilestone)/(nextMilestone-prevMilestone));return(<div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px",textAlign:"center"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>Your Growth</div><div style={{fontSize:64,marginBottom:8}}>{trees[stage]}</div><div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{labels[stage]}</div><div style={{fontSize:13,color:"#b08060",marginBottom:12}}>{count} {count===1?"entry":"entries"} written</div>{stage<5&&(<div style={{background:"rgba(200,137,90,0.1)",borderRadius:12,height:8,overflow:"hidden"}}><div style={{background:"linear-gradient(90deg,#c8895a,#d4956a)",height:"100%",width:`${progress*100}%`,transition:"width 0.5s",borderRadius:12}}/></div>)}{stage<5&&<div style={{fontSize:11,color:"#b08060",marginTop:6}}>{nextMilestone-count} more entries to {labels[stage+1]}</div>}</div>);}
 
 function LettersTab({user}){const [letters,setLetters]=useState(()=>{try{return JSON.parse(localStorage.getItem(`letters_${user.email}`)||"[]");}catch{return[];}});const [writing,setWriting]=useState(false);const [form,setForm]=useState({title:"",content:"",deliverIn:30});function saveLetter(){if(!form.content.trim())return;const letter={id:Date.now(),title:form.title||"A letter to my future self",content:form.content,written:new Date().toISOString(),deliverOn:new Date(Date.now()+form.deliverIn*24*60*60*1000).toISOString(),deliverIn:form.deliverIn,opened:false};const updated=[letter,...letters];setLetters(updated);localStorage.setItem(`letters_${user.email}`,JSON.stringify(updated));setWriting(false);setForm({title:"",content:"",deliverIn:30});}function openLetter(id){const updated=letters.map(l=>l.id===id?{...l,opened:true}:l);setLetters(updated);localStorage.setItem(`letters_${user.email}`,JSON.stringify(updated));}const ready=letters.filter(l=>new Date(l.deliverOn)<=new Date());const waiting=letters.filter(l=>new Date(l.deliverOn)>new Date());return(<div style={{display:"flex",flexDirection:"column",gap:20}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>💌 Letters to Future Me</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Write to yourself across time</p></div><button onClick={()=>setWriting(true)} style={S.newBtn}>+ Write</button></div>{writing&&(<div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:24,padding:"28px 24px",boxShadow:"0 4px 24px rgba(160,100,50,0.12)"}}><input style={{...S.titleInput,marginBottom:16}} placeholder="Give this letter a title..." value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))}/><textarea style={{...S.textarea,minHeight:160,marginBottom:16}} placeholder="Dear future me..." value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))} autoFocus/><div style={{marginBottom:20}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Deliver in</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[{label:"30 days",val:30},{label:"60 days",val:60},{label:"90 days",val:90},{label:"6 months",val:180},{label:"1 year",val:365}].map(o=>(<button key={o.val} onClick={()=>setForm(f=>({...f,deliverIn:o.val}))} style={{padding:"6px 14px",borderRadius:14,border:`1px solid ${form.deliverIn===o.val?"#c8895a":"rgba(200,137,90,0.3)"}`,background:form.deliverIn===o.val?"rgba(200,137,90,0.15)":"transparent",color:form.deliverIn===o.val?"#7a4a1e":"#b08060",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>{o.label}</button>))}</div></div><div style={{display:"flex",justifyContent:"space-between"}}><button onClick={()=>setWriting(false)} style={S.ghostBtn}>Cancel</button><button onClick={saveLetter} style={S.saveBtn}>Seal & Send ✉️</button></div></div>)}{ready.length>0&&(<div><div style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>📬 Ready to open ({ready.length})</div><div style={{display:"flex",flexDirection:"column",gap:10}}>{ready.map(l=>(<div key={l.id} style={{background:"linear-gradient(135deg,rgba(200,137,90,0.1),rgba(122,74,30,0.07))",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}><div><div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600}}>{l.title}</div><div style={{fontSize:11,color:"#b08060",marginTop:2}}>Written {new Date(l.written).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div></div>{!l.opened&&<button onClick={()=>openLetter(l.id)} style={{...S.saveBtn,padding:"6px 16px",fontSize:12}}>Open ✉️</button>}</div>{l.opened&&<p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",lineHeight:1.75,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{l.content}</p>}</div>))}</div></div>)}{waiting.length>0&&(<div><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🔒 Sealed ({waiting.length})</div><div style={{display:"flex",flexDirection:"column",gap:10}}>{waiting.map(l=>(<div key={l.id} style={{background:"rgba(200,137,90,0.05)",border:"1px dashed rgba(200,137,90,0.25)",borderRadius:16,padding:"14px 18px",opacity:0.7}}><div style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{l.title}</div><div style={{fontSize:12,color:"#b08060"}}>Opens {new Date(l.deliverOn).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div></div>))}</div></div>)}{letters.length===0&&!writing&&(<div style={{textAlign:"center",padding:"60px 0"}}><div style={{fontSize:52,marginBottom:14}}>💌</div><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#b08060",fontStyle:"italic",marginBottom:20}}>Write a letter to your future self.<br/>It'll be waiting when you're ready.</p><button onClick={()=>setWriting(true)} style={S.saveBtn}>Write Your First Letter →</button></div>)}</div>);}
 
@@ -674,141 +933,23 @@ function ProfileMenu({user,theme,T,onLogout,onTheme,onUpgradeTab}){const [open,s
 const WEEKLY_BREATHWORK=[{id:"box",name:"Box Breathing",desc:"Calm your nervous system",inhale:4,hold1:4,exhale:4,hold2:4,cycles:4,color:"#7a8c6e"},{id:"478",name:"4-7-8 Breathing",desc:"For sleep & deep calm",inhale:4,hold1:7,exhale:8,hold2:0,cycles:3,color:"#9b7eb8"},{id:"belly",name:"Belly Breathing",desc:"Deep grounding breath",inhale:5,hold1:2,exhale:6,hold2:1,cycles:4,color:"#c8895a"},{id:"reset",name:"Quick Reset",desc:"1-minute instant calm",inhale:3,hold1:1,exhale:5,hold2:0,cycles:5,color:"#5b8fa8"}];
 const MEDITATIONS=[{id:"return",name:"Return to Calm",duration:"2 min",free:true,steps:["Find a comfortable position and gently close your eyes.","Take a slow breath in through your nose... and release it through your mouth.","Notice where your body is holding tension right now. Just notice — no need to fix anything.","With your next exhale, imagine that tension softening. Just a little.","You are safe in this moment. Nothing needs your attention right now.","Breathe in what you need... breathe out what you don't.","Rest here for a moment. You are allowed to simply be.","When you're ready, slowly open your eyes. Carry this calm with you."]},{id:"morning",name:"Morning Intention",duration:"2 min",free:false,steps:["Begin your day by arriving fully in your body.","Take three deep breaths before you do anything else.","Ask yourself: what do I want to feel today?","Not what you want to accomplish — how you want to feel.","Let that feeling settle into your chest like warmth.","You get to choose your energy today, even when things feel uncertain.","Set one gentle intention. Just one. Something that honors you.","Carry it like a quiet thread through your whole day."]},{id:"release",name:"Let It Go",duration:"2 min",free:false,steps:["Think of one thing you've been holding onto today.","It could be a worry, a conversation, a feeling — anything weighing on you.","Breathe it in fully. Really acknowledge it.","Now with your exhale, imagine placing it down. Not throwing it away — just setting it down.","You don't have to carry everything all the time.","Some things aren't yours to solve tonight.","Breathe in peace. Breathe out weight.","You are lighter than you think. Rest now."]}];
 
-// ── NEW useAmbientSound — birds, leaves, waves, static ──
 function useAmbientSound(){
   const ctxRef=useRef(null);
   const nodesRef=useRef([]);
-
-  function stop(){
-    nodesRef.current.forEach(n=>{try{n.stop?.();n.disconnect?.();}catch(e){}});
-    nodesRef.current=[];
-    if(ctxRef.current){ctxRef.current.close();ctxRef.current=null;}
-  }
-
-  function makeNoise(ctx,color="white"){
-    const bufSize=ctx.sampleRate*3;
-    const buf=ctx.createBuffer(1,bufSize,ctx.sampleRate);
-    const data=buf.getChannelData(0);
-    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
-    for(let i=0;i<bufSize;i++){
-      const white=Math.random()*2-1;
-      if(color==="pink"){
-        b0=0.99886*b0+white*0.0555179;b1=0.99332*b1+white*0.0750759;
-        b2=0.96900*b2+white*0.1538520;b3=0.86650*b3+white*0.3104856;
-        b4=0.55000*b4+white*0.5329522;b5=-0.7616*b5-white*0.0168980;
-        data[i]=(b0+b1+b2+b3+b4+b5+b6+white*0.5362)/7;b6=white*0.115926;
-      }else{data[i]=white;}
-    }
-    const src=ctx.createBufferSource();src.buffer=buf;src.loop=true;return src;
-  }
-
+  function stop(){nodesRef.current.forEach(n=>{try{n.stop?.();n.disconnect?.();}catch(e){}});nodesRef.current=[];if(ctxRef.current){ctxRef.current.close();ctxRef.current=null;}}
+  function makeNoise(ctx,color="white"){const bufSize=ctx.sampleRate*3;const buf=ctx.createBuffer(1,bufSize,ctx.sampleRate);const data=buf.getChannelData(0);let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;for(let i=0;i<bufSize;i++){const white=Math.random()*2-1;if(color==="pink"){b0=0.99886*b0+white*0.0555179;b1=0.99332*b1+white*0.0750759;b2=0.96900*b2+white*0.1538520;b3=0.86650*b3+white*0.3104856;b4=0.55000*b4+white*0.5329522;b5=-0.7616*b5-white*0.0168980;data[i]=(b0+b1+b2+b3+b4+b5+b6+white*0.5362)/7;b6=white*0.115926;}else{data[i]=white;}}const src=ctx.createBufferSource();src.buffer=buf;src.loop=true;return src;}
   function play(sound){
     stop();
     const ctx=new(window.AudioContext||window.webkitAudioContext)();
     ctxRef.current=ctx;
-    const master=ctx.createGain();
-    master.gain.value=0.4;
-    master.connect(ctx.destination);
+    const master=ctx.createGain();master.gain.value=0.4;master.connect(ctx.destination);
     const nodes=[];
-
-    if(sound.type==="birds"){
-      // Soft background forest hiss
-      const src=makeNoise(ctx,"pink");
-      const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1200;bp.Q.value=0.3;
-      const g=ctx.createGain();g.gain.value=0.2;
-      src.connect(bp);bp.connect(g);g.connect(master);src.start();nodes.push(src);
-      // Bird chirp layers
-      function chirp(){
-        if(!ctxRef.current)return;
-        const numBirds=2+Math.floor(Math.random()*3);
-        for(let i=0;i<numBirds;i++){
-          setTimeout(()=>{
-            const sweeps=2+Math.floor(Math.random()*3);
-            for(let s=0;s<sweeps;s++){
-              setTimeout(()=>{
-                const osc=ctx.createOscillator();
-                const eg=ctx.createGain();
-                const baseFreq=2000+Math.random()*2000;
-                osc.frequency.setValueAtTime(baseFreq,ctx.currentTime);
-                osc.frequency.linearRampToValueAtTime(baseFreq*(1.1+Math.random()*0.3),ctx.currentTime+0.05);
-                osc.frequency.linearRampToValueAtTime(baseFreq*0.95,ctx.currentTime+0.1);
-                osc.type="sine";
-                eg.gain.setValueAtTime(0,ctx.currentTime);
-                eg.gain.linearRampToValueAtTime(0.1,ctx.currentTime+0.01);
-                eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.12);
-                osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+0.15);
-              },s*110);
-            }
-          },i*400+Math.random()*300);
-        }
-        setTimeout(chirp,2000+Math.random()*4000);
-      }
-      chirp();
-
-    }else if(sound.type==="leaves"){
-      // Layered rustling noise
-      const src=makeNoise(ctx,"pink");
-      const hi=ctx.createBiquadFilter();hi.type="highpass";hi.frequency.value=800;
-      const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=5000;
-      const g=ctx.createGain();g.gain.value=0.85;
-      src.connect(hi);hi.connect(lo);lo.connect(g);g.connect(master);src.start();nodes.push(src);
-      // Wind swell LFO
-      const lfo=ctx.createOscillator();
-      const lfoG=ctx.createGain();lfoG.gain.value=0.3;
-      lfo.frequency.value=0.08+Math.random()*0.05;
-      lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start();nodes.push(lfo);
-      // Occasional gust
-      function gust(){
-        if(!ctxRef.current)return;
-        const src2=makeNoise(ctx,"pink");
-        const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=2000+Math.random()*1000;bp.Q.value=0.5;
-        const eg=ctx.createGain();const dur=0.6+Math.random()*1.2;
-        eg.gain.setValueAtTime(0,ctx.currentTime);
-        eg.gain.linearRampToValueAtTime(0.45,ctx.currentTime+0.2);
-        eg.gain.linearRampToValueAtTime(0,ctx.currentTime+dur);
-        src2.connect(bp);bp.connect(eg);eg.connect(master);src2.start();src2.stop(ctx.currentTime+dur+0.1);
-        setTimeout(gust,3000+Math.random()*6000);
-      }
-      gust();
-
-    }else if(sound.type==="waves"){
-      // Deep ocean base
-      const src=makeNoise(ctx,"pink");
-      const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=350;
-      const mid=ctx.createBiquadFilter();mid.type="bandpass";mid.frequency.value=180;mid.Q.value=0.4;
-      const g=ctx.createGain();g.gain.value=1.4;
-      src.connect(lo);lo.connect(mid);mid.connect(g);g.connect(master);src.start();nodes.push(src);
-      // Wave swell LFO
-      const lfo=ctx.createOscillator();
-      const lfoG=ctx.createGain();lfoG.gain.value=0.5;
-      lfo.frequency.value=0.12;
-      lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start();nodes.push(lfo);
-      // Crash layer
-      function crash(){
-        if(!ctxRef.current)return;
-        const s=makeNoise(ctx,"white");
-        const hp=ctx.createBiquadFilter();hp.type="highpass";hp.frequency.value=600;
-        const eg=ctx.createGain();const dur=1.5+Math.random()*1.5;
-        eg.gain.setValueAtTime(0,ctx.currentTime);
-        eg.gain.linearRampToValueAtTime(0.4,ctx.currentTime+0.15);
-        eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
-        s.connect(hp);hp.connect(eg);eg.connect(master);s.start();s.stop(ctx.currentTime+dur+0.1);
-        setTimeout(crash,4000+Math.random()*3000);
-      }
-      crash();
-
-    }else if(sound.type==="static"){
-      // Clean white noise — steady, grounding static
-      const src=makeNoise(ctx,"white");
-      const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=8000;
-      const hi=ctx.createBiquadFilter();hi.type="highpass";hi.frequency.value=200;
-      const g=ctx.createGain();g.gain.value=0.75;
-      src.connect(lo);lo.connect(hi);hi.connect(g);g.connect(master);src.start();nodes.push(src);
-    }
-
+    if(sound.type==="birds"){const src=makeNoise(ctx,"pink");const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1200;bp.Q.value=0.3;const g=ctx.createGain();g.gain.value=0.2;src.connect(bp);bp.connect(g);g.connect(master);src.start();nodes.push(src);function chirp(){if(!ctxRef.current)return;const numBirds=2+Math.floor(Math.random()*3);for(let i=0;i<numBirds;i++){setTimeout(()=>{const sweeps=2+Math.floor(Math.random()*3);for(let s=0;s<sweeps;s++){setTimeout(()=>{const osc=ctx.createOscillator();const eg=ctx.createGain();const baseFreq=2000+Math.random()*2000;osc.frequency.setValueAtTime(baseFreq,ctx.currentTime);osc.frequency.linearRampToValueAtTime(baseFreq*(1.1+Math.random()*0.3),ctx.currentTime+0.05);osc.frequency.linearRampToValueAtTime(baseFreq*0.95,ctx.currentTime+0.1);osc.type="sine";eg.gain.setValueAtTime(0,ctx.currentTime);eg.gain.linearRampToValueAtTime(0.1,ctx.currentTime+0.01);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.12);osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+0.15);},s*110);},i*400+Math.random()*300);}setTimeout(chirp,2000+Math.random()*4000);}chirp();}
+    else if(sound.type==="leaves"){const src=makeNoise(ctx,"pink");const hi=ctx.createBiquadFilter();hi.type="highpass";hi.frequency.value=800;const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=5000;const g=ctx.createGain();g.gain.value=0.85;src.connect(hi);hi.connect(lo);lo.connect(g);g.connect(master);src.start();nodes.push(src);const lfo=ctx.createOscillator();const lfoG=ctx.createGain();lfoG.gain.value=0.3;lfo.frequency.value=0.08+Math.random()*0.05;lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start();nodes.push(lfo);function gust(){if(!ctxRef.current)return;const src2=makeNoise(ctx,"pink");const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=2000+Math.random()*1000;bp.Q.value=0.5;const eg=ctx.createGain();const dur=0.6+Math.random()*1.2;eg.gain.setValueAtTime(0,ctx.currentTime);eg.gain.linearRampToValueAtTime(0.45,ctx.currentTime+0.2);eg.gain.linearRampToValueAtTime(0,ctx.currentTime+dur);src2.connect(bp);bp.connect(eg);eg.connect(master);src2.start();src2.stop(ctx.currentTime+dur+0.1);setTimeout(gust,3000+Math.random()*6000);}gust();}
+    else if(sound.type==="waves"){const src=makeNoise(ctx,"pink");const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=350;const mid=ctx.createBiquadFilter();mid.type="bandpass";mid.frequency.value=180;mid.Q.value=0.4;const g=ctx.createGain();g.gain.value=1.4;src.connect(lo);lo.connect(mid);mid.connect(g);g.connect(master);src.start();nodes.push(src);const lfo=ctx.createOscillator();const lfoG=ctx.createGain();lfoG.gain.value=0.5;lfo.frequency.value=0.12;lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start();nodes.push(lfo);function crash(){if(!ctxRef.current)return;const s=makeNoise(ctx,"white");const hp=ctx.createBiquadFilter();hp.type="highpass";hp.frequency.value=600;const eg=ctx.createGain();const dur=1.5+Math.random()*1.5;eg.gain.setValueAtTime(0,ctx.currentTime);eg.gain.linearRampToValueAtTime(0.4,ctx.currentTime+0.15);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);s.connect(hp);hp.connect(eg);eg.connect(master);s.start();s.stop(ctx.currentTime+dur+0.1);setTimeout(crash,4000+Math.random()*3000);}crash();}
+    else if(sound.type==="static"){const src=makeNoise(ctx,"white");const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=8000;const hi=ctx.createBiquadFilter();hi.type="highpass";hi.frequency.value=200;const g=ctx.createGain();g.gain.value=0.75;src.connect(lo);lo.connect(hi);hi.connect(g);g.connect(master);src.start();nodes.push(src);}
     nodesRef.current=nodes;
   }
-
   return{play,stop};
 }
 
@@ -816,68 +957,12 @@ function NestTab({user,isPro,isOTR,aiPrompt,promptLoading,onWrite,theme}){const 
 
 function NestCard({icon,title,subtitle,color,onOpen,children}){return(<div style={{background:"rgba(255,252,246,0.93)",border:"1px solid rgba(200,137,90,0.12)",borderRadius:20,overflow:"hidden"}}><button onClick={onOpen} style={{width:"100%",background:"none",border:"none",padding:"18px 20px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",textAlign:"left"}} type="button"><div style={{width:44,height:44,borderRadius:14,background:`${color}18`,border:`1px solid ${color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{icon}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#5a2e0e",fontSize:15,fontFamily:"'Nunito',sans-serif"}}>{title}</div><div style={{fontSize:12,color:"#b08060",marginTop:2,lineHeight:1.4}}>{subtitle}</div></div><span style={{fontSize:16,color:"#b08060"}}>›</span></button>{children&&<div style={{padding:"0 20px 18px"}}>{children}</div>}</div>);}
 
-function BreathworkPlayer({exercise}){const [phase,setPhase]=useState("ready");const [count,setCount]=useState(0);const [cycle,setCycle]=useState(0);const [running,setRunning]=useState(false);const [size,setSize]=useState(120);useEffect(()=>{if(!running)return;const phases=[{name:"Breathe in",duration:exercise.inhale,size:180},...(exercise.hold1?[{name:"Hold",duration:exercise.hold1,size:180}]:[]),{name:"Breathe out",duration:exercise.exhale,size:120},...(exercise.hold2?[{name:"Hold",duration:exercise.hold2,size:120}]:[])];let phaseIdx=0,elapsed=0;setPhase(phases[0].name);setSize(phases[0].size);const interval=setInterval(()=>{elapsed++;setCount(phases[phaseIdx].duration-elapsed);if(elapsed>=phases[phaseIdx].duration){elapsed=0;phaseIdx=(phaseIdx+1)%phases.length;if(phaseIdx===0){setCycle(c=>{if(c+1>=exercise.cycles){setRunning(false);setPhase("done");clearInterval(interval);return 0;}return c+1;});}setPhase(phases[phaseIdx].name);setSize(phases[phaseIdx].size);}},1000);return()=>clearInterval(interval);},[running]);return(<div style={{textAlign:"center",padding:"16px 0"}}><div style={{position:"relative",width:200,height:200,margin:"0 auto 20px"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:size,height:size,borderRadius:"50%",background:`${exercise.color}22`,border:`3px solid ${exercise.color}`,transition:"all 1s ease-in-out",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column"}}><div style={{fontSize:13,fontWeight:700,color:exercise.color,textAlign:"center",lineHeight:1.3}}>{phase==="done"?"Done ✓":phase==="ready"?"Tap to begin":phase}</div>{running&&<div style={{fontSize:24,fontWeight:800,color:exercise.color}}>{count}</div>}</div></div></div><div style={{fontSize:12,color:"#b08060",marginBottom:14}}>Cycle {cycle+1} of {exercise.cycles}</div>{!running&&phase!=="done"&&<button onClick={()=>{setRunning(true);setCycle(0);}} style={{...S.saveBtn,padding:"10px 28px"}}>Begin →</button>}{running&&<button onClick={()=>{setRunning(false);setPhase("ready");setCycle(0);}} style={S.ghostBtn}>Stop</button>}{phase==="done"&&<div style={{fontSize:16,color:"#7a4a1e",fontFamily:"'Lora',serif",fontStyle:"italic"}}>Well done 🌿 Take a moment to notice how you feel.</div>}</div>);}
+function BreathworkPlayer({exercise}){const [phase,setPhase]=useState("ready");const [count,setCount]=useState(0);const [cycle,setCycle]=useState(0);const [running,setRunning]=useState(false);const [size,setSize]=useState(120);useEffect(()=>{if(!running)return;const phases=[{name:"Breathe in",duration:exercise.inhale,size:180},...(exercise.hold1?[{name:"Hold",duration:exercise.hold1,size:180}]:[]),{name:"Breathe out",duration:exercise.exhale,size:120},...(exercise.hold2?[{name:"Hold",duration:exercise.hold2,size:120}]:[])];let phaseIdx=0,elapsed=0;setPhase(phases[0].name);setSize(phases[0].size);const interval=setInterval(()=>{elapsed++;setCount(phases[phaseIdx].duration-elapsed);if(elapsed>=phases[phaseIdx].duration){elapsed=0;phaseIdx=(phaseIdx+1)%phases.length;if(phaseIdx===0){setCycle(c=>{if(c+1>=exercise.cycles){setRunning(false);setPhase("done");clearInterval(interval);return 0;}return c+1;});}setPhase(phases[phaseIdx].name);setSize(phases[phaseIdx].size);}},1000);return()=>clearInterval(interval);},[running,exercise]);return(<div style={{textAlign:"center",padding:"16px 0"}}><div style={{position:"relative",width:200,height:200,margin:"0 auto 20px"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:size,height:size,borderRadius:"50%",background:`${exercise.color}22`,border:`3px solid ${exercise.color}`,transition:"all 1s ease-in-out",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column"}}><div style={{fontSize:13,fontWeight:700,color:exercise.color,textAlign:"center",lineHeight:1.3}}>{phase==="done"?"Done ✓":phase==="ready"?"Tap to begin":phase}</div>{running&&<div style={{fontSize:24,fontWeight:800,color:exercise.color}}>{count}</div>}</div></div></div><div style={{fontSize:12,color:"#b08060",marginBottom:14}}>Cycle {cycle+1} of {exercise.cycles}</div>{!running&&phase!=="done"&&<button onClick={()=>{setRunning(true);setCycle(0);}} style={{...S.saveBtn,padding:"10px 28px"}}>Begin →</button>}{running&&<button onClick={()=>{setRunning(false);setPhase("ready");setCycle(0);}} style={S.ghostBtn}>Stop</button>}{phase==="done"&&<div style={{fontSize:16,color:"#7a4a1e",fontFamily:"'Lora',serif",fontStyle:"italic"}}>Well done 🌿 Take a moment to notice how you feel.</div>}</div>);}
 
 function MeditationPlayer({isOTR}){const [selected,setSelected]=useState(null);const [stepIdx,setStepIdx]=useState(0);const available=isOTR?MEDITATIONS:MEDITATIONS.filter(m=>m.free);if(selected){const step=selected.steps[stepIdx];const isLast=stepIdx===selected.steps.length-1;return(<div style={{padding:"8px 0"}}><div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",borderRadius:16,padding:"20px",marginBottom:14,minHeight:100,display:"flex",alignItems:"center",justifyContent:"center"}}><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,textAlign:"center"}}>{step}</p></div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{fontSize:12,color:"#b08060"}}>{stepIdx+1} / {selected.steps.length}</div><div style={{display:"flex",gap:8}}><button onClick={()=>{setSelected(null);setStepIdx(0);}} style={S.ghostBtn}>← Back</button>{!isLast?<button onClick={()=>setStepIdx(i=>i+1)} style={S.saveBtn}>Next →</button>:<button onClick={()=>{setSelected(null);setStepIdx(0);}} style={{...S.saveBtn,background:"linear-gradient(135deg,#7a8c6e,#6a7c5e)"}}>Complete ✓</button>}</div></div></div>);}return(<div style={{display:"flex",flexDirection:"column",gap:10,paddingTop:8}}>{available.map(m=>(<button key={m.id} onClick={()=>{setSelected(m);setStepIdx(0);}} style={{background:"rgba(155,126,184,0.08)",border:"1px solid rgba(155,126,184,0.2)",borderRadius:14,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",textAlign:"left"}}><div><div style={{fontWeight:700,color:"#5a2e0e",fontSize:14}}>{m.name}</div><div style={{fontSize:12,color:"#b08060",marginTop:2}}>{m.duration}</div></div><span style={{fontSize:18}}>›</span></button>))}{!isOTR&&<div style={{fontSize:12,color:"#b08060",textAlign:"center",fontStyle:"italic",padding:"4px 0"}}>✨ Upgrade to Off the Record for the full meditation library</div>}</div>);}
 
-function JournalingTimeBanner(){
-  const [dismissed,setDismissed]=useState(()=>localStorage.getItem("journaling_banner_dismissed")==="true");
-  if(dismissed)return null;
-  return(
-    <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.07),rgba(155,126,184,0.06))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:18,padding:"16px 20px",display:"flex",gap:14,alignItems:"flex-start"}}>
-      <span style={{fontSize:28,flexShrink:0}}>⏱️</span>
-      <div style={{flex:1}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:5}}>The sweet spot</div>
-        <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.65,marginBottom:4}}>"5 to 15 minutes is all it takes — and 10 is the sweet spot. Enough time to get past the surface and into something real. Not a task, just presence."</p>
-        <p style={{fontSize:11,color:"#b08060"}}>— Hallie 🌿</p>
-      </div>
-      <button onClick={()=>{localStorage.setItem("journaling_banner_dismissed","true");setDismissed(true);}} style={{background:"none",border:"none",fontSize:16,color:"#c8b896",cursor:"pointer",flexShrink:0,padding:2}}>×</button>
-    </div>
-  );
-}
+function JournalingTimeBanner(){const [dismissed,setDismissed]=useState(()=>localStorage.getItem("journaling_banner_dismissed")==="true");if(dismissed)return null;return(<div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.07),rgba(155,126,184,0.06))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:18,padding:"16px 20px",display:"flex",gap:14,alignItems:"flex-start"}}><span style={{fontSize:28,flexShrink:0}}>⏱️</span><div style={{flex:1}}><div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:5}}>The sweet spot</div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.65,marginBottom:4}}>"5 to 15 minutes is all it takes — and 10 is the sweet spot. Enough time to get past the surface and into something real. Not a task, just presence."</p><p style={{fontSize:11,color:"#b08060"}}>— Hallie 🌿</p></div><button onClick={()=>{localStorage.setItem("journaling_banner_dismissed","true");setDismissed(true);}} style={{background:"none",border:"none",fontSize:16,color:"#c8b896",cursor:"pointer",flexShrink:0,padding:2}}>×</button></div>);}
 
-function StoryOfTheMonth({communityId,cfg}){
-  const [stories,setStories]=useState([]);
-  const [loading,setLoading]=useState(true);
-  const [anonContent,setAnonContent]=useState("");
-  const [submitting,setSubmitting]=useState(false);
-  const [submitted,setSubmitted]=useState(false);
-  useEffect(()=>{loadStories();},[communityId]);
-  async function loadStories(){setLoading(true);try{const filters=communityId?`submit_to_sotm=eq.true&community_id=eq.${communityId}&order=created_at.desc`:`submit_to_sotm=eq.true&order=created_at.desc`;const data=await sbGet("community_posts",`${filters}&select=*`);if(Array.isArray(data))setStories(data);}catch(e){console.error(e);}setLoading(false);}
-  async function submitAnon(){if(!anonContent.trim())return;setSubmitting(true);try{await sbInsert("community_posts",{user_id:"anonymous",community_id:communityId,content:anonContent.trim(),is_anonymous:true,submit_to_sotm:true,});setSubmitted(true);setAnonContent("");}catch(e){console.error(e);}setSubmitting(false);}
-  return(
-    <div style={{padding:"0 16px"}}>
-      <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:18,padding:"20px",marginBottom:16,textAlign:"center"}}>
-        <div style={{fontSize:32,marginBottom:8}}>🎙️</div>
-        <h3 style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",marginBottom:6,fontWeight:600}}>Story of the Month</h3>
-        <p style={{fontSize:13,color:"#b08060",lineHeight:1.6,marginBottom:16,fontStyle:"italic",fontFamily:"'Lora',serif"}}>Hallie reads every submission and may feature your story — anonymously — on the My Sister's Closet podcast. No account needed.</p>
-        {!submitted?(<div style={{textAlign:"left"}}><textarea style={{width:"100%",padding:"12px 14px",border:"1.5px solid rgba(200,137,90,0.2)",borderRadius:12,fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",resize:"none",outline:"none",lineHeight:1.7,marginBottom:10,background:"rgba(253,248,242,0.9)",boxSizing:"border-box",fontStyle:"italic",minHeight:100}} placeholder="Share something from your heart. It will always be kept anonymous." value={anonContent} onChange={e=>setAnonContent(e.target.value)} rows={4}/><button style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"white",border:"none",borderRadius:20,padding:"11px",fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700,opacity:!anonContent.trim()||submitting?0.5:1}} disabled={!anonContent.trim()||submitting} onClick={submitAnon}>{submitting?"Submitting...":"Submit Anonymously 🎙️"}</button></div>):(<div style={{background:"rgba(122,74,30,0.06)",borderRadius:14,padding:"16px"}}><div style={{fontSize:28,marginBottom:6}}>💛</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",color:"#7a4a1e",fontSize:14,lineHeight:1.6}}>Your story has been submitted. Thank you for trusting us with it. Hallie will read it. 🌿</p></div>)}
-      </div>
-      {loading?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic"}}>Loading submissions...</div>:stories.length===0?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif"}}>No submissions yet — be the first. 🌿</div>:(stories.map(s=>(<div key={s.id} style={{background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px",marginBottom:10,border:"1px solid rgba(122,74,30,0.1)"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><div style={{width:30,height:30,borderRadius:"50%",background:"linear-gradient(135deg,#b0a090,#9a8878)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700}}>👤</div><div><div style={{fontSize:12,fontWeight:700,color:"#5a2e0e"}}>Anonymous</div><div style={{fontSize:10,color:"#b08060"}}>Submitted for Story of the Month</div></div><span style={{marginLeft:"auto",fontSize:10,color:"#7a4a1e",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",padding:"2px 8px",borderRadius:10,fontWeight:700}}>🎙️ SOTM</span></div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",lineHeight:1.8,fontStyle:"italic"}}>{s.content}</p></div>)))}
-    </div>
-  );
-}
+function StoryOfTheMonth({communityId,cfg}){const [stories,setStories]=useState([]);const [loading,setLoading]=useState(true);const [anonContent,setAnonContent]=useState("");const [submitting,setSubmitting]=useState(false);const [submitted,setSubmitted]=useState(false);useEffect(()=>{loadStories();},[communityId]);async function loadStories(){setLoading(true);try{const filters=communityId?`submit_to_sotm=eq.true&community_id=eq.${communityId}&order=created_at.desc`:`submit_to_sotm=eq.true&order=created_at.desc`;const data=await sbGet("community_posts",`${filters}&select=*`);if(Array.isArray(data))setStories(data);}catch(e){console.error(e);}setLoading(false);}async function submitAnon(){if(!anonContent.trim())return;setSubmitting(true);try{await sbInsert("community_posts",{user_id:"anonymous",community_id:communityId,content:anonContent.trim(),is_anonymous:true,submit_to_sotm:true,});setSubmitted(true);setAnonContent("");}catch(e){console.error(e);}setSubmitting(false);}return(<div style={{padding:"0 16px"}}><div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:18,padding:"20px",marginBottom:16,textAlign:"center"}}><div style={{fontSize:32,marginBottom:8}}>🎙️</div><h3 style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",marginBottom:6,fontWeight:600}}>Story of the Month</h3><p style={{fontSize:13,color:"#b08060",lineHeight:1.6,marginBottom:16,fontStyle:"italic",fontFamily:"'Lora',serif"}}>Hallie reads every submission and may feature your story — anonymously — on the My Sister's Closet podcast. No account needed.</p>{!submitted?(<div style={{textAlign:"left"}}><textarea style={{width:"100%",padding:"12px 14px",border:"1.5px solid rgba(200,137,90,0.2)",borderRadius:12,fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",resize:"none",outline:"none",lineHeight:1.7,marginBottom:10,background:"rgba(253,248,242,0.9)",boxSizing:"border-box",fontStyle:"italic",minHeight:100}} placeholder="Share something from your heart. It will always be kept anonymous." value={anonContent} onChange={e=>setAnonContent(e.target.value)} rows={4}/><button style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"white",border:"none",borderRadius:20,padding:"11px",fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700,opacity:!anonContent.trim()||submitting?0.5:1}} disabled={!anonContent.trim()||submitting} onClick={submitAnon}>{submitting?"Submitting...":"Submit Anonymously 🎙️"}</button></div>):(<div style={{background:"rgba(122,74,30,0.06)",borderRadius:14,padding:"16px"}}><div style={{fontSize:28,marginBottom:6}}>💛</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",color:"#7a4a1e",fontSize:14,lineHeight:1.6}}>Your story has been submitted. Thank you for trusting us with it. Hallie will read it. 🌿</p></div>)}</div>{loading?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic"}}>Loading submissions...</div>:stories.length===0?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif"}}>No submissions yet — be the first. 🌿</div>:(stories.map(s=>(<div key={s.id} style={{background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px",marginBottom:10,border:"1px solid rgba(122,74,30,0.1)"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><div style={{width:30,height:30,borderRadius:"50%",background:"linear-gradient(135deg,#b0a090,#9a8878)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700}}>👤</div><div><div style={{fontSize:12,fontWeight:700,color:"#5a2e0e"}}>Anonymous</div><div style={{fontSize:10,color:"#b08060"}}>Submitted for Story of the Month</div></div><span style={{marginLeft:"auto",fontSize:10,color:"#7a4a1e",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",padding:"2px 8px",borderRadius:10,fontWeight:700}}>🎙️ SOTM</span></div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",lineHeight:1.8,fontStyle:"italic"}}>{s.content}</p></div>)))}</div>);}
 
-// ── NEW AmbientPlayer — all 4 sounds, all free, 2x2 grid ──
-function AmbientPlayer(){
-  const [playing,setPlaying]=useState(null);
-  const sound=useAmbientSound();
-  function toggle(s){
-    if(playing===s.id){sound.stop();setPlaying(null);}
-    else{sound.play(s);setPlaying(s.id);}
-  }
-  return(
-    <div style={{paddingTop:8}}>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
-        {AMBIENT_SOUNDS.map(s=>(
-          <button key={s.id} onClick={()=>toggle(s)} style={{background:playing===s.id?"rgba(91,143,168,0.18)":"rgba(91,143,168,0.05)",border:`1.5px solid ${playing===s.id?"#5b8fa8":"rgba(91,143,168,0.18)"}`,borderRadius:16,padding:"16px 10px",display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",transition:"all 0.2s"}}>
-            <span style={{fontSize:28}}>{s.icon}</span>
-            <span style={{fontSize:12,fontWeight:700,color:playing===s.id?"#5b8fa8":"#7a5030",fontFamily:"'Nunito',sans-serif",textAlign:"center",lineHeight:1.3}}>{s.name}</span>
-            {playing===s.id&&<span style={{fontSize:9,color:"#5b8fa8",fontWeight:700,letterSpacing:"1px"}}>▶ PLAYING</span>}
-          </button>
-        ))}
-      </div>
-      <p style={{fontSize:11,color:"#b08060",textAlign:"center",fontStyle:"italic",marginTop:6}}>Tap a sound to play • Tap again to stop</p>
-    </div>
-  );
-}
+function AmbientPlayer(){const [playing,setPlaying]=useState(null);const sound=useAmbientSound();function toggle(s){if(playing===s.id){sound.stop();setPlaying(null);}else{sound.play(s);setPlaying(s.id);}}return(<div style={{paddingTop:8}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>{AMBIENT_SOUNDS.map(s=>(<button key={s.id} onClick={()=>toggle(s)} style={{background:playing===s.id?"rgba(91,143,168,0.18)":"rgba(91,143,168,0.05)",border:`1.5px solid ${playing===s.id?"#5b8fa8":"rgba(91,143,168,0.18)"}`,borderRadius:16,padding:"16px 10px",display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",transition:"all 0.2s"}}><span style={{fontSize:28}}>{s.icon}</span><span style={{fontSize:12,fontWeight:700,color:playing===s.id?"#5b8fa8":"#7a5030",fontFamily:"'Nunito',sans-serif",textAlign:"center",lineHeight:1.3}}>{s.name}</span>{playing===s.id&&<span style={{fontSize:9,color:"#5b8fa8",fontWeight:700,letterSpacing:"1px"}}>▶ PLAYING</span>}</button>))}</div><p style={{fontSize:11,color:"#b08060",textAlign:"center",fontStyle:"italic",marginTop:6}}>Tap a sound to play • Tap again to stop</p></div>);}
