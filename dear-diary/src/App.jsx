@@ -110,6 +110,10 @@ function SetItDownPage() {
           <p style={SID.successSub}>You don't have to carry it on the walk.<br/>Just breathe, move, and be here.</p>
           <p style={SID.successEncourage}>Now go enjoy the walk. 🌿</p>
           <button onClick={()=>setStep("input")} style={SID.ghostBtn}>Set down another word</button>
+          <div style={{marginTop:28,padding:"20px 22px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(196,181,244,0.15)",borderRadius:16,textAlign:"center"}}>
+            <p style={{color:"rgba(255,255,255,0.45)",fontSize:13,lineHeight:1.7,marginBottom:14,fontStyle:"italic",margin:"0 0 14px"}}>Want to keep journaling? My Inner Mind is a free space to write, reflect, and grow. 🌿</p>
+            <a href="https://myinnermind.halliewho.com" style={{display:"inline-block",background:"linear-gradient(135deg,#9d7fe0,#7c5cbf)",color:"#fff",borderRadius:"50px",padding:"11px 28px",fontSize:13,fontFamily:"'Georgia',serif",textDecoration:"none",letterSpacing:"0.5px",boxShadow:"0 6px 20px rgba(157,127,224,0.25)"}}>Start Journaling Free →</a>
+          </div>
           <p style={SID.footer}>Anonymous · My Inner Mind · Set It Down Saturday</p>
         </>}
       </div>
