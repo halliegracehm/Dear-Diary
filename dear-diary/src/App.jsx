@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import * as React from "react";
 
 const SUPABASE_URL = "https://xwhpyslvwnnbvyydimmg.supabase.co";
@@ -7,7 +7,35 @@ const STRIPE_PUBLISHABLE_KEY = "pk_live_51TBmTBDC5IHfzeBkp5DgUYOdkSUiMYebP36KU3w
 const STRIPE_PRICES = { community:"price_1TBmxqDC5IHfzeBkFuxyZPfX", offtherecord:"price_1TDFaiDC5IHfzeBkH1kqn47G" };
 const ADMIN_EMAIL = "halliegracehm@gmail.com";
 
-// ── SET IT DOWN SATURDAY — self-contained, no login required ──
+// ── STORAGE HELPER (fix #3 — replaces localStorage with safe cross-env storage) ──
+const store = {
+  get(key, fallback = null) {
+    try { const v = sessionStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback; }
+    catch { return fallback; }
+  },
+  set(key, value) {
+    try { sessionStorage.setItem(key, JSON.stringify(value)); } catch {}
+  },
+  remove(key) {
+    try { sessionStorage.removeItem(key); } catch {}
+  }
+};
+
+// Persistent store (survives session, safe for Natively)
+const persist = {
+  get(key, fallback = null) {
+    try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback; }
+    catch { return fallback; }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  },
+  remove(key) {
+    try { localStorage.removeItem(key); } catch {}
+  }
+};
+
+// ── SET IT DOWN SATURDAY ──
 function SetItDownPage() {
   const [step, setStep] = useState("context");
   const [word, setWord] = useState("");
@@ -26,19 +54,12 @@ function SetItDownPage() {
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/set_it_down_submissions`, {
         method: "POST",
-        headers: {
-          "apikey": SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`,
-          "Content-Type": "application/json",
-          "Prefer": "return=minimal"
-        },
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
         body: JSON.stringify({ word: trimmed.toLowerCase(), event_tag: "set-it-down-saturday" })
       });
       if (!res.ok) throw new Error("Failed");
       setStep("success"); setStatus("idle"); setWord(""); setCharCount(0);
-    } catch (e) {
-      console.error(e); setStatus("error");
-    }
+    } catch (e) { console.error(e); setStatus("error"); }
   };
 
   const SID = {
@@ -77,15 +98,14 @@ function SetItDownPage() {
           <p style={SID.eyebrow}>Set It Down Saturday</p>
           <h1 style={SID.title}>Before we walk,<br/>we set it down.</h1>
           <div style={SID.contextBox}>
-            <p style={SID.contextLine}><span style={SID.contextNum}>1.</span>Think of one thing weighing on you today — a worry, a feeling, a name, anything.</p>
+            <p style={SID.contextLine}><span style={SID.contextNum}>1.</span>Think of one thing weighing on you today.</p>
             <p style={SID.contextLine}><span style={SID.contextNum}>2.</span>Give it one word.</p>
             <p style={SID.contextLine}><span style={SID.contextNum}>3.</span>Set it down here — anonymously — before we take our walk.</p>
           </div>
           <p style={SID.contextNote}>You don't have to explain it. No one will know it's yours.</p>
           <button style={SID.btn} onClick={() => setStep("input")}>I'm ready → Set It Down</button>
-          <p style={SID.footer}>Anonymous · My Inner Mind · Set It Down Saturday</p>
+          <p style={SID.footer}>Anonymous · My Inner Mind</p>
         </>}
-
         {step === "input" && <>
           <p style={SID.eyebrow}>Set It Down Saturday</p>
           <h1 style={SID.title}>What are you<br/>setting down today?</h1>
@@ -96,14 +116,13 @@ function SetItDownPage() {
               <span style={SID.charCount}>{charCount}/40</span>
             </div>
             {status==="error" && <p style={SID.errorMsg}>Something went wrong. Try again.</p>}
-            <button onClick={handleSubmit} disabled={!word.trim()||status==="submitting"} style={{...SID.btn, opacity:!word.trim()||status==="submitting"?0.4:1}}>
+            <button onClick={handleSubmit} disabled={!word.trim()||status==="submitting"} style={{...SID.btn,opacity:!word.trim()||status==="submitting"?0.4:1}}>
               {status==="submitting"?"Setting it down...":"Set It Down ↓"}
             </button>
             <button onClick={()=>setStep("context")} style={SID.backBtn}>← Back</button>
           </div>
           <p style={SID.footer}>Anonymous · My Inner Mind</p>
         </>}
-
         {step === "success" && <>
           <div style={SID.successIcon}>🍃</div>
           <h1 style={SID.successTitle}>It's set down.</h1>
@@ -114,7 +133,9 @@ function SetItDownPage() {
             <p style={{color:"rgba(255,255,255,0.45)",fontSize:13,lineHeight:1.7,marginBottom:14,fontStyle:"italic",margin:"0 0 14px"}}>Want to keep journaling? My Inner Mind is a free space to write, reflect, and grow. 🌿</p>
             <a href="https://myinnermind.halliewho.com" style={{display:"inline-block",background:"linear-gradient(135deg,#9d7fe0,#7c5cbf)",color:"#fff",borderRadius:"50px",padding:"11px 28px",fontSize:13,fontFamily:"'Georgia',serif",textDecoration:"none",letterSpacing:"0.5px",boxShadow:"0 6px 20px rgba(157,127,224,0.25)"}}>Start Journaling Free →</a>
           </div>
-          <p style={SID.footer}>Anonymous · My Inner Mind · Set It Down Saturday</p>
+          <p style={SID.footer}>Anonymous · My Inner Mind</p>
+          {/* fix #9 — back to home link */}
+          <div style={{marginTop:16}}><a href="/" style={{color:"rgba(196,181,244,0.5)",fontSize:12,textDecoration:"none"}}>← Back to My Inner Mind</a></div>
         </>}
       </div>
     </div>
@@ -155,10 +176,8 @@ const HALLIE_DESK_NOTES=[
 ];
 
 function getWeeklyDeskNote(){const w=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000));return HALLIE_DESK_NOTES[w%HALLIE_DESK_NOTES.length];}
-function getWeeklyHalliePrompt(){
-  const w=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000));
-  return HALLIE_PROMPTS[(w-1)%HALLIE_PROMPTS.length];
-}
+function getWeeklyHalliePrompt(){const w=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000));return HALLIE_PROMPTS[(w-1)%HALLIE_PROMPTS.length];}
+
 function spawnConfetti(){
   const emojis=["🌸","✨","🌿","💛","🌟","💫","🍃","🌺","⭐","💕"];
   for(let i=0;i<18;i++){
@@ -177,15 +196,19 @@ function spawnConfetti(){
 }
 
 async function sbQuery(path,options={}){
-  const res=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{
-    headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json","Prefer":options.prefer||"return=representation",...(options.headers||{})},
-    ...options
-  });
-  if(res.status===204)return[];
-  const data=await res.json();
-  // surface Supabase errors gracefully
-  if(data?.code||data?.error){console.error("Supabase error:",data);return[];}
-  return data;
+  try {
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{
+      headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json","Prefer":options.prefer||"return=representation",...(options.headers||{})},
+      ...options
+    });
+    if(res.status===204)return[];
+    const data=await res.json();
+    if(data?.code||data?.error){console.error("Supabase error:",data);return[];}
+    return data;
+  } catch(e) {
+    console.error("Network error:",e);
+    return []; // fix #12 — graceful fallback instead of throwing
+  }
 }
 async function sbGet(table,filters=""){return sbQuery(`${table}?${filters}`);}
 async function sbInsert(table,data){return sbQuery(table,{method:"POST",body:JSON.stringify(data)});}
@@ -209,10 +232,24 @@ function hashStr(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeA
 function calcStreak(entries){if(!entries?.length)return 0;const dates=[...new Set(entries.map(e=>e.date))].sort().reverse();let streak=0,check=getTodayStr();for(const d of dates){if(d===check){streak++;check=prevDay(check);}else if(d<check)break;}return streak;}
 function prevDay(dateStr){const d=new Date(dateStr);d.setDate(d.getDate()-1);return d.toISOString().split("T")[0];}
 function streakReward(streak){if(streak>=14)return{label:"14-Day Champion 🏆",discount:"GRATEFUL20",pct:"20%"};if(streak>=10)return{label:"10-Day Dedicated ✨",discount:"GRATEFUL15",pct:"15%"};if(streak>=7)return{label:"7-Day Consistent 🌱",discount:"GRATEFUL10",pct:"10%"};return null;}
-function exportToPDF(entries,username){const win=window.open("","_blank");const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;color:#3a2010;background:#fffdf8}h1{font-size:28px;color:#7a4a1e;border-bottom:2px solid #c8895a;padding-bottom:12px}.entry{margin:28px 0;padding:24px;border:1px solid #e8d0b0;border-radius:12px;background:#fdf8f0}.meta{font-size:13px;color:#b08060;margin-bottom:6px}.title{font-size:20px;font-weight:bold;color:#5a2e0e;margin-bottom:10px}.content{font-size:15px;line-height:1.85;font-style:italic;white-space:pre-wrap}.tag{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;margin:2px;background:#f0e0c8;color:#8a5020}</style></head><body><h1>🌿 ${username}'s Journal</h1><p style="color:#b08060">Exported ${new Date().toLocaleDateString()}</p>${entries.map(e=>`<div class="entry"><div class="meta">${formatDate(e.date)}${e.mood?` · ${e.mood.emoji} ${e.mood.label}`:""}</div><div class="title">${e.title||"Untitled"}</div><div class="content">${(e.content||"").replace(/</g,"&lt;")}</div>${e.tags?.length?`<div style="margin-top:12px">${e.tags.map(t=>`<span class="tag">${t}</span>`).join("")}</div>`:""}</div>`).join("")}</body></html>`;win.document.write(html);win.document.close();setTimeout(()=>win.print(),500);}
+
+// fix #11 — PDF export uses blob instead of window.open for mobile
+function exportToPDF(entries,username){
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;color:#3a2010;background:#fffdf8}h1{font-size:28px;color:#7a4a1e;border-bottom:2px solid #c8895a;padding-bottom:12px}.entry{margin:28px 0;padding:24px;border:1px solid #e8d0b0;border-radius:12px;background:#fdf8f0}.meta{font-size:13px;color:#b08060;margin-bottom:6px}.title{font-size:20px;font-weight:bold;color:#5a2e0e;margin-bottom:10px}.content{font-size:15px;line-height:1.85;font-style:italic;white-space:pre-wrap}.tag{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;margin:2px;background:#f0e0c8;color:#8a5020}</style></head><body><h1>🌿 ${username}'s Journal</h1><p style="color:#b08060">Exported ${new Date().toLocaleDateString()}</p>${entries.map(e=>`<div class="entry"><div class="meta">${formatDate(e.date)}${e.mood?` · ${e.mood.emoji} ${e.mood.label}`:""}</div><div class="title">${e.title||"Untitled"}</div><div class="content">${(e.content||"").replace(/</g,"&lt;")}</div>${e.tags?.length?`<div style="margin-top:12px">${e.tags.map(t=>`<span class="tag">${t}</span>`).join("")}</div>`:""}</div>`).join("")}</body></html>`;
+  try {
+    const blob = new Blob([html], {type:"text/html"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${username}-journal.html`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  } catch { alert("To save your journal, please use a desktop browser for PDF export."); }
+}
+
 async function callClaude(messages,system=""){const body={model:"claude-sonnet-4-20250514",max_tokens:1000,messages};if(system)body.system=system;const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const data=await res.json();return data.content?.map(b=>b.text||"").join("")||"";}
 async function getAIInsight(entry){return callClaude([{role:"user",content:`Journal entry titled "${entry.title}":\n\n${entry.content}\n\nMood: ${entry.mood?.label||"not set"}`}],"You are a warm, thoughtful journaling companion. In 3-4 sentences, offer a gentle, insightful reflection on this journal entry. Be encouraging and kind. Do not ask questions. Write in second person.");}
 async function getAIPrompt(){const day=new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});return callClaude([{role:"user",content:`Today is ${day}. Give me a single thoughtful journaling prompt. Just the prompt itself, no preamble.`}],"You generate warm, introspective daily journaling prompts. 1-2 sentences max.");}
+
 async function startStripeCheckout(priceId,userEmail){
   if(!window.Stripe){
     await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="https://js.stripe.com/v3/";s.onload=resolve;s.onerror=reject;document.head.appendChild(s);});
@@ -237,6 +274,9 @@ const AMBIENT_SOUNDS=[
   {id:"static",name:"White Noise",icon:"📻",type:"static"},
 ];
 
+// fix #1 — ambient sound hook with global stop ref exposed
+const ambientStopRef = { current: null };
+
 export default function App() {
   const [screen,setScreen]=useState("splash");
   const [currentUser,setCurrentUser]=useState(null);
@@ -253,39 +293,24 @@ export default function App() {
   },[]);
 
   useEffect(()=>{
-    // ── Set It Down Saturday public route — no login needed ──
-    if(window.location.pathname==="/set-it-down"){
-      setScreen("setitdown");
-      return;
-    }
-
+    if(window.location.pathname==="/set-it-down"){setScreen("setitdown");return;}
     const params=new URLSearchParams(window.location.search);
     const justUpgraded=params.get("upgraded")==="true";
-    const saved=sessionStorage.getItem("myinnerminduser");
-
+    const saved=store.get("myinnerminduser");
     if(saved){
       try {
-        const user=JSON.parse(saved);
         if(justUpgraded){
-          sbGet("users",`email=eq.${encodeURIComponent(user.email)}`).then(result=>{
-            const fresh=result?.length?result[0]:user;
-            sessionStorage.setItem("myinnerminduser",JSON.stringify(fresh));
-            setCurrentUser(fresh);
-            setScreen("app");
+          sbGet("users",`email=eq.${encodeURIComponent(saved.email)}`).then(result=>{
+            const fresh=result?.length?result[0]:saved;
+            store.set("myinnerminduser",fresh);
+            setCurrentUser(fresh); setScreen("app");
             window.history.replaceState({},"","/");
-          }).catch(()=>{ setCurrentUser(user); setScreen("app"); });
+          }).catch(()=>{setCurrentUser(saved);setScreen("app");});
         } else {
-          setCurrentUser(user);
-          setScreen("app");
+          setCurrentUser(saved); setScreen("app");
         }
-      } catch(e) {
-        // Corrupt session — clear and go to landing
-        sessionStorage.removeItem("myinnerminduser");
-        setTimeout(()=>setScreen("landing"),1800);
-      }
-    } else {
-      setTimeout(()=>setScreen("landing"),1800);
-    }
+      } catch(e) { store.remove("myinnerminduser"); setTimeout(()=>setScreen("landing"),1800); }
+    } else { setTimeout(()=>setScreen("landing"),1800); }
   },[]);
 
   async function handleAuth(){
@@ -300,34 +325,29 @@ export default function App() {
         const result=await sbInsert("users",{email,username:authForm.username,password_hash:hashStr(authForm.password),plan:"free"});
         if(result?.length>0){
           const u=result[0];
-          sessionStorage.setItem("myinnerminduser",JSON.stringify(u));
+          store.set("myinnerminduser",u);
           fetch("/api/add-to-mailchimp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,name:authForm.username})}).catch(()=>{});
           setCurrentUser(u);setScreen("onboarding");
-        } else {
-          setAuthError("Something went wrong. Please try again.");
-        }
+        } else { setAuthError("Something went wrong. Please try again."); }
       } else {
         if(!email||!authForm.password){setAuthError("Email and password are required.");return;}
         const result=await sbGet("users",`email=eq.${encodeURIComponent(email)}`);
         if(!result?.length){setAuthError("No account found with that email.");return;}
         const user=result[0];
         if(user.password_hash!==hashStr(authForm.password)){setAuthError("Incorrect password.");return;}
-        sessionStorage.setItem("myinnerminduser",JSON.stringify(user));
+        store.set("myinnerminduser",user);
         setCurrentUser(user);setScreen("app");
       }
-    } catch(e) {
-      setAuthError("Connection error. Please try again.");
-    } finally {
-      setAuthLoading(false);
-    }
+    } catch(e) { setAuthError("Connection error. Please try again."); }
+    finally { setAuthLoading(false); }
   }
 
   function handleLogout(){
-    sessionStorage.removeItem("myinnerminduser");
-    setCurrentUser(null);
-    setScreen("landing");
+    // fix #1 — stop any playing sound on logout
+    if(ambientStopRef.current) { ambientStopRef.current(); ambientStopRef.current=null; }
+    store.remove("myinnerminduser");
+    setCurrentUser(null); setScreen("landing");
     setAuthForm({username:"",email:"",password:""});
-    // Return to root path if on a public route
     if(window.location.pathname!=="/"){window.history.replaceState({},"","/");}
   }
 
@@ -335,7 +355,7 @@ export default function App() {
     if(!currentUser)return;
     await sbUpdate("users",`email=eq.${encodeURIComponent(currentUser.email)}`,{plan});
     const updated={...currentUser,plan};
-    sessionStorage.setItem("myinnerminduser",JSON.stringify(updated));
+    store.set("myinnerminduser",updated);
     setCurrentUser(updated);
   }
 
@@ -389,43 +409,68 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
   const [aiPrompt,setAiPrompt]=useState("");
   const [promptLoading,setPromptLoading]=useState(false);
   const [loading,setLoading]=useState(true);
+  const [dbError,setDbError]=useState(false); // fix #12
   const [form,setForm]=useState({id:null,date:getTodayStr(),title:"",content:"",mood:null,tags:[],shared:false,submitToFeature:false});
   const [editMode,setEditMode]=useState(false);
   const [insight,setInsight]=useState("");
   const [insightLoading,setInsightLoading]=useState(false);
   const [pwaDismissed,setPwaDismissed]=useState(false);
   const [showRecap,setShowRecap]=useState(false);
-  const [theme,setTheme]=useState(()=>localStorage.getItem("theme_"+user.email)||"original");
+  const [theme,setTheme]=useState(()=>persist.get("theme_"+user.email)||"original");
   const T=THEMES[theme]||THEMES.original;
   const isPro=user.plan==="community"||user.plan==="offtherecord";
   const isOTR=user.plan==="offtherecord";
+  const isAdmin=user.email===ADMIN_EMAIL; // fix #5
   const streak=calcStreak(entries);
   const reward=isPro?streakReward(streak):null;
   const halliePrompt=getWeeklyHalliePrompt();
 
+  // fix #5 — listen for admin nav event from ProfileMenu
+  useEffect(()=>{
+    const handler=(e)=>{ if(e.detail==="admin"&&isAdmin) setTab("admin"); };
+    window.addEventListener("hallie-nav",handler);
+    return()=>window.removeEventListener("hallie-nav",handler);
+  },[isAdmin]);
+
+  // fix #1 — stop sound when switching away from nest tab
+  function handleTabChange(newTab) {
+    if(tab==="nest" && newTab!=="nest") {
+      if(ambientStopRef.current) { ambientStopRef.current(); ambientStopRef.current=null; }
+    }
+    setTab(newTab); setView("list");
+  }
+
   useEffect(()=>{
     loadEntries();
     loadAiPrompt();
+    // fix #8 — only show recap if user has entries from last month
     const recapKey=`myinnermind_recap_${new Date().toISOString().slice(0,7)}`;
-    const lastRecap=sessionStorage.getItem(`myinnermind_lastrecap_${user.email}`);
+    const lastRecap=store.get(`myinnermind_lastrecap_${user.email}`);
     if(lastRecap!==recapKey){
       const now=new Date();
-      if(now.getDate()<=3){setShowRecap(true);sessionStorage.setItem(`myinnermind_lastrecap_${user.email}`,recapKey);}
+      if(now.getDate()<=3){
+        // defer recap check until entries load
+        store.set(`myinnermind_lastrecap_${user.email}`,recapKey);
+        setTimeout(()=>setShowRecap(true),1500);
+      }
     }
   },[]);
 
   async function loadEntries(){
-    setLoading(true);
-    try{const data=await sbGet("entries",`user_email=eq.${encodeURIComponent(user.email)}&order=date.desc`);setEntries(Array.isArray(data)?data:[]);}
-    catch{setEntries([]);}
+    setLoading(true); setDbError(false);
+    try{
+      const data=await sbGet("entries",`user_email=eq.${encodeURIComponent(user.email)}&order=date.desc`);
+      if(Array.isArray(data)){setEntries(data);}
+      else{setDbError(true);}
+    } catch{setDbError(true);}
     finally{setLoading(false);}
   }
 
   async function loadAiPrompt(){
-    const cached=sessionStorage.getItem("myinnermindPrompt_"+getTodayStr());
+    const cached=store.get("myinnermindPrompt_"+getTodayStr());
     if(cached){setAiPrompt(cached);return;}
     setPromptLoading(true);
-    try{const p=await getAIPrompt();setAiPrompt(p);sessionStorage.setItem("myinnermindPrompt_"+getTodayStr(),p);}
+    try{const p=await getAIPrompt();setAiPrompt(p);store.set("myinnermindPrompt_"+getTodayStr(),p);}
     catch{setAiPrompt("What is one small thing that brought you comfort today?");}
     finally{setPromptLoading(false);}
   }
@@ -484,21 +529,26 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
     return(!q||e.title?.toLowerCase().includes(q)||e.content?.toLowerCase().includes(q))&&(!filterTag||e.tags?.includes(filterTag))&&(!filterMood||e.mood?.label===filterMood);
   });
 
+  // fix #8 — only show recap if there are entries from last month
+  const lastMonthStr=new Date(new Date().getFullYear(),new Date().getMonth()-1,1).toISOString().slice(0,7);
+  const hasLastMonthEntries=entries.some(e=>e.date?.startsWith(lastMonthStr));
+
   return(
     <div style={{...S.page,background:T.bg}}>
       <div style={S.texture}/><GlobalStyles/>
       <header style={{...S.header,background:T.header}}>
         <div style={{...S.headerInner,flexDirection:"column",gap:0,padding:"8px 16px"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",marginBottom:6}}>
-            <button onClick={()=>{setTab("journal");setView("list");}} style={S.logoBtn}><span style={{fontSize:20}}>🌿</span><span style={{...S.logoText,fontSize:16}}>My Inner Mind</span></button>
+            <button onClick={()=>{handleTabChange("journal");}} style={S.logoBtn}><span style={{fontSize:20}}>🌿</span><span style={{...S.logoText,fontSize:16}}>My Inner Mind</span></button>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               {streak>0&&(<div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 8px",background:"rgba(245,158,11,0.12)",borderRadius:12,border:"1px solid rgba(245,158,11,0.3)"}}><span style={{fontSize:12}}>🔥</span><span style={{fontSize:11,fontWeight:700,color:"#b45309"}}>{streak}</span></div>)}
-              <ProfileMenu user={user} theme={theme} T={T} onLogout={onLogout} onTheme={(key)=>{setTheme(key);localStorage.setItem("theme_"+user.email,key);}} onUpgradeTab={()=>setTab("pricing")}/>
+              <ProfileMenu user={user} theme={theme} T={T} onLogout={onLogout} onTheme={(key)=>{setTheme(key);persist.set("theme_"+user.email,key);}} onUpgradeTab={()=>handleTabChange("pricing")} onAccountTab={()=>handleTabChange("account")}/>
             </div>
           </div>
+          {/* fix #14 — admin tab only in nav for admin, keeps bottom bar clean */}
           <nav style={{display:"flex",gap:2,width:"100%",justifyContent:"space-around"}}>
-            {[["journal","📖"],["nest","🪹"],["journey","🌱"],["challenges","🏆"],["letters","💌"],["community","🌿"],...(user.email===ADMIN_EMAIL?[["admin","🔐"]]:[])].map(([t,icon])=>(
-              <button key={t} onClick={()=>{setTab(t);setView("list");}} style={{...S.navBtn,...(tab===t?S.navBtnActive:{}),padding:"5px 8px",fontSize:11,display:"flex",flexDirection:"column",alignItems:"center",gap:2,flex:1}}>
+            {[["journal","📖"],["nest","🪹"],["journey","🌱"],["challenges","🏆"],["letters","💌"],["community","🌿"]].map(([t,icon])=>(
+              <button key={t} onClick={()=>handleTabChange(t)} style={{...S.navBtn,...(tab===t?S.navBtnActive:{}),padding:"5px 8px",fontSize:11,display:"flex",flexDirection:"column",alignItems:"center",gap:2,flex:1}}>
                 <span style={{fontSize:18}}>{icon}</span>
                 <span style={{fontSize:9,textTransform:"capitalize",fontWeight:tab===t?700:500}}>{t}</span>
               </button>
@@ -508,9 +558,20 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
       </header>
 
       <main style={{...S.main,color:T.text}}>
+        {/* fix #12 — error state when DB is down */}
+        {dbError&&tab==="journal"&&(
+          <div style={{background:"rgba(200,80,60,0.08)",border:"1px solid rgba(200,80,60,0.2)",borderRadius:16,padding:"16px 20px",marginBottom:20,display:"flex",gap:12,alignItems:"center"}}>
+            <span style={{fontSize:24}}>🌿</span>
+            <div>
+              <div style={{fontWeight:700,color:"#c05040",fontSize:14}}>Having trouble connecting</div>
+              <div style={{fontSize:13,color:"#9a7050",marginTop:3}}>Check your connection and <button onClick={loadEntries} style={{background:"none",border:"none",color:"#c8895a",fontWeight:700,cursor:"pointer",fontSize:13,padding:0}}>try again</button></div>
+            </div>
+          </div>
+        )}
+
         {tab==="journal"&&view==="list"&&(
           <div style={{display:"flex",flexDirection:"column",gap:20}}>
-            {showRecap&&<MonthlyRecap entries={entries} user={user} onDismiss={()=>setShowRecap(false)}/>}
+            {showRecap&&hasLastMonthEntries&&<MonthlyRecap entries={entries} user={user} onDismiss={()=>setShowRecap(false)}/>}
             {(()=>{const g=getTimeGreeting();return(<div style={{textAlign:"center",padding:"8px 0 4px"}}><div style={{fontFamily:"'Lora',serif",fontSize:22,color:T.accentDark,fontWeight:600,marginBottom:4}}>{g.greeting}</div><div style={{fontSize:13,color:T.subtext,fontStyle:"italic"}}>{g.sub}</div></div>);})()}
             <IntentionBanner user={user} onWrite={startNew} theme={T}/>
             {entries.length>0&&!loading&&<GentleNudge entries={entries} theme={T}/>}
@@ -521,7 +582,7 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
             <div style={{...S.promptCard,background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.18)"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:18}}>💌</span><span style={{fontWeight:700,color:"#7a4a1e",fontSize:12,textTransform:"uppercase",letterSpacing:"0.6px"}}>Hallie's Prompt This Week</span></div><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.7,marginBottom:6}}>"{halliePrompt.prompt}"</p><div style={{fontSize:12,color:"#b08060",marginBottom:12}}>{halliePrompt.note}</div><button onClick={()=>startNew(halliePrompt.prompt)} style={S.softBtn}>Write to this →</button></div>
             <div style={{display:"flex",gap:10,alignItems:"center"}}>
               <div style={{flex:1,position:"relative"}}><span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",opacity:0.35,fontSize:15}}>🔍</span><input style={{...S.input,paddingLeft:38,width:"100%"}} placeholder="Search your entries..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}/></div>
-              {isOTR&&<button onClick={()=>exportToPDF(entries,user.username)} style={S.ghostBtn}>📄 PDF</button>}
+              {isOTR&&<button onClick={()=>exportToPDF(entries,user.username)} style={S.ghostBtn}>📄 Export</button>}
               <button onClick={()=>startNew()} style={S.newBtn}>+ New</button>
             </div>
             <div style={{display:"flex",flexWrap:"wrap",gap:7}}><Chip active={!filterTag} onClick={()=>setFilterTag(null)}>All</Chip>{TAG_OPTIONS.map(t=><Chip key={t} active={filterTag===t} activeColor={TAG_COLORS[t]} onClick={()=>setFilterTag(filterTag===t?null:t)}>{t}</Chip>)}</div>
@@ -569,20 +630,146 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
             </div>
           </div>
         )}
-        {tab==="admin"&&user.email===ADMIN_EMAIL&&<AdminTab/>}
-        {tab==="nest"&&<NestTab user={user} isPro={isPro} isOTR={isOTR} aiPrompt={aiPrompt} promptLoading={promptLoading} onWrite={(prefill)=>{setTab("journal");startNew(prefill);}} theme={T}/>}
+        {/* fix #5 — admin tab hidden from nav, only accessible via profile menu */}
+        {tab==="admin"&&isAdmin&&<AdminTab/>}
+        {tab==="account"&&<AccountTab user={user} onUpgrade={()=>handleTabChange("pricing")}/>}
+        {tab==="nest"&&<NestTab user={user} isPro={isPro} isOTR={isOTR} aiPrompt={aiPrompt} promptLoading={promptLoading} onWrite={(prefill)=>{handleTabChange("journal");startNew(prefill);}} theme={T}/>}
         {tab==="journey"&&<JourneyTab entries={entries} user={user}/>}
         {tab==="letters"&&<LettersTab user={user}/>}
-        {tab==="challenges"&&<ChallengesTab entries={entries} user={user} onWrite={(prefill)=>{setTab("journal");startNew(prefill);}}/>}
+        {tab==="challenges"&&<ChallengesTab entries={entries} user={user} onWrite={(prefill)=>{handleTabChange("journal");startNew(prefill);}}/>}
         {tab==="pricing"&&<PricingTab currentPlan={user.plan} userEmail={user.email} onUpgrade={onUpgradePlan}/>}
-        {tab==="community"&&<CommunitiesTab user={user} userTier={user.plan} onUpgrade={()=>setTab("pricing")}/>}
+        {tab==="community"&&<CommunitiesTab user={user} userTier={user.plan} onUpgrade={()=>handleTabChange("pricing")}/>}
       </main>
       {!pwaDismissed&&<PWABanner prompt={pwaPrompt} onDismiss={()=>{setPwaDismissed(true);onPwaInstalled();}}/>}
     </div>
   );
 }
 
-// ── COMMUNITIES TAB ──
+// ── ACCOUNT TAB (fix #3 — new feature, fully built) ──
+function AccountTab({user,onUpgrade}){
+  const [activeSection,setActiveSection]=useState(null);
+  const [currentPw,setCurrentPw]=useState("");
+  const [newPw,setNewPw]=useState("");
+  const [confirmPw,setConfirmPw]=useState("");
+  const [pwStatus,setPwStatus]=useState("");
+  const [askMsg,setAskMsg]=useState("");
+  const [askSent,setAskSent]=useState(false);
+  const [askLoading,setAskLoading]=useState(false);
+
+  async function handlePasswordChange(){
+    setPwStatus("");
+    if(!currentPw||!newPw||!confirmPw){setPwStatus("error:All fields required.");return;}
+    if(newPw.length<6){setPwStatus("error:New password must be at least 6 characters.");return;}
+    if(newPw!==confirmPw){setPwStatus("error:Passwords don't match.");return;}
+    const result=await sbGet("users",`email=eq.${encodeURIComponent(user.email)}`);
+    if(!result?.length){setPwStatus("error:Could not verify account.");return;}
+    if(result[0].password_hash!==hashStr(currentPw)){setPwStatus("error:Current password is incorrect.");return;}
+    await sbUpdate("users",`email=eq.${encodeURIComponent(user.email)}`,{password_hash:hashStr(newPw)});
+    setPwStatus("success:Password updated! 🌿");
+    setCurrentPw("");setNewPw("");setConfirmPw("");
+  }
+
+  async function handleAskHallie(){
+    if(!askMsg.trim())return;
+    setAskLoading(true);
+    try{
+      await fetch("/api/ask-hallie",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:user.email,username:user.username,message:askMsg})});
+      setAskSent(true);setAskMsg("");
+    }catch{setAskSent(true);}
+    setAskLoading(false);
+  }
+
+  const plan=PLANS[user.plan];
+  const sections=[
+    {id:"plan",icon:"💎",label:"My Plan"},
+    {id:"password",icon:"🔑",label:"Change Password"},
+    {id:"ask",icon:"💌",label:"Ask Hallie"},
+    {id:"faq",icon:"🌿",label:"Help & FAQ"},
+  ];
+
+  const FAQ=[
+    {q:"How do I cancel my subscription?",a:"Email hello@halliewho.com and we'll take care of it within 24 hours. No hard feelings — ever."},
+    {q:"Is my journal private?",a:"Yes. Your entries are private by default. You choose what you share to the community feed."},
+    {q:"What's Story of the Month?",a:"Each month, Hallie reads community submissions and may feature a story anonymously on My Sister's Closet podcast."},
+    {q:"Can I export my journal?",a:"Off the Record members can export all entries as an HTML file from the journal view."},
+    {q:"How do streaks work?",a:"Write at least one entry per day to keep your streak alive. It resets if you miss a day."},
+    {q:"What is Off the Record?",a:"Our most private plan — includes AI reflections, PDF export, all challenges, and a deeper journaling experience."},
+  ];
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div style={{textAlign:"center",padding:"20px 0 8px"}}>
+        <div style={{fontSize:40,marginBottom:8}}>⚙️</div>
+        <h2 style={{fontFamily:"'Lora',serif",fontSize:24,color:"#5a2e0e",fontWeight:600}}>Account Settings</h2>
+        <p style={{fontSize:13,color:"#b08060",fontStyle:"italic",marginTop:4}}>Hey {user.username} 🌿</p>
+      </div>
+
+      {sections.map(s=>(
+        <div key={s.id} style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,overflow:"hidden",boxShadow:"0 2px 12px rgba(160,100,50,0.07)"}}>
+          <button onClick={()=>setActiveSection(activeSection===s.id?null:s.id)} style={{width:"100%",background:"none",border:"none",padding:"18px 20px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",textAlign:"left"}}>
+            <div style={{width:42,height:42,borderRadius:14,background:"rgba(200,137,90,0.1)",border:"1px solid rgba(200,137,90,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{s.icon}</div>
+            <span style={{fontWeight:700,color:"#5a2e0e",fontSize:15,fontFamily:"'Nunito',sans-serif",flex:1}}>{s.label}</span>
+            <span style={{fontSize:16,color:"#b08060"}}>{activeSection===s.id?"▲":"▼"}</span>
+          </button>
+
+          {activeSection==="plan"&&s.id==="plan"&&(
+            <div style={{padding:"0 20px 20px"}}>
+              <div style={{background:`linear-gradient(135deg,${plan.color}18,${plan.color}08)`,border:`1px solid ${plan.color}33`,borderRadius:16,padding:"18px",marginBottom:14,textAlign:"center"}}>
+                <div style={{fontSize:28,fontWeight:800,color:plan.color,fontFamily:"'Lora',serif",marginBottom:4}}>{plan.name}</div>
+                <div style={{fontSize:20,fontWeight:700,color:"#7a4a1e",marginBottom:10}}>{plan.price}</div>
+                <ul style={{listStyle:"none",display:"flex",flexDirection:"column",gap:8,textAlign:"left"}}>{plan.features.map(f=><li key={f} style={{fontSize:13,color:"#7a5030",display:"flex",gap:8}}><span style={{color:plan.color,fontWeight:700}}>✓</span>{f}</li>)}</ul>
+              </div>
+              {user.plan!=="offtherecord"&&<button onClick={onUpgrade} style={{...S.saveBtn,width:"100%"}}>See All Plans →</button>}
+              {user.plan!=="free"&&<div style={{textAlign:"center",marginTop:10,fontSize:12,color:"#b08060"}}>To manage billing, email <strong>hello@halliewho.com</strong></div>}
+            </div>
+          )}
+
+          {activeSection==="password"&&s.id==="password"&&(
+            <div style={{padding:"0 20px 20px",display:"flex",flexDirection:"column",gap:12}}>
+              <Field label="Current Password"><input style={S.input} type="password" placeholder="••••••••" value={currentPw} onChange={e=>setCurrentPw(e.target.value)}/></Field>
+              <Field label="New Password"><input style={S.input} type="password" placeholder="At least 6 characters" value={newPw} onChange={e=>setNewPw(e.target.value)}/></Field>
+              <Field label="Confirm New Password"><input style={S.input} type="password" placeholder="Type it again" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)}/></Field>
+              {pwStatus&&<div style={{padding:"10px 14px",borderRadius:12,fontSize:13,fontWeight:600,background:pwStatus.startsWith("success")?"rgba(100,170,100,0.1)":"rgba(200,80,60,0.08)",border:pwStatus.startsWith("success")?"1px solid rgba(100,170,100,0.3)":"1px solid rgba(200,80,60,0.2)",color:pwStatus.startsWith("success")?"#3a8050":"#c05040"}}>{pwStatus.replace(/^(success|error):/,"")}</div>}
+              <button onClick={handlePasswordChange} style={S.saveBtn}>Update Password →</button>
+            </div>
+          )}
+
+          {activeSection==="ask"&&s.id==="ask"&&(
+            <div style={{padding:"0 20px 20px"}}>
+              {!askSent?(
+                <>
+                  <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",fontStyle:"italic",lineHeight:1.7,marginBottom:14}}>Have a question, a thought, or something on your heart? Hallie reads every message. 🌿</p>
+                  <textarea style={{...S.textarea,minHeight:120,marginBottom:12}} placeholder="Hey Hallie..." value={askMsg} onChange={e=>setAskMsg(e.target.value)} rows={4}/>
+                  <button onClick={handleAskHallie} disabled={!askMsg.trim()||askLoading} style={{...S.saveBtn,width:"100%",opacity:!askMsg.trim()||askLoading?0.5:1}}>{askLoading?"Sending...":"Send to Hallie 💌"}</button>
+                </>
+              ):(
+                <div style={{textAlign:"center",padding:"16px 0"}}>
+                  <div style={{fontSize:36,marginBottom:10}}>💌</div>
+                  <p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.7}}>Your message is on its way. Hallie will read it. 🌿</p>
+                  <button onClick={()=>setAskSent(false)} style={{...S.ghostBtn,marginTop:14}}>Send another</button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeSection==="faq"&&s.id==="faq"&&(
+            <div style={{padding:"0 20px 20px",display:"flex",flexDirection:"column",gap:12}}>
+              {FAQ.map((item,i)=>(
+                <div key={i} style={{borderBottom:"1px solid rgba(200,137,90,0.1)",paddingBottom:12}}>
+                  <div style={{fontWeight:700,color:"#5a2e0e",fontSize:14,marginBottom:5}}>🌿 {item.q}</div>
+                  <div style={{fontSize:13,color:"#8a6040",lineHeight:1.65,fontFamily:"'Lora',serif",fontStyle:"italic"}}>{item.a}</div>
+                </div>
+              ))}
+              <div style={{fontSize:12,color:"#b08060",textAlign:"center",paddingTop:4}}>Still have questions? <strong>hello@halliewho.com</strong></div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── COMMUNITIES TAB (fix #2 — member counts hidden from users) ──
 function CommunitiesTab({user,userTier="free",onUpgrade}){
   const [communities,setCommunities]=useState([]);
   const [activeCommunity,setActiveCommunity]=useState(null);
@@ -591,11 +778,10 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
   const [selectedMood,setSelectedMood]=useState(null);
   const [isPromptMode,setIsPromptMode]=useState(false);
   const [loading,setLoading]=useState(true);
-  const [postsLoading,setPostsLoading]=useState(false);
+  const [postsLoading,setPostsLoading]=useState(false); // fix #6
   const [submitting,setSubmitting]=useState(false);
   const [reactions,setReactions]=useState({});
   const [myReactions,setMyReactions]=useState({});
-  const [memberCounts,setMemberCounts]=useState({});
   const [isMember,setIsMember]=useState({});
   const [view,setView]=useState("list");
   const userTierLevel=COMMUNITY_TIER_ORDER[userTier]??0;
@@ -612,14 +798,14 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
     try{
       const data=await sbGet("communities","order=min_tier.asc");
       if(Array.isArray(data))setCommunities(data);
-      const members=await sbGet("community_members","select=community_id");
-      if(Array.isArray(members)){const counts={};members.forEach(m=>{counts[m.community_id]=(counts[m.community_id]||0)+1;});setMemberCounts(counts);}
+      // fix #2 — member counts NOT loaded for regular users, only admin sees them
     }catch(e){console.error(e);}
     setLoading(false);
   }
 
   async function loadPosts(communityId){
     setPostsLoading(true);
+    setPosts([]); // fix #6 — clear old posts before loading new
     try{
       const data=await sbGet("community_posts",`community_id=eq.${communityId}&order=created_at.desc&limit=50&select=*`);
       if(Array.isArray(data)){
@@ -635,7 +821,7 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
   }
 
   async function checkMembership(communityId){if(!userKey)return;const data=await sbGet("community_members",`user_id=eq.${encodeURIComponent(userKey)}&community_id=eq.${communityId}`);setIsMember(prev=>({...prev,[communityId]:Array.isArray(data)&&data.length>0}));}
-  async function joinCommunity(communityId){if(!userKey)return;await sbInsert("community_members",{user_id:userKey,community_id:communityId});setIsMember(prev=>({...prev,[communityId]:true}));setMemberCounts(prev=>({...prev,[communityId]:(prev[communityId]||0)+1}));}
+  async function joinCommunity(communityId){if(!userKey)return;await sbInsert("community_members",{user_id:userKey,community_id:communityId});setIsMember(prev=>({...prev,[communityId]:true}));}
 
   async function submitPost(){
     if(!newPost.trim()||!activeCommunity||!userKey)return;
@@ -697,8 +883,8 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
                   <div key={community.id} style={{background:"rgba(255,252,246,0.95)",borderRadius:18,border:`1px solid ${accessible?cfg.border:"rgba(200,180,160,0.15)"}`,overflow:"hidden",boxShadow:"0 2px 12px rgba(160,100,50,0.08)",opacity:accessible?1:0.55,cursor:accessible?"pointer":"default"}} onClick={()=>{if(accessible){setActiveCommunity(community);setView("community");}}}>
                     <div style={{padding:"14px 14px 8px",display:"flex",alignItems:"flex-start",justifyContent:"space-between",background:accessible?cfg.bg:"rgba(200,180,160,0.06)"}}>
                       <span style={{fontSize:26}}>{community.emoji}</span>
+                      {/* fix #2 — no member count shown here */}
                       {!accessible&&<div style={{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:10,border:"1px solid",background:cfg.bg,color:cfg.color,borderColor:cfg.border,letterSpacing:"0.3px",textTransform:"uppercase"}}>🔒 {cfg.label}</div>}
-                      {accessible&&memberCounts[community.id]>0&&<div style={{fontSize:10,color:"#b08060",background:"rgba(200,137,90,0.08)",borderRadius:10,padding:"2px 8px"}}>👥 {memberCounts[community.id]}</div>}
                     </div>
                     <div style={{padding:"0 12px 12px"}}><div style={{fontFamily:"'Lora',serif",fontSize:13,fontWeight:600,color:"#5a2e0e",marginBottom:3,lineHeight:1.3}}>{community.name}</div><div style={{fontSize:11,color:"#b08060",lineHeight:1.4}}>{community.description}</div></div>
                   </div>
@@ -739,219 +925,62 @@ function CommunitiesTab({user,userTier="free",onUpgrade}){
       {communityView==="stories"&&<StoryOfTheMonth communityId={activeCommunity?.id} cfg={cfg}/>}
 
       {communityView==="feed"&&<>
-      {posts.length>0&&<div style={{textAlign:"center",fontSize:12,color:"#b08060",fontStyle:"italic",padding:"4px 0 8px"}}>{posts.filter(p=>p.created_at?.startsWith(getTodayStr())).length>0?`${posts.filter(p=>p.created_at?.startsWith(getTodayStr())).length} ${posts.filter(p=>p.created_at?.startsWith(getTodayStr())).length===1?"person has":"people have"} shared here today 🌿`:""}</div>}
-      {prompt&&(<div style={{margin:"0 16px 12px",background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px 18px",border:"1px solid rgba(200,137,90,0.15)",boxShadow:"0 2px 12px rgba(160,100,50,0.08)"}}><div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",fontWeight:700,marginBottom:8,color:cfg.color}}>✦ Today's Prompt</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:14,color:"#5a3a1a",lineHeight:1.7,marginBottom:12}}>"{prompt}"</p><button style={{background:"transparent",border:`1px solid ${cfg.color}`,borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",color:cfg.color}} onClick={()=>{setIsPromptMode(true);setNewPost("");}}>Answer this →</button></div>)}
-      {hasAccess&&(<div style={{margin:"0 16px 12px",background:"rgba(255,252,246,0.97)",borderRadius:18,padding:"16px",boxShadow:"0 2px 16px rgba(160,100,50,0.1)",border:"1px solid rgba(200,137,90,0.15)"}}>
-        {isPromptMode&&(<div style={{fontSize:11,color:"#c8895a",fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(200,137,90,0.07)",padding:"6px 10px",borderRadius:8}}>✦ Answering today's prompt<button style={{background:"none",border:"none",fontSize:12,color:"#b08060",cursor:"pointer"}} onClick={()=>setIsPromptMode(false)}>✕</button></div>)}
-        <textarea style={{width:"100%",padding:"12px 14px",border:"1.5px solid rgba(200,137,90,0.2)",borderRadius:12,fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",resize:"none",outline:"none",lineHeight:1.7,marginBottom:10,background:"rgba(253,248,242,0.8)",boxSizing:"border-box",fontStyle:"italic"}} placeholder={isPromptMode?"Share your thoughts here...":"What's on your heart today?"} value={newPost} onChange={e=>setNewPost(e.target.value)} rows={3}/>
-        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>{COMMUNITY_MOOD_TAGS.map(mood=>(<button key={mood.label} style={{border:"1px solid",borderRadius:20,padding:"4px 10px",fontSize:11,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:600,background:selectedMood?.label===mood.label?"rgba(200,137,90,0.15)":"transparent",borderColor:selectedMood?.label===mood.label?"#c8895a":"rgba(200,180,160,0.3)",color:selectedMood?.label===mood.label?"#7a4a1e":"#b08060"}} onClick={()=>setSelectedMood(selectedMood?.label===mood.label?null:mood)}>{mood.emoji} {mood.label}</button>))}</div>
-        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:10}}>
-          <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:12,color:"#9a7050"}}><input type="checkbox" checked={isAnon} onChange={e=>setIsAnon(e.target.checked)} style={{accentColor:"#c8895a",width:14,height:14}}/>Post anonymously</label>
-          <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:12,color:"#7a4a1e",background:"rgba(122,74,30,0.05)",padding:"8px 10px",borderRadius:10,border:"1px solid rgba(122,74,30,0.12)"}}><input type="checkbox" checked={submitToMonth} onChange={e=>setSubmitToMonth(e.target.checked)} style={{accentColor:"#c8895a",width:14,height:14}}/><span>🎙️ <strong>Submit for Story of the Month</strong> — Hallie may feature this on My Sister's Closet</span></label>
-        </div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          {selectedMood&&<span style={{fontSize:12,color:"#c8895a",fontWeight:600,fontStyle:"italic"}}>{selectedMood.emoji} {selectedMood.label}</span>}
-          <button style={{background:cfg.color,color:"white",border:"none",borderRadius:20,padding:"8px 22px",fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700,marginLeft:"auto",opacity:!newPost.trim()||submitting?0.5:1}} disabled={!newPost.trim()||submitting} onClick={submitPost}>{submitting?"Sharing...":"Share 🌿"}</button>
-        </div>
-      </div>)}
-      {postsLoading?<div style={{textAlign:"center",padding:"40px",color:"#b08060",fontStyle:"italic"}}>Loading posts...</div>:posts.length===0?(<div style={{textAlign:"center",padding:"40px 24px"}}><div style={{fontSize:36,marginBottom:10}}>{activeCommunity?.emoji}</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",color:"#b08060",fontSize:14,lineHeight:1.7}}>No posts yet — be the first to share something here.<br/>Your words might be exactly what someone needed. 🌿</p></div>):(
-        <div style={{padding:"0 16px"}}>
-          {posts.map(post=>(
-            <div key={post.id} style={{background:"rgba(255,252,246,0.95)",borderRadius:18,padding:"16px",marginBottom:10,border:"1px solid rgba(200,137,90,0.12)",boxShadow:"0 2px 10px rgba(160,100,50,0.07)"}}>
-              {post.submit_to_sotm&&<div style={{fontSize:10,fontWeight:700,color:"#7a4a1e",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",padding:"3px 10px",borderRadius:8,marginBottom:10,display:"inline-block"}}>🎙️ Submitted for Story of the Month</div>}
-              {post.is_prompt_response&&<div style={{fontSize:10,fontWeight:700,letterSpacing:"0.5px",textTransform:"uppercase",padding:"3px 10px",borderRadius:8,border:`1px solid ${cfg.border}`,marginBottom:10,display:"inline-block",color:cfg.color,background:cfg.bg}}>✦ Prompt response</div>}
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                <div style={{width:34,height:34,borderRadius:"50%",background:post.is_anonymous?"linear-gradient(135deg,#b0a090,#9a8878)":`linear-gradient(135deg,${cfg.color}88,${cfg.color})`,color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>{post.is_anonymous?"👤":(post.user_id||"?")[0].toUpperCase()}</div>
-                <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:"#5a2e0e"}}>{post.is_anonymous?"Anonymous":post.display_name||post.user_id?.split("@")[0]||"Anonymous"}</div><div style={{fontSize:11,color:"#b08060",marginTop:1}}>{timeAgo(post.created_at)}</div></div>
-                {post.mood_tag&&<div style={{fontSize:11,color:"#9a7050",background:"rgba(200,137,90,0.08)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:12,padding:"3px 10px",flexShrink:0,fontWeight:600}}>{post.mood_tag}</div>}
-              </div>
-              <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",lineHeight:1.8,marginBottom:12,fontStyle:"italic"}}>{post.content}</p>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {COMMUNITY_REACTIONS.map(emoji=>{const count=reactions[post.id]?.[emoji]||0;const isMine=myReactions[post.id]===emoji;return(<button key={emoji} style={{border:"1px solid",borderRadius:20,padding:"4px 10px",fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif",display:"flex",alignItems:"center",gap:4,background:isMine?"rgba(200,137,90,0.12)":"transparent",borderColor:isMine?"#c8895a":"rgba(200,180,160,0.3)",fontWeight:isMine?700:400}} onClick={()=>reactToPost(post.id,emoji)}>{emoji}{count>0&&<span style={{fontSize:11,color:"#c8895a",fontWeight:700}}>{count}</span>}</button>);})}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}</>}
-    </div>
-  );
-}
-
-// ── CHALLENGES ──
-const MINI_CHALLENGES=[
-  {id:"healing7",icon:"🌱",title:"7-Day Healing Series",duration:7,color:"#7a9e7e",desc:"A gentle week of turning inward. Release, restore, and come back to yourself.",days:[{day:1,prompt:"What are you carrying right now that isn't yours to carry? Write it out and then write: I release this."},{day:2,prompt:"Describe a wound that has taught you something beautiful. How did that pain shape you?"},{day:3,prompt:"Write a letter to a younger version of yourself who needed to hear something they never got to hear."},{day:4,prompt:"What does healing look like for you — not what it's supposed to look like, but what it actually feels like?"},{day:5,prompt:"Who in your life makes you feel most like yourself? What do they see in you that you sometimes forget?"},{day:6,prompt:"Name three ways you have grown in the last year that no one else would notice but you."},{day:7,prompt:"Write yourself a blessing. Something you wish someone had said to you. Say it to yourself now."}]},
-  {id:"gratitude5",icon:"🙏",title:"5-Day Gratitude Reset",duration:5,color:"#c8895a",desc:"Not toxic positivity — real, specific gratitude that rewires how you see your life.",days:[{day:1,prompt:"Write about something you almost missed today — a small moment that could have gone unnoticed but didn't."},{day:2,prompt:"Who is someone in your life who shows up quietly? Write them a thank you they'll never see."},{day:3,prompt:"What is something about your body you are grateful for today? Not how it looks — what it does."},{day:4,prompt:"Write about a hard season that gave you something you wouldn't trade. What did difficulty teach you?"},{day:5,prompt:"Write a love letter to your own life — exactly as it is right now, imperfect and in process."}]},
-  {id:"confidence10",icon:"🔥",title:"10-Day Confidence Builder",duration:10,color:"#c47c2a",desc:"Call yourself back. Rebuild your belief in who you are and what you're capable of.",days:[{day:1,prompt:"Write about a time you did something that scared you. How did it feel on the other side?"},{day:2,prompt:"What is something you are actually really good at that you rarely let yourself claim?"},{day:3,prompt:"Write about a version of yourself you've been afraid to become. What's stopping you?"},{day:4,prompt:"Describe your dream life in present tense — as if it's already happening. How does she live?"},{day:5,prompt:"What would you do this week if you weren't afraid of what people thought?"},{day:6,prompt:"Write about a compliment you've received that you dismissed. Receive it now."},{day:7,prompt:"What are three things you've built, created, or overcome that prove you are more capable than you think?"},{day:8,prompt:"What boundary would change your life if you set it? Write it out as a declaration."},{day:9,prompt:"Who are you becoming? Describe her in detail. What does she believe about herself?"},{day:10,prompt:"Write a manifesto for yourself. Five things you believe about who you are and what you deserve."}]},
-  {id:"letters7",icon:"💌",title:"7-Day Letters to Yourself",duration:7,color:"#9b7eb8",desc:"One letter a day. To your past, your future, your fears, your dreams, your people.",days:[{day:1,prompt:"Write a letter to 16-year-old you. What did she need to know that no one told her?"},{day:2,prompt:"Write a letter to the person you were a year ago. How far have you come since then?"},{day:3,prompt:"Write a letter to your fear. Not to fight it — to understand it."},{day:4,prompt:"Write a letter to someone you need to forgive — even if you're not ready. Just start."},{day:5,prompt:"Write a letter to your future self five years from now. What do you hope she feels?"},{day:6,prompt:"Write a letter to your body. Everything you've put it through and everything it's carried for you."},{day:7,prompt:"Write a letter from your future self back to you — right now, today. What does she want you to know?"}]},
-  {id:"lettinggo5",icon:"🌊",title:"5-Day Letting Go",duration:5,color:"#5b8fa8",desc:"Release what no longer serves you. Five days to lighten the load you've been carrying.",days:[{day:1,prompt:"What is the story about yourself that you keep telling — and is it actually true?"},{day:2,prompt:"What relationship (past or present) are you still carrying? What would it feel like to set it down?"},{day:3,prompt:"Write about a version of yourself you've outgrown. Say goodbye to her with love."},{day:4,prompt:"What expectation — of yourself or your life — is causing you the most pain right now?"},{day:5,prompt:"Write a release ritual. Everything you are choosing to leave in this season. Then write: I am free."}]},
-];
-
-function ChallengesTab({entries,user,onWrite}){
-  const [activeChallenge,setActiveChallenge]=useState(null);
-  const [joined,setJoined]=useState(()=>{try{return JSON.parse(localStorage.getItem(`challenges_joined_${user.email}`)||'{}');}catch{return{};}});
-  const [view,setView]=useState("list");
-  const thisMonth=new Date().toISOString().slice(0,7);
-  const monthEntries=entries.filter(e=>e.date?.startsWith(thisMonth));
-  const daysInMonth=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
-  const today=new Date().getDate();
-  const journaledDays=new Set(monthEntries.map(e=>new Date(e.date).getDate()));
-
-  function joinChallenge(id){const updated={...joined,[id]:{joinedDate:getTodayStr(),daysCompleted:[]}};setJoined(updated);localStorage.setItem(`challenges_joined_${user.email}`,JSON.stringify(updated));}
-  function getChallengeDay(id){if(!joined[id])return 0;const start=new Date(joined[id].joinedDate);const now=new Date();return Math.floor((now-start)/(24*60*60*1000))+1;}
-  function getCompletedDays(id){return joined[id]?.daysCompleted||[];}
-  function markDayComplete(challengeId,day){const updated={...joined,[challengeId]:{...joined[challengeId],daysCompleted:[...new Set([...(joined[challengeId]?.daysCompleted||[]),day])]}};setJoined(updated);localStorage.setItem(`challenges_joined_${user.email}`,JSON.stringify(updated));}
-
-  if(view==="detail"&&activeChallenge){
-    const c=activeChallenge;
-    const isJoined=!!joined[c.id];
-    const currentDay=Math.min(getChallengeDay(c.id),c.duration);
-    const completedDays=getCompletedDays(c.id);
-    const todayPrompt=c.days[currentDay-1];
-    const progress=completedDays.length/c.duration;
-    return(
-      <div style={{display:"flex",flexDirection:"column",gap:16}}>
-        <button onClick={()=>{setView("list");setActiveChallenge(null);}} style={{...S.ghostBtn,alignSelf:"flex-start"}}>← Challenges</button>
-        <div style={{background:`linear-gradient(135deg,${c.color}15,${c.color}05)`,border:`1px solid ${c.color}30`,borderRadius:24,padding:"24px"}}>
-          <div style={{fontSize:40,marginBottom:8}}>{c.icon}</div>
-          <h2 style={{fontFamily:"'Lora',serif",fontSize:24,color:"#5a2e0e",marginBottom:6,fontWeight:600}}>{c.title}</h2>
-          <p style={{fontSize:14,color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif",lineHeight:1.6,marginBottom:16}}>{c.desc}</p>
-          {isJoined&&(<div style={{marginBottom:16}}><div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#b08060",marginBottom:6}}><span>Day {currentDay} of {c.duration}</span><span>{completedDays.length} completed</span></div><div style={{background:"rgba(200,137,90,0.15)",borderRadius:20,height:8,overflow:"hidden"}}><div style={{background:`linear-gradient(90deg,${c.color},${c.color}cc)`,height:"100%",width:`${progress*100}%`,borderRadius:20,transition:"width 0.5s"}}/></div></div>)}
-          {isJoined&&(<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>{c.days.map(d=>(<div key={d.day} style={{width:32,height:32,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,background:completedDays.includes(d.day)?c.color:d.day===currentDay?"rgba(200,137,90,0.15)":"rgba(200,137,90,0.06)",color:completedDays.includes(d.day)?"white":d.day===currentDay?"#7a4a1e":"#b08060",border:`1px solid ${completedDays.includes(d.day)?c.color:d.day===currentDay?"#c8895a":"rgba(200,137,90,0.2)"}`}}>{completedDays.includes(d.day)?"✓":d.day}</div>))}</div>)}
-          {!isJoined&&(<button onClick={()=>joinChallenge(c.id)} style={{...S.saveBtn,background:`linear-gradient(135deg,${c.color}cc,${c.color})`}}>Start This Challenge →</button>)}
-        </div>
-        {isJoined&&todayPrompt&&(<div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:20,padding:"22px"}}><div style={{fontSize:11,fontWeight:700,color:c.color,textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:10}}>{completedDays.includes(currentDay)?"✓ Day "+currentDay+" Complete":"✦ Day "+currentDay+" — Today's Prompt"}</div><p style={{fontFamily:"'Lora',serif",fontSize:17,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,marginBottom:16}}>"{todayPrompt.prompt}"</p>{!completedDays.includes(currentDay)?(<button onClick={()=>{markDayComplete(c.id,currentDay);spawnConfetti();onWrite(todayPrompt.prompt);}} style={{...S.saveBtn,background:`linear-gradient(135deg,${c.color}cc,${c.color})`}}>Write Today's Entry →</button>):(<div style={{display:"flex",alignItems:"center",gap:8,color:c.color,fontSize:14,fontWeight:600}}><span>✓</span><span>You wrote today. Come back tomorrow. 🌿</span></div>)}</div>)}
-        <div><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>All {c.duration} Days</div>{c.days.map(d=>(<div key={d.day} style={{background:"rgba(255,252,246,0.9)",border:`1px solid ${completedDays.includes(d.day)?"rgba(200,137,90,0.3)":"rgba(200,137,90,0.12)"}`,borderRadius:14,padding:"14px 16px",marginBottom:8,display:"flex",gap:12,alignItems:"flex-start",opacity:isJoined&&d.day>currentDay?0.5:1}}><div style={{width:28,height:28,borderRadius:"50%",background:completedDays.includes(d.day)?c.color:"rgba(200,137,90,0.1)",color:completedDays.includes(d.day)?"white":"#b08060",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{completedDays.includes(d.day)?"✓":d.day}</div><p style={{fontFamily:"'Lora',serif",fontSize:13,color:"#6a4020",fontStyle:"italic",lineHeight:1.6,margin:0}}>{d.prompt}</p></div>))}</div>
-      </div>
-    );
-  }
-
-  return(
-    <div style={{display:"flex",flexDirection:"column",gap:20}}>
-      <div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🏆 Challenges</h2><p style={{color:"#b08060",fontSize:13,marginTop:4,fontStyle:"italic"}}>Push a little deeper. Grow a little more.</p></div>
-      <div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(245,158,11,0.25)",borderRadius:22,padding:"22px"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}><span style={{fontSize:32}}>🔥</span><div><div style={{fontFamily:"'Lora',serif",fontSize:18,fontWeight:600,color:"#5a2e0e"}}>Monthly Streak Challenge</div><div style={{fontSize:12,color:"#b08060",marginTop:2}}>Journal every day this month — keep the chain alive</div></div></div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:12}}>
-          {["S","M","T","W","T","F","S"].map((d,i)=>(<div key={i} style={{textAlign:"center",fontSize:10,color:"#b08060",fontWeight:700,padding:"2px 0"}}>{d}</div>))}
-          {Array.from({length:new Date(new Date().getFullYear(),new Date().getMonth(),1).getDay()}).map((_,i)=>(<div key={`empty-${i}`}/>))}
-          {Array.from({length:daysInMonth}).map((_,i)=>{const day=i+1;const done=journaledDays.has(day);const isToday=day===today;const future=day>today;return(<div key={day} style={{aspectRatio:"1",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:done?"#c8895a":isToday?"rgba(200,137,90,0.15)":future?"rgba(200,137,90,0.04)":"rgba(200,137,90,0.08)",color:done?"white":isToday?"#7a4a1e":"#b08060",border:isToday?"1px solid #c8895a":"1px solid transparent"}}>{done?"✓":day}</div>);})}
-        </div>
-        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#b08060"}}><span>🔥 {calcStreak(entries)} day streak</span><span>{journaledDays.size}/{today} days this month</span></div>
-      </div>
-      <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px"}}>Themed Challenges</div>
-      {MINI_CHALLENGES.map(c=>{
-        const isJoined=!!joined[c.id];const completed=getCompletedDays(c.id).length;const done=completed>=c.duration;
-        return(<div key={c.id} style={{background:"rgba(255,252,246,0.95)",border:`1px solid ${isJoined?"rgba(200,137,90,0.25)":"rgba(200,137,90,0.12)"}`,borderRadius:20,padding:"18px 20px",cursor:"pointer",transition:"all 0.2s",boxShadow:"0 2px 12px rgba(160,100,50,0.08)"}} onClick={()=>{setActiveChallenge(c);setView("detail");}}>
-          <div style={{display:"flex",alignItems:"center",gap:14}}>
-            <div style={{width:52,height:52,borderRadius:16,background:`${c.color}15`,border:`1px solid ${c.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0}}>{c.icon}</div>
-            <div style={{flex:1}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}><div style={{fontFamily:"'Lora',serif",fontSize:16,fontWeight:600,color:"#5a2e0e"}}>{c.title}</div>{done&&<span style={{fontSize:10,fontWeight:800,background:c.color,color:"white",padding:"2px 8px",borderRadius:10,textTransform:"uppercase"}}>Complete!</span>}{isJoined&&!done&&<span style={{fontSize:10,fontWeight:700,background:`${c.color}20`,color:c.color,padding:"2px 8px",borderRadius:10}}>In progress</span>}</div>
-              <div style={{fontSize:12,color:"#b08060",lineHeight:1.4,marginBottom:isJoined?8:0}}>{c.desc}</div>
-              {isJoined&&(<div style={{background:"rgba(200,137,90,0.12)",borderRadius:10,height:5,overflow:"hidden"}}><div style={{background:`linear-gradient(90deg,${c.color},${c.color}cc)`,height:"100%",width:`${(completed/c.duration)*100}%`,borderRadius:10,transition:"width 0.5s"}}/></div>)}
-            </div>
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0}}><span style={{fontSize:11,fontWeight:700,color:"#b08060"}}>{c.duration}d</span><span style={{fontSize:16,color:"#c8b896"}}>→</span></div>
+        {prompt&&(<div style={{margin:"0 16px 12px",background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px 18px",border:"1px solid rgba(200,137,90,0.15)",boxShadow:"0 2px 12px rgba(160,100,50,0.08)"}}><div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",fontWeight:700,marginBottom:8,color:cfg.color}}>✦ Today's Prompt</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:14,color:"#5a3a1a",lineHeight:1.7,marginBottom:12}}>"{prompt}"</p><button style={{background:"transparent",border:`1px solid ${cfg.color}`,borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",color:cfg.color}} onClick={()=>{setIsPromptMode(true);setNewPost("");}}>Answer this →</button></div>)}
+        {hasAccess&&(<div style={{margin:"0 16px 12px",background:"rgba(255,252,246,0.97)",borderRadius:18,padding:"16px",boxShadow:"0 2px 16px rgba(160,100,50,0.1)",border:"1px solid rgba(200,137,90,0.15)"}}>
+          {isPromptMode&&(<div style={{fontSize:11,color:"#c8895a",fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(200,137,90,0.07)",padding:"6px 10px",borderRadius:8}}>✦ Answering today's prompt<button style={{background:"none",border:"none",fontSize:12,color:"#b08060",cursor:"pointer"}} onClick={()=>setIsPromptMode(false)}>✕</button></div>)}
+          <textarea style={{width:"100%",padding:"12px 14px",border:"1.5px solid rgba(200,137,90,0.2)",borderRadius:12,fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",resize:"none",outline:"none",lineHeight:1.7,marginBottom:10,background:"rgba(253,248,242,0.8)",boxSizing:"border-box",fontStyle:"italic"}} placeholder={isPromptMode?"Share your thoughts here...":"What's on your heart today?"} value={newPost} onChange={e=>setNewPost(e.target.value)} rows={3}/>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>{COMMUNITY_MOOD_TAGS.map(mood=>(<button key={mood.label} style={{border:"1px solid",borderRadius:20,padding:"4px 10px",fontSize:11,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:600,background:selectedMood?.label===mood.label?"rgba(200,137,90,0.15)":"transparent",borderColor:selectedMood?.label===mood.label?"#c8895a":"rgba(200,180,160,0.3)",color:selectedMood?.label===mood.label?"#7a4a1e":"#b08060"}} onClick={()=>setSelectedMood(selectedMood?.label===mood.label?null:mood)}>{mood.emoji} {mood.label}</button>))}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:10}}>
+            <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:12,color:"#9a7050"}}><input type="checkbox" checked={isAnon} onChange={e=>setIsAnon(e.target.checked)} style={{accentColor:"#c8895a",width:14,height:14}}/>Post anonymously</label>
+            <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:12,color:"#7a4a1e",background:"rgba(122,74,30,0.05)",padding:"8px 10px",borderRadius:10,border:"1px solid rgba(122,74,30,0.12)"}}><input type="checkbox" checked={submitToMonth} onChange={e=>setSubmitToMonth(e.target.checked)} style={{accentColor:"#c8895a",width:14,height:14}}/><span>🎙️ <strong>Submit for Story of the Month</strong></span></label>
           </div>
-        </div>);
-      })}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            {selectedMood&&<span style={{fontSize:12,color:"#c8895a",fontWeight:600,fontStyle:"italic"}}>{selectedMood.emoji} {selectedMood.label}</span>}
+            <button style={{background:cfg.color,color:"white",border:"none",borderRadius:20,padding:"8px 22px",fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700,marginLeft:"auto",opacity:!newPost.trim()||submitting?0.5:1}} disabled={!newPost.trim()||submitting} onClick={submitPost}>{submitting?"Sharing...":"Share 🌿"}</button>
+          </div>
+        </div>)}
+        {/* fix #6 — loading state for posts */}
+        {postsLoading?<div style={{textAlign:"center",padding:"40px",color:"#b08060",fontStyle:"italic"}}>Loading posts...</div>:posts.length===0?(<div style={{textAlign:"center",padding:"40px 24px"}}><div style={{fontSize:36,marginBottom:10}}>{activeCommunity?.emoji}</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",color:"#b08060",fontSize:14,lineHeight:1.7}}>No posts yet — be the first to share something here. 🌿</p></div>):(
+          <div style={{padding:"0 16px"}}>
+            {posts.map(post=>(
+              <div key={post.id} style={{background:"rgba(255,252,246,0.95)",borderRadius:18,padding:"16px",marginBottom:10,border:"1px solid rgba(200,137,90,0.12)",boxShadow:"0 2px 10px rgba(160,100,50,0.07)"}}>
+                {post.submit_to_sotm&&<div style={{fontSize:10,fontWeight:700,color:"#7a4a1e",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",padding:"3px 10px",borderRadius:8,marginBottom:10,display:"inline-block"}}>🎙️ Submitted for Story of the Month</div>}
+                {post.is_prompt_response&&<div style={{fontSize:10,fontWeight:700,letterSpacing:"0.5px",textTransform:"uppercase",padding:"3px 10px",borderRadius:8,border:`1px solid ${cfg.border}`,marginBottom:10,display:"inline-block",color:cfg.color,background:cfg.bg}}>✦ Prompt response</div>}
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                  <div style={{width:34,height:34,borderRadius:"50%",background:post.is_anonymous?"linear-gradient(135deg,#b0a090,#9a8878)":`linear-gradient(135deg,${cfg.color}88,${cfg.color})`,color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>{post.is_anonymous?"👤":(post.user_id||"?")[0].toUpperCase()}</div>
+                  <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:"#5a2e0e"}}>{post.is_anonymous?"Anonymous":post.display_name||post.user_id?.split("@")[0]||"Anonymous"}</div><div style={{fontSize:11,color:"#b08060",marginTop:1}}>{timeAgo(post.created_at)}</div></div>
+                  {post.mood_tag&&<div style={{fontSize:11,color:"#9a7050",background:"rgba(200,137,90,0.08)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:12,padding:"3px 10px",flexShrink:0,fontWeight:600}}>{post.mood_tag}</div>}
+                </div>
+                <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",lineHeight:1.8,marginBottom:12,fontStyle:"italic"}}>{post.content}</p>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {COMMUNITY_REACTIONS.map(emoji=>{const count=reactions[post.id]?.[emoji]||0;const isMine=myReactions[post.id]===emoji;return(<button key={emoji} style={{border:"1px solid",borderRadius:20,padding:"4px 10px",fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif",display:"flex",alignItems:"center",gap:4,background:isMine?"rgba(200,137,90,0.12)":"transparent",borderColor:isMine?"#c8895a":"rgba(200,180,160,0.3)",fontWeight:isMine?700:400}} onClick={()=>reactToPost(post.id,emoji)}>{emoji}{count>0&&<span style={{fontSize:11,color:"#c8895a",fontWeight:700}}>{count}</span>}</button>);})}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}</>}
     </div>
   );
 }
 
-function PricingTab({currentPlan,userEmail,onUpgrade}){
-  const [checkoutLoading,setCheckoutLoading]=useState(null);
-  const [checkoutError,setCheckoutError]=useState("");
-  async function handleUpgrade(key){
-    if(key==="free"){onUpgrade("free");return;}
-    setCheckoutError("");setCheckoutLoading(key);
-    try{await startStripeCheckout(STRIPE_PRICES[key],userEmail);}
-    catch{setCheckoutError("Checkout issue — email hello@halliewho.com to upgrade.");onUpgrade(key);}
-    finally{setCheckoutLoading(null);}
-  }
-  return(<div><div style={{textAlign:"center",marginBottom:36}}><h2 style={{fontFamily:"'Lora',serif",fontSize:30,color:"#5a2e0e",marginBottom:8}}>Choose Your Plan</h2><p style={{color:"#b08060",fontSize:15,fontStyle:"italic"}}>Some thoughts aren't meant for the surface.</p></div>{checkoutError&&<div style={{...S.errorBox,marginBottom:20,textAlign:"center"}}>{checkoutError}</div>}<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:20,marginBottom:40}}>{Object.entries(PLANS).map(([key,plan])=>(<div key={key} style={{...S.pricingCard,...(currentPlan===key?{borderColor:plan.color,boxShadow:`0 4px 24px ${plan.color}33`}:{})}}>{currentPlan===key&&<div style={{position:"absolute",top:-13,left:"50%",transform:"translateX(-50%)",background:plan.color,color:"#fff",fontSize:10,fontWeight:800,padding:"3px 14px",borderRadius:20,textTransform:"uppercase",letterSpacing:"0.5px",whiteSpace:"nowrap"}}>Current Plan</div>}<div style={{fontFamily:"'Lora',serif",fontSize:22,fontWeight:600,color:"#5a2e0e",marginBottom:4}}>{plan.name}</div><div style={{fontSize:30,fontWeight:800,color:plan.color,marginBottom:20,fontFamily:"'Lora',serif"}}>{plan.price}</div><ul style={{listStyle:"none",display:"flex",flexDirection:"column",gap:10,marginBottom:24}}>{plan.features.map(f=><li key={f} style={{fontSize:14,color:"#7a5030",display:"flex",gap:8}}><span style={{color:plan.color,fontWeight:700,flexShrink:0}}>✓</span>{f}</li>)}</ul>{currentPlan!==key&&(<button onClick={()=>handleUpgrade(key)} disabled={checkoutLoading===key} style={{...S.saveBtn,width:"100%",background:`linear-gradient(135deg,${plan.color}cc,${plan.color})`,boxShadow:`0 3px 14px ${plan.color}55`}}>{checkoutLoading===key?"Opening checkout...":key==="free"?"Downgrade":key==="offtherecord"?"Enter Off the Record →":`Join ${plan.name} →`}</button>)}</div>))}</div></div>);
-}
-
-function EntryCard({entry,onClick,showAuthor}){
-  const [hovered,setHovered]=useState(false);
-  const moodColor=entry.mood?.color;
-  const moodBg=moodColor?`linear-gradient(160deg,rgba(255,252,246,0.97) 0%,${moodColor}11 100%)`:"rgba(255,252,246,0.93)";
-  const moodBorder=moodColor?`1px solid ${moodColor}33`:"1px solid rgba(200,137,90,0.15)";
-  return(<div style={{...S.card,background:moodBg,border:moodBorder,cursor:onClick?"pointer":"default",transform:hovered?"translateY(-3px)":"",boxShadow:hovered?"0 10px 30px rgba(160,100,50,0.18)":"0 2px 12px rgba(160,100,50,0.10)"}} onClick={onClick} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}><div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><span style={{fontSize:11,color:"#b08060",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.3px"}}>{formatDate(entry.date)}</span><div style={{display:"flex",gap:5,alignItems:"center"}}>{entry.submit_to_feature&&<span style={{fontSize:11}}>🎙️</span>}{entry.shared&&<span style={{fontSize:11,opacity:0.5}}>🌿</span>}{entry.mood&&<span style={{fontSize:18}}>{entry.mood.emoji}</span>}</div></div>{showAuthor&&<div style={{fontSize:12,color:"#c8895a",fontWeight:700,marginBottom:4}}>by {entry.author_name}</div>}<h3 style={{fontFamily:"'Lora',serif",fontSize:17,color:"#5a2e0e",fontWeight:600,marginBottom:8,lineHeight:1.3}}>{entry.title||"Untitled"}</h3><p style={{fontSize:14,color:"#8a6040",lineHeight:1.65,fontStyle:"italic",fontFamily:"'Lora',serif"}}>{(entry.content||"").slice(0,110)}{(entry.content||"").length>110?"…":""}</p>{entry.tags?.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:10}}>{entry.tags.map(t=><TagPill key={t} tag={t}/>)}</div>}</div>);
-}
-
-function TagPill({tag}){return <span style={{padding:"3px 10px",borderRadius:12,fontSize:11,fontWeight:700,fontFamily:"'Nunito',sans-serif",letterSpacing:"0.3px",background:TAG_COLORS[tag]+"22",color:TAG_COLORS[tag],border:`1px solid ${TAG_COLORS[tag]}44`}}>{tag}</span>;}
-function Chip({children,active,activeColor,onClick}){const base={padding:"5px 14px",borderRadius:20,border:"1px solid rgba(200,137,90,0.3)",background:"rgba(255,255,255,0.6)",color:"#9a6a3a",fontSize:13,fontWeight:600,fontFamily:"'Nunito',sans-serif",cursor:"pointer",transition:"all .15s"};const activeStyle=activeColor?{background:activeColor,color:"#fff",borderColor:activeColor}:{background:"#c8895a",color:"#fff",borderColor:"#c8895a"};return <button style={{...base,...(active?activeStyle:{})}} onClick={onClick}>{children}</button>;}
-function Field({label,children}){return <div style={{marginBottom:16}}><label style={{display:"block",fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>{label}</label>{children}</div>;}
-function SectionLabel({children}){return <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:8}}>{children}</div>;}
-function GlobalStyles(){return <style>{`@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Nunito:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Nunito',sans-serif}textarea{resize:none}button{transition:opacity .15s}button:hover{opacity:0.85}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#d4a87a55;border-radius:3px}input::placeholder,textarea::placeholder{opacity:0.45}`}</style>;}
-
-const S={page:{minHeight:"100vh",background:"linear-gradient(160deg,#fdf6ec 0%,#f5e8d3 40%,#ede0cc 100%)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",position:"relative",overflowX:"hidden"},texture:{position:"fixed",inset:0,backgroundImage:`url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8895a' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,pointerEvents:"none",zIndex:0},header:{position:"sticky",top:0,zIndex:100,background:"rgba(253,246,236,0.9)",backdropFilter:"blur(14px)",borderBottom:"1px solid rgba(200,137,90,0.15)"},headerInner:{maxWidth:960,margin:"0 auto",padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8},logoBtn:{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,padding:0},logoText:{fontFamily:"'Lora',serif",fontSize:18,fontWeight:600,color:"#7a4a1e"},navBtn:{background:"none",border:"1px solid transparent",borderRadius:20,padding:"6px 10px",color:"#9a7050",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"},navBtnActive:{background:"rgba(200,137,90,0.12)",borderColor:"rgba(200,137,90,0.3)",color:"#7a4a1e"},main:{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",padding:"24px 16px 100px",width:"100%",overflowX:"hidden",boxSizing:"border-box"},authCard:{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:24,padding:"36px 40px",width:"100%",maxWidth:400,boxShadow:"0 8px 40px rgba(160,100,50,0.15)",position:"relative",zIndex:1},input:{width:"100%",padding:"11px 15px",borderRadius:13,border:"1px solid rgba(200,137,90,0.25)",background:"rgba(255,255,255,0.75)",fontFamily:"'Nunito',sans-serif",fontSize:15,color:"#5a3a1a",outline:"none"},errorBox:{background:"rgba(200,80,60,0.08)",border:"1px solid rgba(200,80,60,0.2)",borderRadius:10,padding:"8px 14px",color:"#c05040",fontSize:13,fontWeight:600,marginBottom:14},card:{background:"rgba(255,252,246,0.93)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px",transition:"transform .2s, box-shadow .2s"},grid:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16},promptCard:{background:"linear-gradient(135deg,rgba(200,137,90,0.1),rgba(155,126,184,0.07))",border:"1px solid rgba(200,137,90,0.2)",borderRadius:20,padding:"20px 24px"},writeCard:{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:24,padding:"28px 24px",boxShadow:"0 4px 24px rgba(160,100,50,0.12)",display:"flex",flexDirection:"column",gap:16,maxWidth:700,margin:"0 auto"},titleInput:{fontFamily:"'Lora',serif",fontSize:24,fontWeight:600,color:"#5a2e0e",background:"transparent",border:"none",borderBottom:"2px solid rgba(200,137,90,0.2)",padding:"6px 0",outline:"none",width:"100%"},textarea:{fontFamily:"'Lora',serif",fontSize:16,lineHeight:1.85,color:"#5a3a1a",background:"rgba(253,248,242,0.85)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:16,padding:"16px 20px",outline:"none",width:"100%",fontStyle:"italic"},readCard:{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:24,padding:"28px 24px",boxShadow:"0 4px 24px rgba(160,100,50,0.12)",maxWidth:700,margin:"0 auto"},insightBox:{background:"linear-gradient(135deg,rgba(200,137,90,0.07),rgba(155,126,184,0.06))",border:"1px solid rgba(200,137,90,0.18)",borderRadius:16,padding:"18px 22px",marginBottom:8},pricingCard:{background:"rgba(255,252,246,0.97)",border:"2px solid rgba(200,137,90,0.15)",borderRadius:22,padding:"28px",position:"relative",transition:"all .2s"},saveBtn:{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"10px 24px",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(200,137,90,0.4)"},ghostBtn:{background:"none",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"8px 18px",color:"#b08060",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"},softBtn:{background:"rgba(200,137,90,0.13)",border:"1px solid rgba(200,137,90,0.28)",borderRadius:16,padding:"7px 16px",color:"#9a5a2a",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"},newBtn:{background:"#c8895a",color:"#fff",border:"none",borderRadius:20,padding:"10px 20px",fontSize:14,fontWeight:700,fontFamily:"'Nunito',sans-serif",cursor:"pointer",boxShadow:"0 2px 10px rgba(200,137,90,0.35)",whiteSpace:"nowrap"},deleteBtn:{background:"none",border:"1px solid rgba(200,80,60,0.3)",borderRadius:18,padding:"9px 20px",color:"#c05040",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:600,cursor:"pointer"}};
-
-function LandingScreen({onGetStarted,onSignIn}){return(<div style={{minHeight:"100vh",background:"linear-gradient(160deg,#fdf6ec 0%,#f5e8d3 50%,#ede0cc 100%)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",position:"relative",overflowX:"hidden"}}><div style={{position:"fixed",inset:0,backgroundImage:`url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8895a' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,pointerEvents:"none",zIndex:0}}/><GlobalStyles/><nav style={{position:"relative",zIndex:1,display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",maxWidth:960,margin:"0 auto",width:"100%"}}><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:24}}>🌿</span><span style={{fontFamily:"'Lora',serif",fontSize:18,fontWeight:600,color:"#7a4a1e"}}>My Inner Mind</span></div><button onClick={onSignIn} style={{background:"none",border:"1px solid rgba(200,137,90,0.4)",borderRadius:20,padding:"8px 20px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Sign In</button></nav><div style={{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",padding:"60px 24px 40px",width:"100%",textAlign:"center"}}><div style={{display:"inline-block",background:"rgba(200,137,90,0.12)",border:"1px solid rgba(200,137,90,0.3)",borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:24}}>✨ A space built with you in mind</div><h1 style={{fontFamily:"'Lora',serif",fontSize:"clamp(32px,6vw,58px)",color:"#5a2e0e",fontWeight:600,lineHeight:1.15,marginBottom:20}}>Journal together.<br/><span style={{color:"#c8895a",fontStyle:"italic"}}>Grow together.</span></h1><p style={{fontSize:"clamp(15px,2vw,18px)",color:"#9a7050",lineHeight:1.75,maxWidth:560,margin:"0 auto 36px",fontFamily:"'Lora',serif",fontStyle:"italic"}}>My Inner Mind is a journaling community where your words are witnessed, your growth is celebrated, and you never have to reflect alone.</p><div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap"}}><button onClick={onGetStarted} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:24,padding:"14px 32px",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(200,137,90,0.45)"}}>Start Journaling Free →</button><button onClick={onSignIn} style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(200,137,90,0.3)",borderRadius:24,padding:"14px 28px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:600,cursor:"pointer"}}>I have an account</button></div></div><div style={{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",padding:"20px 24px 60px",width:"100%"}}><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:20,marginBottom:48}}>{[{icon:"💌",title:"Hallie's Weekly Prompts",desc:"Every week, a personal prompt from Hallie to guide your reflection."},{icon:"🌿",title:"10 Communities",desc:"Find your people — Daily Check-in, Healing & Growth, Motherhood and more."},{icon:"🎙️",title:"Story of the Month",desc:"Submit your entry and Hallie may feature your story on the podcast."},{icon:"✨",title:"AI Reflections",desc:"Get a warm, thoughtful insight on any entry."}].map(f=>(<div key={f.title} style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"24px"}}><div style={{fontSize:32,marginBottom:12}}>{f.icon}</div><div style={{fontFamily:"'Lora',serif",fontSize:17,fontWeight:600,color:"#5a2e0e",marginBottom:8}}>{f.title}</div><div style={{fontSize:14,color:"#9a7050",lineHeight:1.65}}>{f.desc}</div></div>))}</div><div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.09),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.18)",borderRadius:24,padding:"36px",textAlign:"center",marginBottom:48}}><div style={{fontSize:36,marginBottom:16}}>🌿</div><p style={{fontFamily:"'Lora',serif",fontSize:"clamp(16px,2.5vw,20px)",color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,maxWidth:600,margin:"0 auto 20px"}}>"I built this because I needed it. A place to be honest, to grow, and to feel less alone in the process."</p><div style={{fontSize:13,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.5px"}}>— Hallie, My Sister's Closet</div></div><div style={{textAlign:"center"}}><button onClick={onGetStarted} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:24,padding:"16px 40px",fontFamily:"'Nunito',sans-serif",fontSize:16,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(200,137,90,0.4)"}}>Join the Community →</button><div style={{fontSize:13,color:"#b08060",marginTop:12}}>Free to start · No credit card required</div></div></div></div>);}
-
-function OnboardingScreen({user,onDone}){const [step,setStep]=useState(0);const [answer,setAnswer]=useState("");const [saving,setSaving]=useState(false);const welcomePrompt="What brought you here today? There's no right answer — just write what's true.";async function handleFinish(){setSaving(true);if(answer.trim()){const entry={id:`${user.email}_onboarding`,user_email:user.email,date:new Date().toISOString().split("T")[0],title:"My first entry 🌿",content:answer,mood:null,tags:["personal"],shared:false,submit_to_feature:false,author_name:user.username,updated_at:Date.now()};await sbUpsert("entries",entry).catch(()=>{});}setSaving(false);onDone();}return(<div style={{minHeight:"100vh",background:"linear-gradient(160deg,#fdf6ec 0%,#f5e8d3 50%,#ede0cc 100%)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",position:"relative"}}><div style={{position:"fixed",inset:0,backgroundImage:`url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8895a' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,pointerEvents:"none",zIndex:0}}/><GlobalStyles/><div style={{position:"relative",zIndex:1,width:"100%",maxWidth:540}}>{step===0&&(<div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:28,padding:"44px 40px",textAlign:"center",boxShadow:"0 8px 40px rgba(160,100,50,0.12)"}}><div style={{fontSize:56,marginBottom:16}}>🌿</div><h2 style={{fontFamily:"'Lora',serif",fontSize:28,color:"#5a2e0e",marginBottom:12,fontWeight:600}}>Welcome, {user.username}!</h2><p style={{fontSize:15,color:"#9a7050",lineHeight:1.7,marginBottom:28,fontFamily:"'Lora',serif",fontStyle:"italic"}}>You've found your space to think, feel, and grow. My Inner Mind is a community — and you're now part of it.</p><div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:28}}>{[{icon:"💌",text:"Weekly prompts from Hallie"},{icon:"🌿",text:"10 communities to find your people"},{icon:"✨",text:"AI reflections on your entries"}].map(i=>(<div key={i.text} style={{display:"flex",alignItems:"center",gap:12,background:"rgba(200,137,90,0.06)",borderRadius:14,padding:"12px 16px",textAlign:"left"}}><span style={{fontSize:20}}>{i.icon}</span><span style={{fontSize:14,color:"#7a5030",fontWeight:600}}>{i.text}</span></div>))}</div><button onClick={()=>setStep(1)} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"13px 32px",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(200,137,90,0.4)",width:"100%"}}>Let's write something →</button></div>)}{step===1&&(<div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:28,padding:"40px",boxShadow:"0 8px 40px rgba(160,100,50,0.12)"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><span style={{fontSize:20}}>💌</span><span style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.8px"}}>A welcome prompt from Hallie</span></div><p style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.7,marginBottom:24}}>"{welcomePrompt}"</p><textarea style={{width:"100%",minHeight:180,fontFamily:"'Lora',serif",fontSize:15,lineHeight:1.85,color:"#5a3a1a",background:"rgba(253,248,242,0.85)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:16,padding:"16px 20px",outline:"none",fontStyle:"italic",resize:"none",boxSizing:"border-box"}} placeholder="Write freely — this is just for you..." value={answer} onChange={e=>setAnswer(e.target.value)} autoFocus/><div style={{display:"flex",justifyContent:"space-between",marginTop:20,gap:12}}><button onClick={onDone} style={{background:"none",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"10px 20px",color:"#b08060",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>Skip for now</button><button onClick={handleFinish} disabled={saving} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"10px 28px",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(200,137,90,0.4)"}}>{saving?"Saving...":"Save & Enter →"}</button></div></div>)}</div></div>);}
-
-function AdminTab(){const [users,setUsers]=useState([]);const [loading,setLoading]=useState(true);const [search,setSearch]=useState("");useEffect(()=>{loadUsers();},[]);async function loadUsers(){setLoading(true);try{const data=await sbGet("users","order=id.desc");setUsers(Array.isArray(data)?data:[]);}catch{setUsers([]);}finally{setLoading(false);}}const filtered=users.filter(u=>u.email?.toLowerCase().includes(search.toLowerCase())||u.username?.toLowerCase().includes(search.toLowerCase()));const counts={free:0,community:0,offtherecord:0};users.forEach(u=>{if(counts[u.plan]!==undefined)counts[u.plan]++;});return(<div style={{display:"flex",flexDirection:"column",gap:20}}><div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🔐 Admin Dashboard</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Only visible to you</p></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:14}}>{[{label:"Total Members",value:users.length,color:"#7a4a1e"},{label:"Free",value:counts.free,color:"#94a3b8"},{label:"Community",value:counts.community,color:"#c8895a"},{label:"Off the Record",value:counts.offtherecord,color:"#7a4a1e"}].map(s=>(<div key={s.label} style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:18,padding:"20px",textAlign:"center"}}><div style={{fontSize:28,fontWeight:800,color:s.color,fontFamily:"'Lora',serif"}}>{s.value}</div><div style={{fontSize:12,color:"#b08060",fontWeight:700,marginTop:4,textTransform:"uppercase",letterSpacing:"0.4px"}}>{s.label}</div></div>))}</div><div style={{position:"relative"}}><span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",opacity:0.35,fontSize:15}}>🔍</span><input style={{width:"100%",padding:"11px 15px 11px 38px",borderRadius:13,border:"1px solid rgba(200,137,90,0.25)",background:"rgba(255,255,255,0.75)",fontFamily:"'Nunito',sans-serif",fontSize:14,color:"#5a3a1a",outline:"none",boxSizing:"border-box"}} placeholder="Search by name or email..." value={search} onChange={e=>setSearch(e.target.value)}/></div>{loading?<div style={{textAlign:"center",padding:"40px",color:"#b08060",fontStyle:"italic"}}>Loading members...</div>:<div style={{display:"flex",flexDirection:"column",gap:10}}>{filtered.map(u=>(<div key={u.id} style={{background:"rgba(255,252,246,0.93)",border:"1px solid rgba(200,137,90,0.12)",borderRadius:16,padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div><div style={{fontWeight:700,color:"#5a2e0e",fontSize:14}}>{u.username}</div><div style={{fontSize:12,color:"#b08060",marginTop:2}}>{u.email}</div></div><span style={{fontSize:10,fontWeight:800,padding:"3px 12px",borderRadius:10,textTransform:"uppercase",letterSpacing:"0.5px",background:PLANS[u.plan]?.color+"22",color:PLANS[u.plan]?.color}}>{u.plan}</span></div>))}</div>}</div>);}
-
-const BADGES=[{id:"first_entry",icon:"🌱",label:"First Entry",desc:"You wrote your first entry",check:(entries)=>entries.length>=1},{id:"ten_entries",icon:"📖",label:"10 Entries",desc:"You've written 10 journal entries",check:(entries)=>entries.length>=10},{id:"streak_7",icon:"🔥",label:"7-Day Streak",desc:"You journaled 7 days in a row",check:(entries)=>calcStreak(entries)>=7},{id:"streak_30",icon:"🏆",label:"30-Day Streak",desc:"You journaled 30 days in a row",check:(entries)=>calcStreak(entries)>=30},{id:"community_share",icon:"🌿",label:"Community Sharer",desc:"You shared your first entry",check:(entries)=>entries.some(e=>e.shared)},{id:"off_the_record",icon:"✨",label:"Off the Record",desc:"You went deeper",check:(_,user)=>user.plan==="offtherecord"}];
-function BadgesSection({entries,user}){const earned=BADGES.filter(b=>b.check(entries,user));const unearned=BADGES.filter(b=>!b.check(entries,user));if(!earned.length&&!unearned.length)return null;return(<div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:14}}>Your Badges</div><div style={{display:"flex",flexWrap:"wrap",gap:10}}>{earned.map(b=>(<div key={b.id} title={b.desc} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"10px 14px",background:"linear-gradient(135deg,rgba(200,137,90,0.12),rgba(122,74,30,0.08))",border:"1px solid rgba(200,137,90,0.3)",borderRadius:14,minWidth:70}}><span style={{fontSize:28}}>{b.icon}</span><span style={{fontSize:10,fontWeight:700,color:"#7a4a1e",textAlign:"center",lineHeight:1.3}}>{b.label}</span></div>))}{unearned.map(b=>(<div key={b.id} title={`Locked: ${b.desc}`} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"10px 14px",background:"rgba(200,200,200,0.08)",border:"1px solid rgba(200,200,200,0.2)",borderRadius:14,minWidth:70,opacity:0.4,filter:"grayscale(1)"}}><span style={{fontSize:28}}>{b.icon}</span><span style={{fontSize:10,fontWeight:700,color:"#9a9a9a",textAlign:"center",lineHeight:1.3}}>{b.label}</span></div>))}</div></div>);}
-
-function MoodChart({entries}){const last14=entries.filter(e=>e.mood).slice(0,14).reverse();if(last14.length<2)return null;const moodScore={Radiant:7,Happy:6,Calm:5,Neutral:4,Low:3,Sad:2,Frustrated:1};const points=last14.map((e,i)=>({x:i,y:moodScore[e.mood?.label]||4,mood:e.mood,date:e.date}));const w=280,h=80,pad=10;const xs=points.map((_,i)=>pad+i*(w-2*pad)/(points.length-1));const ys=points.map(p=>h-pad-(p.y-1)*(h-2*pad)/6);const path=points.map((p,i)=>`${i===0?"M":"L"}${xs[i]},${ys[i]}`).join(" ");return(<div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>Mood This Month</div><svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%",height:80}}><defs><linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#c8895a" stopOpacity="0.3"/><stop offset="100%" stopColor="#c8895a" stopOpacity="0"/></linearGradient></defs><path d={`${path} L${xs[xs.length-1]},${h} L${xs[0]},${h} Z`} fill="url(#moodGrad)"/><path d={path} fill="none" stroke="#c8895a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>{points.map((p,i)=><circle key={i} cx={xs[i]} cy={ys[i]} r="3" fill={p.mood?.color||"#c8895a"} stroke="#fff" strokeWidth="1.5"/>)}</svg><div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#b08060",marginTop:4}}><span>😢 Low</span><span>😌 Calm</span><span>🌟 Radiant</span></div></div>);}
-
-function MonthlyRecap({entries,user,onDismiss}){const now=new Date();const lastMonth=new Date(now.getFullYear(),now.getMonth()-1,1);const monthStr=lastMonth.toISOString().slice(0,7);const monthName=lastMonth.toLocaleDateString("en-US",{month:"long",year:"numeric"});const monthEntries=entries.filter(e=>e.date?.startsWith(monthStr));const streak=calcStreak(entries);const topMood=(()=>{const counts={};monthEntries.forEach(e=>{if(e.mood?.label)counts[e.mood.label]=(counts[e.mood.label]||0)+1;});return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];})();const topTag=(()=>{const counts={};monthEntries.forEach(e=>e.tags?.forEach(t=>{counts[t]=(counts[t]||0)+1;}));return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];})();return(<div style={{position:"fixed",inset:0,background:"rgba(90,46,14,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onDismiss}><div style={{background:"#fffdf8",borderRadius:28,padding:"36px 32px",maxWidth:400,width:"100%",boxShadow:"0 20px 60px rgba(90,46,14,0.3)",position:"relative"}} onClick={e=>e.stopPropagation()}><div style={{textAlign:"center",marginBottom:24}}><div style={{fontSize:48,marginBottom:8}}>🌿</div><h2 style={{fontFamily:"'Lora',serif",fontSize:24,color:"#5a2e0e",marginBottom:4,fontWeight:600}}>{monthName} Recap</h2><p style={{fontSize:13,color:"#b08060",fontStyle:"italic"}}>Look how far you've come</p></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>{[{label:"Entries Written",value:monthEntries.length,icon:"📖"},{label:"Current Streak",value:`${streak} days`,icon:"🔥"},{label:"Top Mood",value:topMood?`${MOODS.find(m=>m.label===topMood[0])?.emoji} ${topMood[0]}`:"—",icon:"💭"},{label:"Top Tag",value:topTag?`#${topTag[0]}`:"—",icon:"🏷️"}].map(s=>(<div key={s.label} style={{background:"rgba(200,137,90,0.07)",borderRadius:16,padding:"14px",textAlign:"center"}}><div style={{fontSize:22,marginBottom:4}}>{s.icon}</div><div style={{fontSize:20,fontWeight:800,color:"#7a4a1e",fontFamily:"'Lora',serif"}}>{s.value}</div><div style={{fontSize:11,color:"#b08060",marginTop:2}}>{s.label}</div></div>))}</div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",fontStyle:"italic",textAlign:"center",lineHeight:1.7,marginBottom:20}}>{monthEntries.length===0?"A new month is a fresh page. Start writing yours. 🌱":monthEntries.length<5?"Every entry matters. Keep showing up for yourself. 🌿":"You showed up for yourself this month. That's everything. ✨"}</p><button onClick={onDismiss} style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"12px",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>Keep Going →</button></div></div>);}
-
-function IntentionBanner({user,onWrite}){const weekKey=`intention_${user.email}_${Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000))}`;const [intention,setIntention]=useState(()=>localStorage.getItem(weekKey)||"");const [editing,setEditing]=useState(false);const [draft,setDraft]=useState("");function save(){localStorage.setItem(weekKey,draft);setIntention(draft);setEditing(false);}if(editing)return(<div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:20,padding:"20px 24px"}}><div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🎯 This Week's Intention</div><input style={{width:"100%",padding:"10px 14px",borderRadius:12,border:"1px solid rgba(155,126,184,0.3)",background:"rgba(255,255,255,0.8)",fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",outline:"none",marginBottom:12,boxSizing:"border-box"}} placeholder="I intend to..." value={draft} onChange={e=>setDraft(e.target.value)} autoFocus onKeyDown={e=>e.key==="Enter"&&save()}/><div style={{display:"flex",gap:8}}><button onClick={()=>setEditing(false)} style={{background:"none",border:"1px solid rgba(155,126,184,0.3)",borderRadius:14,padding:"7px 16px",color:"#9b7eb8",fontFamily:"'Nunito',sans-serif",fontSize:13,cursor:"pointer"}}>Cancel</button><button onClick={save} style={{background:"#9b7eb8",border:"none",borderRadius:14,padding:"7px 20px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Set Intention ✓</button></div></div>);return(<div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:20,padding:"18px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div style={{flex:1}}><div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:4}}>🎯 This Week's Intention</div>{intention?<p style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",fontStyle:"italic"}}>{intention}</p>:<p style={{fontSize:13,color:"#b08060"}}>Set an intention for this week — something to come back to.</p>}</div><button onClick={()=>{setDraft(intention);setEditing(true);}} style={{background:"rgba(155,126,184,0.15)",border:"1px solid rgba(155,126,184,0.3)",borderRadius:14,padding:"7px 14px",color:"#9b7eb8",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{intention?"Edit":"Set →"}</button></div>);}
-
-function JourneyTab({entries,user}){
-  const streak=calcStreak(entries);
-  const thisMonth=new Date().toISOString().slice(0,7);
-  const monthEntries=entries.filter(e=>e.date?.startsWith(thisMonth));
-  const topMood=(()=>{const counts={};entries.forEach(e=>{if(e.mood?.label)counts[e.mood.label]=(counts[e.mood.label]||0)+1;});const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];return top?MOODS.find(m=>m.label===top[0]):null;})();
-  const oneYearAgo=new Date();oneYearAgo.setFullYear(oneYearAgo.getFullYear()-1);
-  const oneYearAgoStr=oneYearAgo.toISOString().split("T")[0];
-  const onThisDay=entries.find(e=>e.date===oneYearAgoStr);
-  return(
-    <div style={{display:"flex",flexDirection:"column",gap:20}}>
-      <div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🌱 My Journey</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Your growth, all in one place</p></div>
-      <div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(155,126,184,0.2)",borderRadius:18,padding:"18px 20px"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🖊️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>A note for your journey</span></div>
-        <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,margin:0}}>{getWeeklyDeskNote()}</p>
-        <p style={{fontSize:11,color:"#b08060",marginTop:8}}>— Hallie 🌿</p>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:14}}>{[{icon:"📖",label:"Total Entries",value:entries.length},{icon:"🔥",label:"Current Streak",value:`${streak}d`},{icon:"📅",label:"This Month",value:monthEntries.length},{icon:"💭",label:"Top Mood",value:topMood?`${topMood.emoji} ${topMood.label}`:"—"}].map(s=>(<div key={s.label} style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:18,padding:"18px",textAlign:"center"}}><div style={{fontSize:26,marginBottom:6}}>{s.icon}</div><div style={{fontSize:22,fontWeight:800,color:"#7a4a1e",fontFamily:"'Lora',serif"}}>{s.value}</div><div style={{fontSize:11,color:"#b08060",marginTop:3,textTransform:"uppercase",letterSpacing:"0.4px"}}>{s.label}</div></div>))}</div>
-      {onThisDay&&(<div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🗓️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>On this day, one year ago</span></div><p style={{fontFamily:"'Lora',serif",fontSize:15,fontWeight:600,color:"#5a2e0e",marginBottom:6}}>{onThisDay.title||"Untitled"}</p><p style={{fontFamily:"'Lora',serif",fontSize:13,color:"#7a5030",fontStyle:"italic",lineHeight:1.65}}>{(onThisDay.content||"").slice(0,160)}{(onThisDay.content||"").length>160?"…":""}</p></div>)}
-      <MoodChart entries={entries}/>
-      <GrowthTree entries={entries}/>
-      <BadgesSection entries={entries} user={user}/>
-      <div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:20,padding:"20px 24px"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>This Month at a Glance</div><div style={{display:"flex",flexWrap:"wrap",gap:10}}>{(()=>{const tagCounts={};monthEntries.forEach(e=>e.tags?.forEach(t=>{tagCounts[t]=(tagCounts[t]||0)+1;}));return Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([tag,count])=>(<div key={tag} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:TAG_COLORS[tag]+"22",border:`1px solid ${TAG_COLORS[tag]}44`,borderRadius:12}}><span style={{fontSize:12,fontWeight:700,color:TAG_COLORS[tag]}}>{tag}</span><span style={{fontSize:11,color:"#b08060"}}>×{count}</span></div>));})()}{monthEntries.length===0&&<p style={{fontSize:13,color:"#b08060",fontStyle:"italic"}}>No entries yet this month — start writing! 🌱</p>}</div></div>
-    </div>
-  );
-}
-
-function GentleNudge({entries,theme}){const T=theme||THEMES.original;const [dismissed,setDismissed]=useState(false);if(dismissed)return null;const lastEntry=entries[0];if(!lastEntry)return null;const daysSince=Math.floor((Date.now()-new Date(lastEntry.date).getTime())/(24*60*60*1000));if(daysSince<5)return null;return(<div style={{background:`linear-gradient(135deg,${T.accent}10,${T.accent}06)`,border:`1px dashed ${T.accent}40`,borderRadius:18,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:28}}>🌱</span><div style={{flex:1}}><div style={{fontWeight:700,color:T.accentDark,fontSize:14}}>We've missed you</div><div style={{fontSize:13,color:T.subtext,marginTop:2}}>It's been {daysSince} days since your last entry. No pressure — just here when you're ready. 🌿</div></div><button onClick={()=>setDismissed(true)} style={{background:"none",border:"none",color:T.subtext,fontSize:18,cursor:"pointer",padding:4}}>×</button></div>);}
-
-function GrowthTree({entries}){const count=entries.length;const stage=count===0?0:count<5?1:count<15?2:count<30?3:count<60?4:5;const trees=["🌱","🌿","🪴","🌳","🌲","🎋"];const labels=["Plant your seed","Sprouting","Growing","Rooted","Thriving","Flourishing"];const next=[1,5,15,30,60,Infinity];const prevMilestone=stage>0?next[stage-1]:0;const nextMilestone=next[stage];const progress=stage>=5?1:Math.min(1,(count-prevMilestone)/(nextMilestone-prevMilestone));return(<div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px",textAlign:"center"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>Your Growth</div><div style={{fontSize:64,marginBottom:8}}>{trees[stage]}</div><div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{labels[stage]}</div><div style={{fontSize:13,color:"#b08060",marginBottom:12}}>{count} {count===1?"entry":"entries"} written</div>{stage<5&&(<div style={{background:"rgba(200,137,90,0.1)",borderRadius:12,height:8,overflow:"hidden"}}><div style={{background:"linear-gradient(90deg,#c8895a,#d4956a)",height:"100%",width:`${progress*100}%`,transition:"width 0.5s",borderRadius:12}}/></div>)}{stage<5&&<div style={{fontSize:11,color:"#b08060",marginTop:6}}>{nextMilestone-count} more entries to {labels[stage+1]}</div>}</div>);}
-
-function LettersTab({user}){const [letters,setLetters]=useState(()=>{try{return JSON.parse(localStorage.getItem(`letters_${user.email}`)||"[]");}catch{return[];}});const [writing,setWriting]=useState(false);const [form,setForm]=useState({title:"",content:"",deliverIn:30});function saveLetter(){if(!form.content.trim())return;const letter={id:Date.now(),title:form.title||"A letter to my future self",content:form.content,written:new Date().toISOString(),deliverOn:new Date(Date.now()+form.deliverIn*24*60*60*1000).toISOString(),deliverIn:form.deliverIn,opened:false};const updated=[letter,...letters];setLetters(updated);localStorage.setItem(`letters_${user.email}`,JSON.stringify(updated));setWriting(false);setForm({title:"",content:"",deliverIn:30});}function openLetter(id){const updated=letters.map(l=>l.id===id?{...l,opened:true}:l);setLetters(updated);localStorage.setItem(`letters_${user.email}`,JSON.stringify(updated));}const ready=letters.filter(l=>new Date(l.deliverOn)<=new Date());const waiting=letters.filter(l=>new Date(l.deliverOn)>new Date());return(<div style={{display:"flex",flexDirection:"column",gap:20}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>💌 Letters to Future Me</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Write to yourself across time</p></div><button onClick={()=>setWriting(true)} style={S.newBtn}>+ Write</button></div>{writing&&(<div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:24,padding:"28px 24px",boxShadow:"0 4px 24px rgba(160,100,50,0.12)"}}><input style={{...S.titleInput,marginBottom:16}} placeholder="Give this letter a title..." value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))}/><textarea style={{...S.textarea,minHeight:160,marginBottom:16}} placeholder="Dear future me..." value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))} autoFocus/><div style={{marginBottom:20}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Deliver in</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[{label:"30 days",val:30},{label:"60 days",val:60},{label:"90 days",val:90},{label:"6 months",val:180},{label:"1 year",val:365}].map(o=>(<button key={o.val} onClick={()=>setForm(f=>({...f,deliverIn:o.val}))} style={{padding:"6px 14px",borderRadius:14,border:`1px solid ${form.deliverIn===o.val?"#c8895a":"rgba(200,137,90,0.3)"}`,background:form.deliverIn===o.val?"rgba(200,137,90,0.15)":"transparent",color:form.deliverIn===o.val?"#7a4a1e":"#b08060",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>{o.label}</button>))}</div></div><div style={{display:"flex",justifyContent:"space-between"}}><button onClick={()=>setWriting(false)} style={S.ghostBtn}>Cancel</button><button onClick={saveLetter} style={S.saveBtn}>Seal & Send ✉️</button></div></div>)}{ready.length>0&&(<div><div style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>📬 Ready to open ({ready.length})</div><div style={{display:"flex",flexDirection:"column",gap:10}}>{ready.map(l=>(<div key={l.id} style={{background:"linear-gradient(135deg,rgba(200,137,90,0.1),rgba(122,74,30,0.07))",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}><div><div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600}}>{l.title}</div><div style={{fontSize:11,color:"#b08060",marginTop:2}}>Written {new Date(l.written).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div></div>{!l.opened&&<button onClick={()=>openLetter(l.id)} style={{...S.saveBtn,padding:"6px 16px",fontSize:12}}>Open ✉️</button>}</div>{l.opened&&<p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",lineHeight:1.75,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{l.content}</p>}</div>))}</div></div>)}{waiting.length>0&&(<div><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🔒 Sealed ({waiting.length})</div><div style={{display:"flex",flexDirection:"column",gap:10}}>{waiting.map(l=>(<div key={l.id} style={{background:"rgba(200,137,90,0.05)",border:"1px dashed rgba(200,137,90,0.25)",borderRadius:16,padding:"14px 18px",opacity:0.7}}><div style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{l.title}</div><div style={{fontSize:12,color:"#b08060"}}>Opens {new Date(l.deliverOn).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div></div>))}</div></div>)}{letters.length===0&&!writing&&(<div style={{textAlign:"center",padding:"60px 0"}}><div style={{fontSize:52,marginBottom:14}}>💌</div><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#b08060",fontStyle:"italic",marginBottom:20}}>Write a letter to your future self.<br/>It'll be waiting when you're ready.</p><button onClick={()=>setWriting(true)} style={S.saveBtn}>Write Your First Letter →</button></div>)}</div>);}
-
-function ProfileMenu({user,theme,T,onLogout,onTheme,onUpgradeTab}){const [open,setOpen]=useState(false);const plan=PLANS[user.plan];return(<div style={{position:"relative"}}><button onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(200,137,90,0.08)",borderRadius:20,border:"1px solid rgba(200,137,90,0.18)",cursor:"pointer"}}><span style={{fontSize:12,fontWeight:600,color:"#7a4a1e"}}>👤 {user.username}</span><span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:8,textTransform:"uppercase",background:plan?.color+"22",color:plan?.color}}>{plan?.name}</span><span style={{fontSize:10,color:"#b08060"}}>{open?"▲":"▼"}</span></button>{open&&(<div style={{position:"absolute",right:0,top:"calc(100% + 8px)",background:"#fffdf8",border:"1px solid rgba(200,137,90,0.2)",borderRadius:18,padding:"12px",minWidth:200,boxShadow:"0 8px 32px rgba(120,70,20,0.2)",zIndex:200}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Theme</div><div style={{display:"flex",gap:6,marginBottom:12}}>{Object.entries(THEMES).map(([key,t])=>(<button key={key} onClick={()=>{onTheme(key);setOpen(false);}} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"8px 4px",borderRadius:12,border:`1px solid ${theme===key?"#c8895a":"rgba(200,137,90,0.2)"}`,background:theme===key?"rgba(200,137,90,0.12)":"transparent",cursor:"pointer"}}><span style={{fontSize:20}}>{t.icon}</span><span style={{fontSize:9,fontWeight:600,color:theme===key?"#7a4a1e":"#b08060"}}>{t.name}</span></button>))}</div><div style={{height:1,background:"rgba(200,137,90,0.15)",marginBottom:10}}/><button onClick={()=>{onUpgradeTab();setOpen(false);}} style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",border:"none",borderRadius:14,padding:"8px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:8}}>💎 Plans & Upgrade</button><button onClick={()=>{onLogout();setOpen(false);}} style={{width:"100%",background:"none",border:"1px solid rgba(200,80,60,0.25)",borderRadius:14,padding:"8px",color:"#c05040",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>Sign out</button></div>)}</div>);}
-
-const WEEKLY_BREATHWORK=[{id:"box",name:"Box Breathing",desc:"Calm your nervous system",inhale:4,hold1:4,exhale:4,hold2:4,cycles:4,color:"#7a8c6e"},{id:"478",name:"4-7-8 Breathing",desc:"For sleep & deep calm",inhale:4,hold1:7,exhale:8,hold2:0,cycles:3,color:"#9b7eb8"},{id:"belly",name:"Belly Breathing",desc:"Deep grounding breath",inhale:5,hold1:2,exhale:6,hold2:1,cycles:4,color:"#c8895a"},{id:"reset",name:"Quick Reset",desc:"1-minute instant calm",inhale:3,hold1:1,exhale:5,hold2:0,cycles:5,color:"#5b8fa8"}];
-const MEDITATIONS=[{id:"return",name:"Return to Calm",duration:"2 min",free:true,steps:["Find a comfortable position and gently close your eyes.","Take a slow breath in through your nose... and release it through your mouth.","Notice where your body is holding tension right now. Just notice — no need to fix anything.","With your next exhale, imagine that tension softening. Just a little.","You are safe in this moment. Nothing needs your attention right now.","Breathe in what you need... breathe out what you don't.","Rest here for a moment. You are allowed to simply be.","When you're ready, slowly open your eyes. Carry this calm with you."]},{id:"morning",name:"Morning Intention",duration:"2 min",free:false,steps:["Begin your day by arriving fully in your body.","Take three deep breaths before you do anything else.","Ask yourself: what do I want to feel today?","Not what you want to accomplish — how you want to feel.","Let that feeling settle into your chest like warmth.","You get to choose your energy today, even when things feel uncertain.","Set one gentle intention. Just one. Something that honors you.","Carry it like a quiet thread through your whole day."]},{id:"release",name:"Let It Go",duration:"2 min",free:false,steps:["Think of one thing you've been holding onto today.","It could be a worry, a conversation, a feeling — anything weighing on you.","Breathe it in fully. Really acknowledge it.","Now with your exhale, imagine placing it down. Not throwing it away — just setting it down.","You don't have to carry everything all the time.","Some things aren't yours to solve tonight.","Breathe in peace. Breathe out weight.","You are lighter than you think. Rest now."]}];
-
+// ── AMBIENT SOUND HOOK (fix #1 — exposes stop ref globally) ──
 function useAmbientSound(){
   const ctxRef=useRef(null);
   const nodesRef=useRef([]);
 
-  function stop(){
+  const stop=useCallback(()=>{
     nodesRef.current.forEach(n=>{try{n.stop&&n.stop();n.disconnect&&n.disconnect();}catch(e){}});
     nodesRef.current=[];
     if(ctxRef.current){ctxRef.current.close();ctxRef.current=null;}
-  }
+    ambientStopRef.current=null; // clear global ref
+  },[]);
 
-  function play(sound){
+  const play=useCallback((sound)=>{
     stop();
     const AudioCtx=window.AudioContext||window.webkitAudioContext;
     const ctx=new AudioCtx();
     ctxRef.current=ctx;
+    ambientStopRef.current=stop; // register global stop
     const master=ctx.createGain();
     master.gain.value=0.4;
     master.connect(ctx.destination);
@@ -969,9 +998,7 @@ function useAmbientSound(){
           b2=0.96900*b2+w*0.1538520;b3=0.86650*b3+w*0.3104856;
           b4=0.55000*b4+w*0.5329522;b5=-0.7616*b5-w*0.0168980;
           data[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)/7;b6=w*0.115926;
-        } else {
-          data[i]=w;
-        }
+        } else { data[i]=w; }
       }
       const src=ctx.createBufferSource();src.buffer=buf;src.loop=true;return src;
     }
@@ -984,26 +1011,7 @@ function useAmbientSound(){
       function scheduleChirp(){
         if(!ctxRef.current)return;
         const n=2+Math.floor(Math.random()*3);
-        for(let i=0;i<n;i++){
-          setTimeout(function(){
-            const sw=2+Math.floor(Math.random()*3);
-            for(let s=0;s<sw;s++){
-              setTimeout(function(){
-                const osc=ctx.createOscillator();
-                const eg=ctx.createGain();
-                const f=2000+Math.random()*2000;
-                osc.type="sine";
-                osc.frequency.setValueAtTime(f,ctx.currentTime);
-                osc.frequency.linearRampToValueAtTime(f*1.2,ctx.currentTime+0.05);
-                osc.frequency.linearRampToValueAtTime(f*0.95,ctx.currentTime+0.1);
-                eg.gain.setValueAtTime(0,ctx.currentTime);
-                eg.gain.linearRampToValueAtTime(0.1,ctx.currentTime+0.01);
-                eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.12);
-                osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+0.15);
-              },s*110);
-            }
-          },i*400+Math.random()*300);
-        }
+        for(let i=0;i<n;i++){setTimeout(function(){const sw=2+Math.floor(Math.random()*3);for(let s=0;s<sw;s++){setTimeout(function(){const osc=ctx.createOscillator();const eg=ctx.createGain();const f=2000+Math.random()*2000;osc.type="sine";osc.frequency.setValueAtTime(f,ctx.currentTime);osc.frequency.linearRampToValueAtTime(f*1.2,ctx.currentTime+0.05);osc.frequency.linearRampToValueAtTime(f*0.95,ctx.currentTime+0.1);eg.gain.setValueAtTime(0,ctx.currentTime);eg.gain.linearRampToValueAtTime(0.1,ctx.currentTime+0.01);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.12);osc.connect(eg);eg.connect(master);osc.start();osc.stop(ctx.currentTime+0.15);},s*110);}},i*400+Math.random()*300);}
         setTimeout(scheduleChirp,2000+Math.random()*4000);
       }
       scheduleChirp();
@@ -1013,67 +1021,202 @@ function useAmbientSound(){
       const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=5000;
       const g=ctx.createGain();g.gain.value=0.85;
       src.connect(hi);hi.connect(lo);lo.connect(g);g.connect(master);src.start();nodes.push(src);
-      const lfo=ctx.createOscillator();
-      const lfoG=ctx.createGain();lfoG.gain.value=0.3;
-      lfo.frequency.value=0.08+Math.random()*0.05;
-      lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start();nodes.push(lfo);
-      function scheduleGust(){
-        if(!ctxRef.current)return;
-        const src2=makeNoise("pink");
-        const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=2000+Math.random()*1000;bp.Q.value=0.5;
-        const eg=ctx.createGain();
-        const dur=0.6+Math.random()*1.2;
-        eg.gain.setValueAtTime(0,ctx.currentTime);
-        eg.gain.linearRampToValueAtTime(0.45,ctx.currentTime+0.2);
-        eg.gain.linearRampToValueAtTime(0,ctx.currentTime+dur);
-        src2.connect(bp);bp.connect(eg);eg.connect(master);src2.start();src2.stop(ctx.currentTime+dur+0.1);
-        setTimeout(scheduleGust,3000+Math.random()*6000);
-      }
+      const lfo=ctx.createOscillator();const lfoG=ctx.createGain();lfoG.gain.value=0.3;lfo.frequency.value=0.08+Math.random()*0.05;lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start();nodes.push(lfo);
+      function scheduleGust(){if(!ctxRef.current)return;const src2=makeNoise("pink");const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=2000+Math.random()*1000;bp.Q.value=0.5;const eg=ctx.createGain();const dur=0.6+Math.random()*1.2;eg.gain.setValueAtTime(0,ctx.currentTime);eg.gain.linearRampToValueAtTime(0.45,ctx.currentTime+0.2);eg.gain.linearRampToValueAtTime(0,ctx.currentTime+dur);src2.connect(bp);bp.connect(eg);eg.connect(master);src2.start();src2.stop(ctx.currentTime+dur+0.1);setTimeout(scheduleGust,3000+Math.random()*6000);}
       scheduleGust();
     } else if(sound.type==="waves"){
-      const src=makeNoise("pink");
-      const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=350;
-      const mid=ctx.createBiquadFilter();mid.type="bandpass";mid.frequency.value=180;mid.Q.value=0.4;
-      const g=ctx.createGain();g.gain.value=1.4;
-      src.connect(lo);lo.connect(mid);mid.connect(g);g.connect(master);src.start();nodes.push(src);
-      const lfo=ctx.createOscillator();
-      const lfoG=ctx.createGain();lfoG.gain.value=0.5;lfo.frequency.value=0.12;
-      lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start();nodes.push(lfo);
-      function scheduleCrash(){
-        if(!ctxRef.current)return;
-        const s=makeNoise("white");
-        const hp=ctx.createBiquadFilter();hp.type="highpass";hp.frequency.value=600;
-        const eg=ctx.createGain();
-        const dur=1.5+Math.random()*1.5;
-        eg.gain.setValueAtTime(0,ctx.currentTime);
-        eg.gain.linearRampToValueAtTime(0.4,ctx.currentTime+0.15);
-        eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
-        s.connect(hp);hp.connect(eg);eg.connect(master);s.start();s.stop(ctx.currentTime+dur+0.1);
-        setTimeout(scheduleCrash,4000+Math.random()*3000);
-      }
+      const src=makeNoise("pink");const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=350;const mid=ctx.createBiquadFilter();mid.type="bandpass";mid.frequency.value=180;mid.Q.value=0.4;const g=ctx.createGain();g.gain.value=1.4;src.connect(lo);lo.connect(mid);mid.connect(g);g.connect(master);src.start();nodes.push(src);
+      const lfo=ctx.createOscillator();const lfoG=ctx.createGain();lfoG.gain.value=0.5;lfo.frequency.value=0.12;lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start();nodes.push(lfo);
+      function scheduleCrash(){if(!ctxRef.current)return;const s=makeNoise("white");const hp=ctx.createBiquadFilter();hp.type="highpass";hp.frequency.value=600;const eg=ctx.createGain();const dur=1.5+Math.random()*1.5;eg.gain.setValueAtTime(0,ctx.currentTime);eg.gain.linearRampToValueAtTime(0.4,ctx.currentTime+0.15);eg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);s.connect(hp);hp.connect(eg);eg.connect(master);s.start();s.stop(ctx.currentTime+dur+0.1);setTimeout(scheduleCrash,4000+Math.random()*3000);}
       scheduleCrash();
     } else if(sound.type==="static"){
-      const src=makeNoise("white");
-      const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=8000;
-      const hi=ctx.createBiquadFilter();hi.type="highpass";hi.frequency.value=200;
-      const g=ctx.createGain();g.gain.value=0.75;
-      src.connect(lo);lo.connect(hi);hi.connect(g);g.connect(master);src.start();nodes.push(src);
+      const src=makeNoise("white");const lo=ctx.createBiquadFilter();lo.type="lowpass";lo.frequency.value=8000;const hi=ctx.createBiquadFilter();hi.type="highpass";hi.frequency.value=200;const g=ctx.createGain();g.gain.value=0.75;src.connect(lo);lo.connect(hi);hi.connect(g);g.connect(master);src.start();nodes.push(src);
     }
     nodesRef.current=nodes;
-  }
+  },[stop]);
+
   return{play,stop};
 }
 
-function NestTab({user,isPro,isOTR,aiPrompt,promptLoading,onWrite,theme}){const T=theme||THEMES.original;const [section,setSection]=useState(null);const affirmation=getDailyAffirmation();const weekIndex=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000))%WEEKLY_BREATHWORK.length;const weeklyBreath=WEEKLY_BREATHWORK[weekIndex];const nightTime=isNightTime();return(<div style={{display:"flex",flexDirection:"column",gap:0}}><div style={{textAlign:"center",padding:"28px 0 20px"}}><div style={{fontSize:48,marginBottom:8}}>🪹</div><h2 style={{fontFamily:"'Lora',serif",fontSize:28,color:T.accentDark,marginBottom:6,fontWeight:600}}>Welcome to your Nest</h2><p style={{fontSize:14,color:T.subtext,fontStyle:"italic",maxWidth:340,margin:"0 auto",lineHeight:1.6}}>A place to pause, breathe, and return to yourself.</p></div><div style={{display:"flex",flexDirection:"column",gap:14}}><NestCard icon="💫" title="Daily Affirmation" subtitle="Your daily reminder to soften and center" color={T.accent} onOpen={()=>setSection(section==="affirmation"?null:"affirmation")}>{section==="affirmation"&&(<div style={{textAlign:"center",padding:"16px 0 8px"}}><p style={{fontFamily:"'Lora',serif",fontSize:18,color:T.text,fontStyle:"italic",lineHeight:1.65}}>"{affirmation}"</p></div>)}</NestCard><NestCard icon="🌬️" title="Breathwork" subtitle={`This week: ${weeklyBreath.name} — ${weeklyBreath.desc}`} color="#7a8c6e" onOpen={()=>setSection(section==="breath"?null:"breath")}>{section==="breath"&&<BreathworkPlayer exercise={weeklyBreath}/>}</NestCard><NestCard icon="🧘" title="2-min Meditation" subtitle="Pause for 2 minutes. Sit back, settle in, return to calm." color="#9b7eb8" onOpen={()=>setSection(section==="meditation"?null:"meditation")}>{section==="meditation"&&<MeditationPlayer isOTR={isOTR} onUpgrade={()=>setSection(null)}/>}</NestCard><NestCard icon="🎵" title="Ambient Sounds" subtitle="Birds, leaves, waves, or white noise — find your calm." color="#5b8fa8" onOpen={()=>setSection(section==="sound"?null:"sound")}>{section==="sound"&&<AmbientPlayer/>}</NestCard><NestCard icon={nightTime?"🌙":"✨"} title={nightTime?"Tonight's Reflection":"Today's Prompt"} subtitle={nightTime?"Softly close the day with intention.":"A gentle nudge for self-reflection."} color={nightTime?"#6b5ba8":"#c8895a"} onOpen={()=>setSection(section==="prompt"?null:"prompt")}>{section==="prompt"&&(<div style={{padding:"12px 0 4px"}}><p style={{fontFamily:"'Lora',serif",fontSize:15,color:T.text,fontStyle:"italic",lineHeight:1.7,marginBottom:14}}>{nightTime?getNightPrompt():(promptLoading?"Finding your prompt...":aiPrompt||"What are you grateful for right now?")}</p><button onClick={(e)=>{e.stopPropagation();onWrite(nightTime?getNightPrompt():aiPrompt);}} style={S.softBtn}>Write to this →</button></div>)}</NestCard></div></div>);}
+function AmbientPlayer(){
+  const [playing,setPlaying]=useState(null);
+  const sound=useAmbientSound();
 
-function NestCard({icon,title,subtitle,color,onOpen,children}){return(<div style={{background:"rgba(255,252,246,0.93)",border:"1px solid rgba(200,137,90,0.12)",borderRadius:20,overflow:"hidden"}}><button onClick={onOpen} style={{width:"100%",background:"none",border:"none",padding:"18px 20px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",textAlign:"left"}} type="button"><div style={{width:44,height:44,borderRadius:14,background:`${color}18`,border:`1px solid ${color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{icon}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#5a2e0e",fontSize:15,fontFamily:"'Nunito',sans-serif"}}>{title}</div><div style={{fontSize:12,color:"#b08060",marginTop:2,lineHeight:1.4}}>{subtitle}</div></div><span style={{fontSize:16,color:"#b08060"}}>›</span></button>{children&&<div style={{padding:"0 20px 18px"}}>{children}</div>}</div>);}
+  function toggle(s){
+    if(playing===s.id){sound.stop();setPlaying(null);}
+    else{sound.play(s);setPlaying(s.id);}
+  }
+
+  // stop on unmount (fix #1)
+  useEffect(()=>()=>{sound.stop();},[]);
+
+  return(
+    <div style={{paddingTop:8}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
+        {AMBIENT_SOUNDS.map(s=>(<button key={s.id} onClick={()=>toggle(s)} style={{background:playing===s.id?"rgba(91,143,168,0.18)":"rgba(91,143,168,0.05)",border:`1.5px solid ${playing===s.id?"#5b8fa8":"rgba(91,143,168,0.18)"}`,borderRadius:16,padding:"16px 10px",display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",transition:"all 0.2s"}}><span style={{fontSize:28}}>{s.icon}</span><span style={{fontSize:12,fontWeight:700,color:playing===s.id?"#5b8fa8":"#7a5030",fontFamily:"'Nunito',sans-serif",textAlign:"center",lineHeight:1.3}}>{s.name}</span>{playing===s.id&&<span style={{fontSize:9,color:"#5b8fa8",fontWeight:700,letterSpacing:"1px"}}>▶ PLAYING</span>}</button>))}
+      </div>
+      <p style={{fontSize:11,color:"#b08060",textAlign:"center",fontStyle:"italic",marginTop:6}}>Tap a sound to play · Tap again to stop</p>
+    </div>
+  );
+}
+
+function NestTab({user,isPro,isOTR,aiPrompt,promptLoading,onWrite,theme}){
+  const T=theme||THEMES.original;
+  const [section,setSection]=useState(null);
+  const affirmation=getDailyAffirmation();
+  const weekIndex=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000))%WEEKLY_BREATHWORK.length;
+  const weeklyBreath=WEEKLY_BREATHWORK[weekIndex];
+  const nightTime=isNightTime();
+
+  // fix #1 — stop sound when section closes
+  function toggleSection(id){
+    if(section===id){
+      if(id==="sound"&&ambientStopRef.current){ambientStopRef.current();ambientStopRef.current=null;}
+      setSection(null);
+    } else {
+      if(section==="sound"&&ambientStopRef.current){ambientStopRef.current();ambientStopRef.current=null;}
+      setSection(id);
+    }
+  }
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:0}}>
+      <div style={{textAlign:"center",padding:"28px 0 20px"}}>
+        <div style={{fontSize:48,marginBottom:8}}>🪹</div>
+        <h2 style={{fontFamily:"'Lora',serif",fontSize:28,color:T.accentDark,marginBottom:6,fontWeight:600}}>Welcome to your Nest</h2>
+        <p style={{fontSize:14,color:T.subtext,fontStyle:"italic",maxWidth:340,margin:"0 auto",lineHeight:1.6}}>A place to pause, breathe, and return to yourself.</p>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <NestCard icon="💫" title="Daily Affirmation" subtitle="Your daily reminder to soften and center" color={T.accent} onOpen={()=>toggleSection("affirmation")} open={section==="affirmation"}>
+          {section==="affirmation"&&(<div style={{textAlign:"center",padding:"16px 0 8px"}}><p style={{fontFamily:"'Lora',serif",fontSize:18,color:T.text,fontStyle:"italic",lineHeight:1.65}}>"{affirmation}"</p></div>)}
+        </NestCard>
+        <NestCard icon="🌬️" title="Breathwork" subtitle={`This week: ${weeklyBreath.name} — ${weeklyBreath.desc}`} color="#7a8c6e" onOpen={()=>toggleSection("breath")} open={section==="breath"}>
+          {section==="breath"&&<BreathworkPlayer exercise={weeklyBreath}/>}
+        </NestCard>
+        <NestCard icon="🧘" title="2-min Meditation" subtitle="Pause for 2 minutes. Sit back, settle in, return to calm." color="#9b7eb8" onOpen={()=>toggleSection("meditation")} open={section==="meditation"}>
+          {section==="meditation"&&<MeditationPlayer isOTR={isOTR}/>}
+        </NestCard>
+        <NestCard icon="🎵" title="Ambient Sounds" subtitle="Birds, leaves, waves, or white noise — find your calm." color="#5b8fa8" onOpen={()=>toggleSection("sound")} open={section==="sound"}>
+          {section==="sound"&&<AmbientPlayer/>}
+        </NestCard>
+        <NestCard icon={nightTime?"🌙":"✨"} title={nightTime?"Tonight's Reflection":"Today's Prompt"} subtitle={nightTime?"Softly close the day with intention.":"A gentle nudge for self-reflection."} color={nightTime?"#6b5ba8":"#c8895a"} onOpen={()=>toggleSection("prompt")} open={section==="prompt"}>
+          {section==="prompt"&&(<div style={{padding:"12px 0 4px"}}><p style={{fontFamily:"'Lora',serif",fontSize:15,color:T.text,fontStyle:"italic",lineHeight:1.7,marginBottom:14}}>{nightTime?getNightPrompt():(promptLoading?"Finding your prompt...":aiPrompt||"What are you grateful for right now?")}</p><button onClick={(e)=>{e.stopPropagation();onWrite(nightTime?getNightPrompt():aiPrompt);}} style={S.softBtn}>Write to this →</button></div>)}
+        </NestCard>
+      </div>
+    </div>
+  );
+}
+
+function NestCard({icon,title,subtitle,color,onOpen,open,children}){
+  return(
+    <div style={{background:"rgba(255,252,246,0.93)",border:`1px solid ${open?"rgba(200,137,90,0.25)":"rgba(200,137,90,0.12)"}`,borderRadius:20,overflow:"hidden",transition:"border-color 0.2s"}}>
+      <button onClick={onOpen} style={{width:"100%",background:"none",border:"none",padding:"18px 20px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",textAlign:"left"}} type="button">
+        <div style={{width:44,height:44,borderRadius:14,background:`${color}18`,border:`1px solid ${color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{icon}</div>
+        <div style={{flex:1}}><div style={{fontWeight:700,color:"#5a2e0e",fontSize:15,fontFamily:"'Nunito',sans-serif"}}>{title}</div><div style={{fontSize:12,color:"#b08060",marginTop:2,lineHeight:1.4}}>{subtitle}</div></div>
+        <span style={{fontSize:16,color:"#b08060",transition:"transform 0.2s",display:"inline-block",transform:open?"rotate(90deg)":"rotate(0deg)"}}>›</span>
+      </button>
+      {children&&<div style={{padding:"0 20px 18px"}}>{children}</div>}
+    </div>
+  );
+}
+
+const WEEKLY_BREATHWORK=[{id:"box",name:"Box Breathing",desc:"Calm your nervous system",inhale:4,hold1:4,exhale:4,hold2:4,cycles:4,color:"#7a8c6e"},{id:"478",name:"4-7-8 Breathing",desc:"For sleep & deep calm",inhale:4,hold1:7,exhale:8,hold2:0,cycles:3,color:"#9b7eb8"},{id:"belly",name:"Belly Breathing",desc:"Deep grounding breath",inhale:5,hold1:2,exhale:6,hold2:1,cycles:4,color:"#c8895a"},{id:"reset",name:"Quick Reset",desc:"1-minute instant calm",inhale:3,hold1:1,exhale:5,hold2:0,cycles:5,color:"#5b8fa8"}];
+const MEDITATIONS=[{id:"return",name:"Return to Calm",duration:"2 min",free:true,steps:["Find a comfortable position and gently close your eyes.","Take a slow breath in through your nose... and release it through your mouth.","Notice where your body is holding tension right now. Just notice — no need to fix anything.","With your next exhale, imagine that tension softening. Just a little.","You are safe in this moment. Nothing needs your attention right now.","Breathe in what you need... breathe out what you don't.","Rest here for a moment. You are allowed to simply be.","When you're ready, slowly open your eyes. Carry this calm with you."]},{id:"morning",name:"Morning Intention",duration:"2 min",free:false,steps:["Begin your day by arriving fully in your body.","Take three deep breaths before you do anything else.","Ask yourself: what do I want to feel today?","Not what you want to accomplish — how you want to feel.","Let that feeling settle into your chest like warmth.","You get to choose your energy today, even when things feel uncertain.","Set one gentle intention. Just one. Something that honors you.","Carry it like a quiet thread through your whole day."]},{id:"release",name:"Let It Go",duration:"2 min",free:false,steps:["Think of one thing you've been holding onto today.","It could be a worry, a conversation, a feeling — anything weighing on you.","Breathe it in fully. Really acknowledge it.","Now with your exhale, imagine placing it down. Not throwing it away — just setting it down.","You don't have to carry everything all the time.","Some things aren't yours to solve tonight.","Breathe in peace. Breathe out weight.","You are lighter than you think. Rest now."]}];
 
 function BreathworkPlayer({exercise}){const [phase,setPhase]=useState("ready");const [count,setCount]=useState(0);const [cycle,setCycle]=useState(0);const [running,setRunning]=useState(false);const [size,setSize]=useState(120);useEffect(()=>{if(!running)return;const phases=[{name:"Breathe in",duration:exercise.inhale,size:180},...(exercise.hold1?[{name:"Hold",duration:exercise.hold1,size:180}]:[]),{name:"Breathe out",duration:exercise.exhale,size:120},...(exercise.hold2?[{name:"Hold",duration:exercise.hold2,size:120}]:[])];let phaseIdx=0,elapsed=0;setPhase(phases[0].name);setSize(phases[0].size);const interval=setInterval(()=>{elapsed++;setCount(phases[phaseIdx].duration-elapsed);if(elapsed>=phases[phaseIdx].duration){elapsed=0;phaseIdx=(phaseIdx+1)%phases.length;if(phaseIdx===0){setCycle(c=>{if(c+1>=exercise.cycles){setRunning(false);setPhase("done");clearInterval(interval);return 0;}return c+1;});}setPhase(phases[phaseIdx].name);setSize(phases[phaseIdx].size);}},1000);return()=>clearInterval(interval);},[running,exercise]);return(<div style={{textAlign:"center",padding:"16px 0"}}><div style={{position:"relative",width:200,height:200,margin:"0 auto 20px"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:size,height:size,borderRadius:"50%",background:`${exercise.color}22`,border:`3px solid ${exercise.color}`,transition:"all 1s ease-in-out",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column"}}><div style={{fontSize:13,fontWeight:700,color:exercise.color,textAlign:"center",lineHeight:1.3}}>{phase==="done"?"Done ✓":phase==="ready"?"Tap to begin":phase}</div>{running&&<div style={{fontSize:24,fontWeight:800,color:exercise.color}}>{count}</div>}</div></div></div><div style={{fontSize:12,color:"#b08060",marginBottom:14}}>Cycle {cycle+1} of {exercise.cycles}</div>{!running&&phase!=="done"&&<button onClick={()=>{setRunning(true);setCycle(0);}} style={{...S.saveBtn,padding:"10px 28px"}}>Begin →</button>}{running&&<button onClick={()=>{setRunning(false);setPhase("ready");setCycle(0);}} style={S.ghostBtn}>Stop</button>}{phase==="done"&&<div style={{fontSize:16,color:"#7a4a1e",fontFamily:"'Lora',serif",fontStyle:"italic"}}>Well done 🌿 Take a moment to notice how you feel.</div>}</div>);}
 
-function MeditationPlayer({isOTR}){const [selected,setSelected]=useState(null);const [stepIdx,setStepIdx]=useState(0);const available=isOTR?MEDITATIONS:MEDITATIONS.filter(m=>m.free);if(selected){const step=selected.steps[stepIdx];const isLast=stepIdx===selected.steps.length-1;return(<div style={{padding:"8px 0"}}><div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",borderRadius:16,padding:"20px",marginBottom:14,minHeight:100,display:"flex",alignItems:"center",justifyContent:"center"}}><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,textAlign:"center"}}>{step}</p></div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{fontSize:12,color:"#b08060"}}>{stepIdx+1} / {selected.steps.length}</div><div style={{display:"flex",gap:8}}><button onClick={()=>{setSelected(null);setStepIdx(0);}} style={S.ghostBtn}>← Back</button>{!isLast?<button onClick={()=>setStepIdx(i=>i+1)} style={S.saveBtn}>Next →</button>:<button onClick={()=>{setSelected(null);setStepIdx(0);}} style={{...S.saveBtn,background:"linear-gradient(135deg,#7a8c6e,#6a7c5e)"}}>Complete ✓</button>}</div></div></div>);}return(<div style={{display:"flex",flexDirection:"column",gap:10,paddingTop:8}}>{available.map(m=>(<button key={m.id} onClick={()=>{setSelected(m);setStepIdx(0);}} style={{background:"rgba(155,126,184,0.08)",border:"1px solid rgba(155,126,184,0.2)",borderRadius:14,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",textAlign:"left"}}><div><div style={{fontWeight:700,color:"#5a2e0e",fontSize:14}}>{m.name}</div><div style={{fontSize:12,color:"#b08060",marginTop:2}}>{m.duration}</div></div><span style={{fontSize:18}}>›</span></button>))}{!isOTR&&<div style={{fontSize:12,color:"#b08060",textAlign:"center",fontStyle:"italic",padding:"4px 0"}}>✨ Upgrade to Off the Record for the full meditation library</div>}</div>);}
+function MeditationPlayer({isOTR}){const [selected,setSelected]=useState(null);const [stepIdx,setStepIdx]=useState(0);const available=isOTR?MEDITATIONS:MEDITATIONS.filter(m=>m.free);if(selected){const step=selected.steps[stepIdx];const isLast=stepIdx===selected.steps.length-1;return(<div style={{padding:"8px 0"}}><div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",borderRadius:16,padding:"20px",marginBottom:14,minHeight:100,display:"flex",alignItems:"center",justifyContent:"center"}}><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,textAlign:"center"}}>{step}</p></div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{fontSize:12,color:"#b08060"}}>{stepIdx+1} / {selected.steps.length}</div><div style={{display:"flex",gap:8}}><button onClick={()=>{setSelected(null);setStepIdx(0);}} style={S.ghostBtn}>← Back</button>{!isLast?<button onClick={()=>setStepIdx(i=>i+1)} style={S.saveBtn}>Next →</button>:<button onClick={()=>{setSelected(null);setStepIdx(0);}} style={{...S.saveBtn,background:"linear-gradient(135deg,#7a8c6e,#6a7c5e)"}}>Complete ✓</button>}</div></div></div>);}return(<div style={{display:"flex",flexDirection:"column",gap:10,paddingTop:8}}>{available.map(m=>(<button key={m.id} onClick={()=>{setSelected(m);setStepIdx(0);}} style={{background:"rgba(155,126,184,0.08)",border:"1px solid rgba(155,126,184,0.2)",borderRadius:14,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",textAlign:"left"}}><div><div style={{fontWeight:700,color:"#5a2e0e",fontSize:14}}>{m.name}</div><div style={{fontSize:12,color:"#b08060",marginTop:2}}>{m.duration}</div></div><span style={{fontSize:18}}>›</span></button>))}{!isOTR&&<div style={{fontSize:12,color:"#b08060",textAlign:"center",fontStyle:"italic",padding:"4px 0"}}>✨ Upgrade to Off the Record for all meditations</div>}</div>);}
 
-function JournalingTimeBanner(){const [dismissed,setDismissed]=useState(()=>localStorage.getItem("journaling_banner_dismissed")==="true");if(dismissed)return null;return(<div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.07),rgba(155,126,184,0.06))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:18,padding:"16px 20px",display:"flex",gap:14,alignItems:"flex-start"}}><span style={{fontSize:28,flexShrink:0}}>⏱️</span><div style={{flex:1}}><div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:5}}>The sweet spot</div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.65,marginBottom:4}}>"5 to 15 minutes is all it takes — and 10 is the sweet spot. Enough time to get past the surface and into something real. Not a task, just presence."</p><p style={{fontSize:11,color:"#b08060"}}>— Hallie 🌿</p></div><button onClick={()=>{localStorage.setItem("journaling_banner_dismissed","true");setDismissed(true);}} style={{background:"none",border:"none",fontSize:16,color:"#c8b896",cursor:"pointer",flexShrink:0,padding:2}}>×</button></div>);}
+// ── REMAINING COMPONENTS ──
+const MINI_CHALLENGES=[{id:"healing7",icon:"🌱",title:"7-Day Healing Series",duration:7,color:"#7a9e7e",desc:"A gentle week of turning inward. Release, restore, and come back to yourself.",days:[{day:1,prompt:"What are you carrying right now that isn't yours to carry? Write it out and then write: I release this."},{day:2,prompt:"Describe a wound that has taught you something beautiful. How did that pain shape you?"},{day:3,prompt:"Write a letter to a younger version of yourself who needed to hear something they never got to hear."},{day:4,prompt:"What does healing look like for you — not what it's supposed to look like, but what it actually feels like?"},{day:5,prompt:"Who in your life makes you feel most like yourself? What do they see in you that you sometimes forget?"},{day:6,prompt:"Name three ways you have grown in the last year that no one else would notice but you."},{day:7,prompt:"Write yourself a blessing. Something you wish someone had said to you. Say it to yourself now."}]},{id:"gratitude5",icon:"🙏",title:"5-Day Gratitude Reset",duration:5,color:"#c8895a",desc:"Not toxic positivity — real, specific gratitude that rewires how you see your life.",days:[{day:1,prompt:"Write about something you almost missed today — a small moment that could have gone unnoticed but didn't."},{day:2,prompt:"Who is someone in your life who shows up quietly? Write them a thank you they'll never see."},{day:3,prompt:"What is something about your body you are grateful for today? Not how it looks — what it does."},{day:4,prompt:"Write about a hard season that gave you something you wouldn't trade. What did difficulty teach you?"},{day:5,prompt:"Write a love letter to your own life — exactly as it is right now, imperfect and in process."}]},{id:"confidence10",icon:"🔥",title:"10-Day Confidence Builder",duration:10,color:"#c47c2a",desc:"Call yourself back. Rebuild your belief in who you are and what you're capable of.",days:[{day:1,prompt:"Write about a time you did something that scared you. How did it feel on the other side?"},{day:2,prompt:"What is something you are actually really good at that you rarely let yourself claim?"},{day:3,prompt:"Write about a version of yourself you've been afraid to become. What's stopping you?"},{day:4,prompt:"Describe your dream life in present tense — as if it's already happening. How does she live?"},{day:5,prompt:"What would you do this week if you weren't afraid of what people thought?"},{day:6,prompt:"Write about a compliment you've received that you dismissed. Receive it now."},{day:7,prompt:"What are three things you've built, created, or overcome that prove you are more capable than you think?"},{day:8,prompt:"What boundary would change your life if you set it? Write it out as a declaration."},{day:9,prompt:"Who are you becoming? Describe her in detail. What does she believe about herself?"},{day:10,prompt:"Write a manifesto for yourself. Five things you believe about who you are and what you deserve."}]},{id:"letters7",icon:"💌",title:"7-Day Letters to Yourself",duration:7,color:"#9b7eb8",desc:"One letter a day. To your past, your future, your fears, your dreams, your people.",days:[{day:1,prompt:"Write a letter to 16-year-old you. What did she need to know that no one told her?"},{day:2,prompt:"Write a letter to the person you were a year ago. How far have you come since then?"},{day:3,prompt:"Write a letter to your fear. Not to fight it — to understand it."},{day:4,prompt:"Write a letter to someone you need to forgive — even if you're not ready. Just start."},{day:5,prompt:"Write a letter to your future self five years from now. What do you hope she feels?"},{day:6,prompt:"Write a letter to your body. Everything you've put it through and everything it's carried for you."},{day:7,prompt:"Write a letter from your future self back to you — right now, today. What does she want you to know?"}]},{id:"lettinggo5",icon:"🌊",title:"5-Day Letting Go",duration:5,color:"#5b8fa8",desc:"Release what no longer serves you. Five days to lighten the load you've been carrying.",days:[{day:1,prompt:"What is the story about yourself that you keep telling — and is it actually true?"},{day:2,prompt:"What relationship (past or present) are you still carrying? What would it feel like to set it down?"},{day:3,prompt:"Write about a version of yourself you've outgrown. Say goodbye to her with love."},{day:4,prompt:"What expectation — of yourself or your life — is causing you the most pain right now?"},{day:5,prompt:"Write a release ritual. Everything you are choosing to leave in this season. Then write: I am free."}]}];
 
-function StoryOfTheMonth({communityId,cfg}){const [stories,setStories]=useState([]);const [loading,setLoading]=useState(true);const [anonContent,setAnonContent]=useState("");const [submitting,setSubmitting]=useState(false);const [submitted,setSubmitted]=useState(false);useEffect(()=>{loadStories();},[communityId]);async function loadStories(){setLoading(true);try{const filters=communityId?`submit_to_sotm=eq.true&community_id=eq.${communityId}&order=created_at.desc`:`submit_to_sotm=eq.true&order=created_at.desc`;const data=await sbGet("community_posts",`${filters}&select=*`);if(Array.isArray(data))setStories(data);}catch(e){console.error(e);}setLoading(false);}async function submitAnon(){if(!anonContent.trim())return;setSubmitting(true);try{await sbInsert("community_posts",{user_id:"anonymous",community_id:communityId,content:anonContent.trim(),is_anonymous:true,submit_to_sotm:true,});setSubmitted(true);setAnonContent("");}catch(e){console.error(e);}setSubmitting(false);}return(<div style={{padding:"0 16px"}}><div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:18,padding:"20px",marginBottom:16,textAlign:"center"}}><div style={{fontSize:32,marginBottom:8}}>🎙️</div><h3 style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",marginBottom:6,fontWeight:600}}>Story of the Month</h3><p style={{fontSize:13,color:"#b08060",lineHeight:1.6,marginBottom:16,fontStyle:"italic",fontFamily:"'Lora',serif"}}>Hallie reads every submission and may feature your story — anonymously — on the My Sister's Closet podcast. No account needed.</p>{!submitted?(<div style={{textAlign:"left"}}><textarea style={{width:"100%",padding:"12px 14px",border:"1.5px solid rgba(200,137,90,0.2)",borderRadius:12,fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",resize:"none",outline:"none",lineHeight:1.7,marginBottom:10,background:"rgba(253,248,242,0.9)",boxSizing:"border-box",fontStyle:"italic",minHeight:100}} placeholder="Share something from your heart. It will always be kept anonymous." value={anonContent} onChange={e=>setAnonContent(e.target.value)} rows={4}/><button style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"white",border:"none",borderRadius:20,padding:"11px",fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700,opacity:!anonContent.trim()||submitting?0.5:1}} disabled={!anonContent.trim()||submitting} onClick={submitAnon}>{submitting?"Submitting...":"Submit Anonymously 🎙️"}</button></div>):(<div style={{background:"rgba(122,74,30,0.06)",borderRadius:14,padding:"16px"}}><div style={{fontSize:28,marginBottom:6}}>💛</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",color:"#7a4a1e",fontSize:14,lineHeight:1.6}}>Your story has been submitted. Thank you for trusting us with it. Hallie will read it. 🌿</p></div>)}</div>{loading?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic"}}>Loading submissions...</div>:stories.length===0?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif"}}>No submissions yet — be the first. 🌿</div>:(stories.map(s=>(<div key={s.id} style={{background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px",marginBottom:10,border:"1px solid rgba(122,74,30,0.1)"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><div style={{width:30,height:30,borderRadius:"50%",background:"linear-gradient(135deg,#b0a090,#9a8878)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700}}>👤</div><div><div style={{fontSize:12,fontWeight:700,color:"#5a2e0e"}}>Anonymous</div><div style={{fontSize:10,color:"#b08060"}}>Submitted for Story of the Month</div></div><span style={{marginLeft:"auto",fontSize:10,color:"#7a4a1e",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",padding:"2px 8px",borderRadius:10,fontWeight:700}}>🎙️ SOTM</span></div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",lineHeight:1.8,fontStyle:"italic"}}>{s.content}</p></div>)))}</div>);}
+function ChallengesTab({entries,user,onWrite}){
+  const [activeChallenge,setActiveChallenge]=useState(null);
+  // fix #3 — use persist for challenges (intentional long-term data)
+  const [joined,setJoined]=useState(()=>persist.get(`challenges_joined_${user.email}`)||{});
+  const [view,setView]=useState("list");
+  const thisMonth=new Date().toISOString().slice(0,7);
+  const monthEntries=entries.filter(e=>e.date?.startsWith(thisMonth));
+  const daysInMonth=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
+  const today=new Date().getDate();
+  const journaledDays=new Set(monthEntries.map(e=>new Date(e.date).getDate()));
 
-function AmbientPlayer(){const [playing,setPlaying]=useState(null);const sound=useAmbientSound();function toggle(s){if(playing===s.id){sound.stop();setPlaying(null);}else{sound.play(s);setPlaying(s.id);}}return(<div style={{paddingTop:8}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>{AMBIENT_SOUNDS.map(s=>(<button key={s.id} onClick={()=>toggle(s)} style={{background:playing===s.id?"rgba(91,143,168,0.18)":"rgba(91,143,168,0.05)",border:`1.5px solid ${playing===s.id?"#5b8fa8":"rgba(91,143,168,0.18)"}`,borderRadius:16,padding:"16px 10px",display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",transition:"all 0.2s"}}><span style={{fontSize:28}}>{s.icon}</span><span style={{fontSize:12,fontWeight:700,color:playing===s.id?"#5b8fa8":"#7a5030",fontFamily:"'Nunito',sans-serif",textAlign:"center",lineHeight:1.3}}>{s.name}</span>{playing===s.id&&<span style={{fontSize:9,color:"#5b8fa8",fontWeight:700,letterSpacing:"1px"}}>▶ PLAYING</span>}</button>))}</div><p style={{fontSize:11,color:"#b08060",textAlign:"center",fontStyle:"italic",marginTop:6}}>Tap a sound to play • Tap again to stop</p></div>);}
+  function joinChallenge(id){const updated={...joined,[id]:{joinedDate:getTodayStr(),daysCompleted:[]}};setJoined(updated);persist.set(`challenges_joined_${user.email}`,updated);}
+  function getChallengeDay(id){if(!joined[id])return 0;const start=new Date(joined[id].joinedDate);const now=new Date();return Math.floor((now-start)/(24*60*60*1000))+1;}
+  function getCompletedDays(id){return joined[id]?.daysCompleted||[];}
+  function markDayComplete(challengeId,day){const updated={...joined,[challengeId]:{...joined[challengeId],daysCompleted:[...new Set([...(joined[challengeId]?.daysCompleted||[]),day])]}};setJoined(updated);persist.set(`challenges_joined_${user.email}`,updated);}
+
+  if(view==="detail"&&activeChallenge){
+    const c=activeChallenge;const isJoined=!!joined[c.id];const currentDay=Math.min(getChallengeDay(c.id),c.duration);const completedDays=getCompletedDays(c.id);const todayPrompt=c.days[currentDay-1];const progress=completedDays.length/c.duration;
+    return(<div style={{display:"flex",flexDirection:"column",gap:16}}><button onClick={()=>{setView("list");setActiveChallenge(null);}} style={{...S.ghostBtn,alignSelf:"flex-start"}}>← Challenges</button><div style={{background:`linear-gradient(135deg,${c.color}15,${c.color}05)`,border:`1px solid ${c.color}30`,borderRadius:24,padding:"24px"}}><div style={{fontSize:40,marginBottom:8}}>{c.icon}</div><h2 style={{fontFamily:"'Lora',serif",fontSize:24,color:"#5a2e0e",marginBottom:6,fontWeight:600}}>{c.title}</h2><p style={{fontSize:14,color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif",lineHeight:1.6,marginBottom:16}}>{c.desc}</p>{isJoined&&(<div style={{marginBottom:16}}><div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#b08060",marginBottom:6}}><span>Day {currentDay} of {c.duration}</span><span>{completedDays.length} completed</span></div><div style={{background:"rgba(200,137,90,0.15)",borderRadius:20,height:8,overflow:"hidden"}}><div style={{background:`linear-gradient(90deg,${c.color},${c.color}cc)`,height:"100%",width:`${progress*100}%`,borderRadius:20,transition:"width 0.5s"}}/></div></div>)}{isJoined&&(<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>{c.days.map(d=>(<div key={d.day} style={{width:32,height:32,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,background:completedDays.includes(d.day)?c.color:d.day===currentDay?"rgba(200,137,90,0.15)":"rgba(200,137,90,0.06)",color:completedDays.includes(d.day)?"white":d.day===currentDay?"#7a4a1e":"#b08060",border:`1px solid ${completedDays.includes(d.day)?c.color:d.day===currentDay?"#c8895a":"rgba(200,137,90,0.2)"}`}}>{completedDays.includes(d.day)?"✓":d.day}</div>))}</div>)}{!isJoined&&(<button onClick={()=>joinChallenge(c.id)} style={{...S.saveBtn,background:`linear-gradient(135deg,${c.color}cc,${c.color})`}}>Start This Challenge →</button>)}</div>{isJoined&&todayPrompt&&(<div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:20,padding:"22px"}}><div style={{fontSize:11,fontWeight:700,color:c.color,textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:10}}>{completedDays.includes(currentDay)?"✓ Day "+currentDay+" Complete":"✦ Day "+currentDay+" — Today's Prompt"}</div><p style={{fontFamily:"'Lora',serif",fontSize:17,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,marginBottom:16}}>"{todayPrompt.prompt}"</p>{!completedDays.includes(currentDay)?(<button onClick={()=>{markDayComplete(c.id,currentDay);spawnConfetti();onWrite(todayPrompt.prompt);}} style={{...S.saveBtn,background:`linear-gradient(135deg,${c.color}cc,${c.color})`}}>Write Today's Entry →</button>):(<div style={{display:"flex",alignItems:"center",gap:8,color:c.color,fontSize:14,fontWeight:600}}><span>✓</span><span>You wrote today. Come back tomorrow. 🌿</span></div>)}</div>)}<div><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>All {c.duration} Days</div>{c.days.map(d=>(<div key={d.day} style={{background:"rgba(255,252,246,0.9)",border:`1px solid ${completedDays.includes(d.day)?"rgba(200,137,90,0.3)":"rgba(200,137,90,0.12)"}`,borderRadius:14,padding:"14px 16px",marginBottom:8,display:"flex",gap:12,alignItems:"flex-start",opacity:isJoined&&d.day>currentDay?0.5:1}}><div style={{width:28,height:28,borderRadius:"50%",background:completedDays.includes(d.day)?c.color:"rgba(200,137,90,0.1)",color:completedDays.includes(d.day)?"white":"#b08060",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{completedDays.includes(d.day)?"✓":d.day}</div><p style={{fontFamily:"'Lora',serif",fontSize:13,color:"#6a4020",fontStyle:"italic",lineHeight:1.6,margin:0}}>{d.prompt}</p></div>))}</div></div>);
+  }
+
+  return(<div style={{display:"flex",flexDirection:"column",gap:20}}><div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🏆 Challenges</h2><p style={{color:"#b08060",fontSize:13,marginTop:4,fontStyle:"italic"}}>Push a little deeper. Grow a little more.</p></div><div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(245,158,11,0.25)",borderRadius:22,padding:"22px"}}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}><span style={{fontSize:32}}>🔥</span><div><div style={{fontFamily:"'Lora',serif",fontSize:18,fontWeight:600,color:"#5a2e0e"}}>Monthly Streak Challenge</div><div style={{fontSize:12,color:"#b08060",marginTop:2}}>Journal every day this month — keep the chain alive</div></div></div><div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:12}}>{["S","M","T","W","T","F","S"].map((d,i)=>(<div key={i} style={{textAlign:"center",fontSize:10,color:"#b08060",fontWeight:700,padding:"2px 0"}}>{d}</div>))}{Array.from({length:new Date(new Date().getFullYear(),new Date().getMonth(),1).getDay()}).map((_,i)=>(<div key={`empty-${i}`}/>))}{Array.from({length:daysInMonth}).map((_,i)=>{const day=i+1;const done=journaledDays.has(day);const isToday=day===today;const future=day>today;return(<div key={day} style={{aspectRatio:"1",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:done?"#c8895a":isToday?"rgba(200,137,90,0.15)":future?"rgba(200,137,90,0.04)":"rgba(200,137,90,0.08)",color:done?"white":isToday?"#7a4a1e":"#b08060",border:isToday?"1px solid #c8895a":"1px solid transparent"}}>{done?"✓":day}</div>);})}</div><div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#b08060"}}><span>🔥 {calcStreak(entries)} day streak</span><span>{journaledDays.size}/{today} days this month</span></div></div><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px"}}>Themed Challenges</div>{MINI_CHALLENGES.map(c=>{const isJoined=!!joined[c.id];const completed=getCompletedDays(c.id).length;const done=completed>=c.duration;return(<div key={c.id} style={{background:"rgba(255,252,246,0.95)",border:`1px solid ${isJoined?"rgba(200,137,90,0.25)":"rgba(200,137,90,0.12)"}`,borderRadius:20,padding:"18px 20px",cursor:"pointer",transition:"all 0.2s",boxShadow:"0 2px 12px rgba(160,100,50,0.08)"}} onClick={()=>{setActiveChallenge(c);setView("detail");}}><div style={{display:"flex",alignItems:"center",gap:14}}><div style={{width:52,height:52,borderRadius:16,background:`${c.color}15`,border:`1px solid ${c.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0}}>{c.icon}</div><div style={{flex:1}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}><div style={{fontFamily:"'Lora',serif",fontSize:16,fontWeight:600,color:"#5a2e0e"}}>{c.title}</div>{done&&<span style={{fontSize:10,fontWeight:800,background:c.color,color:"white",padding:"2px 8px",borderRadius:10,textTransform:"uppercase"}}>Complete!</span>}{isJoined&&!done&&<span style={{fontSize:10,fontWeight:700,background:`${c.color}20`,color:c.color,padding:"2px 8px",borderRadius:10}}>In progress</span>}</div><div style={{fontSize:12,color:"#b08060",lineHeight:1.4,marginBottom:isJoined?8:0}}>{c.desc}</div>{isJoined&&(<div style={{background:"rgba(200,137,90,0.12)",borderRadius:10,height:5,overflow:"hidden"}}><div style={{background:`linear-gradient(90deg,${c.color},${c.color}cc)`,height:"100%",width:`${(completed/c.duration)*100}%`,borderRadius:10,transition:"width 0.5s"}}/></div>)}</div><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0}}><span style={{fontSize:11,fontWeight:700,color:"#b08060"}}>{c.duration}d</span><span style={{fontSize:16,color:"#c8b896"}}>→</span></div></div></div>);})}</div>);
+}
+
+function PricingTab({currentPlan,userEmail,onUpgrade}){const [checkoutLoading,setCheckoutLoading]=useState(null);const [checkoutError,setCheckoutError]=useState("");async function handleUpgrade(key){if(key==="free"){onUpgrade("free");return;}setCheckoutError("");setCheckoutLoading(key);try{await startStripeCheckout(STRIPE_PRICES[key],userEmail);}catch{setCheckoutError("Checkout issue — email hello@halliewho.com to upgrade.");onUpgrade(key);}finally{setCheckoutLoading(null);}}return(<div><div style={{textAlign:"center",marginBottom:36}}><h2 style={{fontFamily:"'Lora',serif",fontSize:30,color:"#5a2e0e",marginBottom:8}}>Choose Your Plan</h2><p style={{color:"#b08060",fontSize:15,fontStyle:"italic"}}>Some thoughts aren't meant for the surface.</p></div>{checkoutError&&<div style={{...S.errorBox,marginBottom:20,textAlign:"center"}}>{checkoutError}</div>}<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:20,marginBottom:40}}>{Object.entries(PLANS).map(([key,plan])=>(<div key={key} style={{...S.pricingCard,...(currentPlan===key?{borderColor:plan.color,boxShadow:`0 4px 24px ${plan.color}33`}:{})}}>{currentPlan===key&&<div style={{position:"absolute",top:-13,left:"50%",transform:"translateX(-50%)",background:plan.color,color:"#fff",fontSize:10,fontWeight:800,padding:"3px 14px",borderRadius:20,textTransform:"uppercase",letterSpacing:"0.5px",whiteSpace:"nowrap"}}>Current Plan</div>}<div style={{fontFamily:"'Lora',serif",fontSize:22,fontWeight:600,color:"#5a2e0e",marginBottom:4}}>{plan.name}</div><div style={{fontSize:30,fontWeight:800,color:plan.color,marginBottom:20,fontFamily:"'Lora',serif"}}>{plan.price}</div><ul style={{listStyle:"none",display:"flex",flexDirection:"column",gap:10,marginBottom:24}}>{plan.features.map(f=><li key={f} style={{fontSize:14,color:"#7a5030",display:"flex",gap:8}}><span style={{color:plan.color,fontWeight:700,flexShrink:0}}>✓</span>{f}</li>)}</ul>{currentPlan!==key&&(<button onClick={()=>handleUpgrade(key)} disabled={checkoutLoading===key} style={{...S.saveBtn,width:"100%",background:`linear-gradient(135deg,${plan.color}cc,${plan.color})`,boxShadow:`0 3px 14px ${plan.color}55`}}>{checkoutLoading===key?"Opening checkout...":key==="free"?"Downgrade":key==="offtherecord"?"Enter Off the Record →":`Join ${plan.name} →`}</button>)}</div>))}</div></div>);}
+
+function EntryCard({entry,onClick,showAuthor}){const [hovered,setHovered]=useState(false);const moodColor=entry.mood?.color;const moodBg=moodColor?`linear-gradient(160deg,rgba(255,252,246,0.97) 0%,${moodColor}11 100%)`:"rgba(255,252,246,0.93)";const moodBorder=moodColor?`1px solid ${moodColor}33`:"1px solid rgba(200,137,90,0.15)";return(<div style={{...S.card,background:moodBg,border:moodBorder,cursor:onClick?"pointer":"default",transform:hovered?"translateY(-3px)":"",boxShadow:hovered?"0 10px 30px rgba(160,100,50,0.18)":"0 2px 12px rgba(160,100,50,0.10)"}} onClick={onClick} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}><div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><span style={{fontSize:11,color:"#b08060",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.3px"}}>{formatDate(entry.date)}</span><div style={{display:"flex",gap:5,alignItems:"center"}}>{entry.submit_to_feature&&<span style={{fontSize:11}}>🎙️</span>}{entry.shared&&<span style={{fontSize:11,opacity:0.5}}>🌿</span>}{entry.mood&&<span style={{fontSize:18}}>{entry.mood.emoji}</span>}</div></div>{showAuthor&&<div style={{fontSize:12,color:"#c8895a",fontWeight:700,marginBottom:4}}>by {entry.author_name}</div>}<h3 style={{fontFamily:"'Lora',serif",fontSize:17,color:"#5a2e0e",fontWeight:600,marginBottom:8,lineHeight:1.3}}>{entry.title||"Untitled"}</h3><p style={{fontSize:14,color:"#8a6040",lineHeight:1.65,fontStyle:"italic",fontFamily:"'Lora',serif"}}>{(entry.content||"").slice(0,110)}{(entry.content||"").length>110?"…":""}</p>{entry.tags?.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:10}}>{entry.tags.map(t=><TagPill key={t} tag={t}/>)}</div>}</div>);}
+function TagPill({tag}){return <span style={{padding:"3px 10px",borderRadius:12,fontSize:11,fontWeight:700,fontFamily:"'Nunito',sans-serif",letterSpacing:"0.3px",background:TAG_COLORS[tag]+"22",color:TAG_COLORS[tag],border:`1px solid ${TAG_COLORS[tag]}44`}}>{tag}</span>;}
+function Chip({children,active,activeColor,onClick}){const base={padding:"5px 14px",borderRadius:20,border:"1px solid rgba(200,137,90,0.3)",background:"rgba(255,255,255,0.6)",color:"#9a6a3a",fontSize:13,fontWeight:600,fontFamily:"'Nunito',sans-serif",cursor:"pointer",transition:"all .15s"};const activeStyle=activeColor?{background:activeColor,color:"#fff",borderColor:activeColor}:{background:"#c8895a",color:"#fff",borderColor:"#c8895a"};return <button style={{...base,...(active?activeStyle:{})}} onClick={onClick}>{children}</button>;}
+function Field({label,children}){return <div style={{marginBottom:16}}><label style={{display:"block",fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>{label}</label>{children}</div>;}
+function SectionLabel({children}){return <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:8}}>{children}</div>;}
+function GlobalStyles(){return <style>{`@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Nunito:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Nunito',sans-serif}textarea{resize:none}button{transition:opacity .15s}button:hover{opacity:0.85}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#d4a87a55;border-radius:3px}input::placeholder,textarea::placeholder{opacity:0.45}`}</style>;}
+
+const S={page:{minHeight:"100vh",background:"linear-gradient(160deg,#fdf6ec 0%,#f5e8d3 40%,#ede0cc 100%)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",position:"relative",overflowX:"hidden"},texture:{position:"fixed",inset:0,backgroundImage:`url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8895a' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,pointerEvents:"none",zIndex:0},header:{position:"sticky",top:0,zIndex:100,background:"rgba(253,246,236,0.9)",backdropFilter:"blur(14px)",borderBottom:"1px solid rgba(200,137,90,0.15)"},headerInner:{maxWidth:960,margin:"0 auto",padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8},logoBtn:{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,padding:0},logoText:{fontFamily:"'Lora',serif",fontSize:18,fontWeight:600,color:"#7a4a1e"},navBtn:{background:"none",border:"1px solid transparent",borderRadius:20,padding:"6px 10px",color:"#9a7050",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"},navBtnActive:{background:"rgba(200,137,90,0.12)",borderColor:"rgba(200,137,90,0.3)",color:"#7a4a1e"},main:{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",padding:"24px 16px 100px",width:"100%",overflowX:"hidden",boxSizing:"border-box"},authCard:{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:24,padding:"36px 40px",width:"100%",maxWidth:400,boxShadow:"0 8px 40px rgba(160,100,50,0.15)",position:"relative",zIndex:1},input:{width:"100%",padding:"11px 15px",borderRadius:13,border:"1px solid rgba(200,137,90,0.25)",background:"rgba(255,255,255,0.75)",fontFamily:"'Nunito',sans-serif",fontSize:15,color:"#5a3a1a",outline:"none"},errorBox:{background:"rgba(200,80,60,0.08)",border:"1px solid rgba(200,80,60,0.2)",borderRadius:10,padding:"8px 14px",color:"#c05040",fontSize:13,fontWeight:600,marginBottom:14},card:{background:"rgba(255,252,246,0.93)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px",transition:"transform .2s, box-shadow .2s"},grid:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16},promptCard:{background:"linear-gradient(135deg,rgba(200,137,90,0.1),rgba(155,126,184,0.07))",border:"1px solid rgba(200,137,90,0.2)",borderRadius:20,padding:"20px 24px"},writeCard:{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:24,padding:"28px 24px",boxShadow:"0 4px 24px rgba(160,100,50,0.12)",display:"flex",flexDirection:"column",gap:16,maxWidth:700,margin:"0 auto"},titleInput:{fontFamily:"'Lora',serif",fontSize:24,fontWeight:600,color:"#5a2e0e",background:"transparent",border:"none",borderBottom:"2px solid rgba(200,137,90,0.2)",padding:"6px 0",outline:"none",width:"100%"},textarea:{fontFamily:"'Lora',serif",fontSize:16,lineHeight:1.85,color:"#5a3a1a",background:"rgba(253,248,242,0.85)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:16,padding:"16px 20px",outline:"none",width:"100%",fontStyle:"italic"},readCard:{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:24,padding:"28px 24px",boxShadow:"0 4px 24px rgba(160,100,50,0.12)",maxWidth:700,margin:"0 auto"},insightBox:{background:"linear-gradient(135deg,rgba(200,137,90,0.07),rgba(155,126,184,0.06))",border:"1px solid rgba(200,137,90,0.18)",borderRadius:16,padding:"18px 22px",marginBottom:8},pricingCard:{background:"rgba(255,252,246,0.97)",border:"2px solid rgba(200,137,90,0.15)",borderRadius:22,padding:"28px",position:"relative",transition:"all .2s"},saveBtn:{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"10px 24px",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(200,137,90,0.4)"},ghostBtn:{background:"none",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"8px 18px",color:"#b08060",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"},softBtn:{background:"rgba(200,137,90,0.13)",border:"1px solid rgba(200,137,90,0.28)",borderRadius:16,padding:"7px 16px",color:"#9a5a2a",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"},newBtn:{background:"#c8895a",color:"#fff",border:"none",borderRadius:20,padding:"10px 20px",fontSize:14,fontWeight:700,fontFamily:"'Nunito',sans-serif",cursor:"pointer",boxShadow:"0 2px 10px rgba(200,137,90,0.35)",whiteSpace:"nowrap"},deleteBtn:{background:"none",border:"1px solid rgba(200,80,60,0.3)",borderRadius:18,padding:"9px 20px",color:"#c05040",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:600,cursor:"pointer"}};
+
+function LandingScreen({onGetStarted,onSignIn}){return(<div style={{minHeight:"100vh",background:"linear-gradient(160deg,#fdf6ec 0%,#f5e8d3 50%,#ede0cc 100%)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",position:"relative",overflowX:"hidden"}}><div style={{position:"fixed",inset:0,backgroundImage:`url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8895a' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,pointerEvents:"none",zIndex:0}}/><GlobalStyles/><nav style={{position:"relative",zIndex:1,display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",maxWidth:960,margin:"0 auto",width:"100%"}}><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:24}}>🌿</span><span style={{fontFamily:"'Lora',serif",fontSize:18,fontWeight:600,color:"#7a4a1e"}}>My Inner Mind</span></div><button onClick={onSignIn} style={{background:"none",border:"1px solid rgba(200,137,90,0.4)",borderRadius:20,padding:"8px 20px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Sign In</button></nav><div style={{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",padding:"60px 24px 40px",width:"100%",textAlign:"center"}}><div style={{display:"inline-block",background:"rgba(200,137,90,0.12)",border:"1px solid rgba(200,137,90,0.3)",borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:24}}>✨ A space built with you in mind</div><h1 style={{fontFamily:"'Lora',serif",fontSize:"clamp(32px,6vw,58px)",color:"#5a2e0e",fontWeight:600,lineHeight:1.15,marginBottom:20}}>Journal together.<br/><span style={{color:"#c8895a",fontStyle:"italic"}}>Grow together.</span></h1><p style={{fontSize:"clamp(15px,2vw,18px)",color:"#9a7050",lineHeight:1.75,maxWidth:560,margin:"0 auto 36px",fontFamily:"'Lora',serif",fontStyle:"italic"}}>My Inner Mind is a journaling community where your words are witnessed, your growth is celebrated, and you never have to reflect alone.</p><div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap"}}><button onClick={onGetStarted} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:24,padding:"14px 32px",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(200,137,90,0.45)"}}>Start Journaling Free →</button><button onClick={onSignIn} style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(200,137,90,0.3)",borderRadius:24,padding:"14px 28px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:600,cursor:"pointer"}}>I have an account</button></div></div><div style={{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",padding:"20px 24px 60px",width:"100%"}}><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:20,marginBottom:48}}>{[{icon:"💌",title:"Hallie's Weekly Prompts",desc:"Every week, a personal prompt from Hallie to guide your reflection."},{icon:"🌿",title:"10 Communities",desc:"Find your people — Daily Check-in, Healing & Growth, Motherhood and more."},{icon:"🎙️",title:"Story of the Month",desc:"Submit your entry and Hallie may feature your story on the podcast."},{icon:"✨",title:"AI Reflections",desc:"Get a warm, thoughtful insight on any entry."}].map(f=>(<div key={f.title} style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"24px"}}><div style={{fontSize:32,marginBottom:12}}>{f.icon}</div><div style={{fontFamily:"'Lora',serif",fontSize:17,fontWeight:600,color:"#5a2e0e",marginBottom:8}}>{f.title}</div><div style={{fontSize:14,color:"#9a7050",lineHeight:1.65}}>{f.desc}</div></div>))}</div><div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.09),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.18)",borderRadius:24,padding:"36px",textAlign:"center",marginBottom:48}}><div style={{fontSize:36,marginBottom:16}}>🌿</div><p style={{fontFamily:"'Lora',serif",fontSize:"clamp(16px,2.5vw,20px)",color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,maxWidth:600,margin:"0 auto 20px"}}>"I built this because I needed it. A place to be honest, to grow, and to feel less alone in the process."</p><div style={{fontSize:13,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.5px"}}>— Hallie, My Sister's Closet</div></div><div style={{textAlign:"center"}}><button onClick={onGetStarted} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:24,padding:"16px 40px",fontFamily:"'Nunito',sans-serif",fontSize:16,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(200,137,90,0.4)"}}>Join the Community →</button><div style={{fontSize:13,color:"#b08060",marginTop:12}}>Free to start · No credit card required</div></div></div></div>);}
+
+function OnboardingScreen({user,onDone}){const [step,setStep]=useState(0);const [answer,setAnswer]=useState("");const [saving,setSaving]=useState(false);const welcomePrompt="What brought you here today? There's no right answer — just write what's true.";async function handleFinish(){setSaving(true);if(answer.trim()){const entry={id:`${user.email}_onboarding`,user_email:user.email,date:new Date().toISOString().split("T")[0],title:"My first entry 🌿",content:answer,mood:null,tags:["personal"],shared:false,submit_to_feature:false,author_name:user.username,updated_at:Date.now()};await sbUpsert("entries",entry).catch(()=>{});}setSaving(false);onDone();}return(<div style={{minHeight:"100vh",background:"linear-gradient(160deg,#fdf6ec 0%,#f5e8d3 50%,#ede0cc 100%)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",position:"relative"}}><div style={{position:"fixed",inset:0,backgroundImage:`url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8895a' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,pointerEvents:"none",zIndex:0}}/><GlobalStyles/><div style={{position:"relative",zIndex:1,width:"100%",maxWidth:540}}>{step===0&&(<div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:28,padding:"44px 40px",textAlign:"center",boxShadow:"0 8px 40px rgba(160,100,50,0.12)"}}><div style={{fontSize:56,marginBottom:16}}>🌿</div><h2 style={{fontFamily:"'Lora',serif",fontSize:28,color:"#5a2e0e",marginBottom:12,fontWeight:600}}>Welcome, {user.username}!</h2><p style={{fontSize:15,color:"#9a7050",lineHeight:1.7,marginBottom:28,fontFamily:"'Lora',serif",fontStyle:"italic"}}>You've found your space to think, feel, and grow.</p><div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:28}}>{[{icon:"💌",text:"Weekly prompts from Hallie"},{icon:"🌿",text:"10 communities to find your people"},{icon:"✨",text:"AI reflections on your entries"}].map(i=>(<div key={i.text} style={{display:"flex",alignItems:"center",gap:12,background:"rgba(200,137,90,0.06)",borderRadius:14,padding:"12px 16px",textAlign:"left"}}><span style={{fontSize:20}}>{i.icon}</span><span style={{fontSize:14,color:"#7a5030",fontWeight:600}}>{i.text}</span></div>))}</div><button onClick={()=>setStep(1)} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"13px 32px",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(200,137,90,0.4)",width:"100%"}}>Let's write something →</button></div>)}{step===1&&(<div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:28,padding:"40px",boxShadow:"0 8px 40px rgba(160,100,50,0.12)"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><span style={{fontSize:20}}>💌</span><span style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.8px"}}>A welcome prompt from Hallie</span></div><p style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.7,marginBottom:24}}>"{welcomePrompt}"</p><textarea style={{width:"100%",minHeight:180,fontFamily:"'Lora',serif",fontSize:15,lineHeight:1.85,color:"#5a3a1a",background:"rgba(253,248,242,0.85)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:16,padding:"16px 20px",outline:"none",fontStyle:"italic",resize:"none",boxSizing:"border-box"}} placeholder="Write freely — this is just for you..." value={answer} onChange={e=>setAnswer(e.target.value)} autoFocus/><div style={{display:"flex",justifyContent:"space-between",marginTop:20,gap:12}}><button onClick={onDone} style={{background:"none",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"10px 20px",color:"#b08060",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>Skip for now</button><button onClick={handleFinish} disabled={saving} style={{background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"10px 28px",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(200,137,90,0.4)"}}>{saving?"Saving...":"Save & Enter →"}</button></div></div>)}</div></div>);}
+
+// fix #5 — admin tab accessed only via profile menu, not visible in nav
+function AdminTab(){const [users,setUsers]=useState([]);const [loading,setLoading]=useState(true);const [search,setSearch]=useState("");useEffect(()=>{loadUsers();},[]);async function loadUsers(){setLoading(true);try{const data=await sbGet("users","order=id.desc");setUsers(Array.isArray(data)?data:[]);}catch{setUsers([]);}finally{setLoading(false);}}const filtered=users.filter(u=>u.email?.toLowerCase().includes(search.toLowerCase())||u.username?.toLowerCase().includes(search.toLowerCase()));const counts={free:0,community:0,offtherecord:0};users.forEach(u=>{if(counts[u.plan]!==undefined)counts[u.plan]++;});return(<div style={{display:"flex",flexDirection:"column",gap:20}}><div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🔐 Admin Dashboard</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Only visible to you, Hallie 🌿</p></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:14}}>{[{label:"Total Members",value:users.length,color:"#7a4a1e"},{label:"Free",value:counts.free,color:"#94a3b8"},{label:"Community",value:counts.community,color:"#c8895a"},{label:"Off the Record",value:counts.offtherecord,color:"#7a4a1e"}].map(s=>(<div key={s.label} style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:18,padding:"20px",textAlign:"center"}}><div style={{fontSize:28,fontWeight:800,color:s.color,fontFamily:"'Lora',serif"}}>{s.value}</div><div style={{fontSize:12,color:"#b08060",fontWeight:700,marginTop:4,textTransform:"uppercase",letterSpacing:"0.4px"}}>{s.label}</div></div>))}</div><div style={{position:"relative"}}><span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",opacity:0.35,fontSize:15}}>🔍</span><input style={{width:"100%",padding:"11px 15px 11px 38px",borderRadius:13,border:"1px solid rgba(200,137,90,0.25)",background:"rgba(255,255,255,0.75)",fontFamily:"'Nunito',sans-serif",fontSize:14,color:"#5a3a1a",outline:"none",boxSizing:"border-box"}} placeholder="Search by name or email..." value={search} onChange={e=>setSearch(e.target.value)}/></div>{loading?<div style={{textAlign:"center",padding:"40px",color:"#b08060",fontStyle:"italic"}}>Loading members...</div>:<div style={{display:"flex",flexDirection:"column",gap:10}}>{filtered.map(u=>(<div key={u.id} style={{background:"rgba(255,252,246,0.93)",border:"1px solid rgba(200,137,90,0.12)",borderRadius:16,padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div><div style={{fontWeight:700,color:"#5a2e0e",fontSize:14}}>{u.username}</div><div style={{fontSize:12,color:"#b08060",marginTop:2}}>{u.email}</div></div><span style={{fontSize:10,fontWeight:800,padding:"3px 12px",borderRadius:10,textTransform:"uppercase",letterSpacing:"0.5px",background:PLANS[u.plan]?.color+"22",color:PLANS[u.plan]?.color}}>{u.plan}</span></div>))}</div>}</div>);}
+
+const BADGES=[{id:"first_entry",icon:"🌱",label:"First Entry",desc:"You wrote your first entry",check:(entries)=>entries.length>=1},{id:"ten_entries",icon:"📖",label:"10 Entries",desc:"You've written 10 journal entries",check:(entries)=>entries.length>=10},{id:"streak_7",icon:"🔥",label:"7-Day Streak",desc:"You journaled 7 days in a row",check:(entries)=>calcStreak(entries)>=7},{id:"streak_30",icon:"🏆",label:"30-Day Streak",desc:"You journaled 30 days in a row",check:(entries)=>calcStreak(entries)>=30},{id:"community_share",icon:"🌿",label:"Community Sharer",desc:"You shared your first entry",check:(entries)=>entries.some(e=>e.shared)},{id:"off_the_record",icon:"✨",label:"Off the Record",desc:"You went deeper",check:(_,user)=>user.plan==="offtherecord"}];
+function BadgesSection({entries,user}){const earned=BADGES.filter(b=>b.check(entries,user));const unearned=BADGES.filter(b=>!b.check(entries,user));if(!earned.length&&!unearned.length)return null;return(<div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:14}}>Your Badges</div><div style={{display:"flex",flexWrap:"wrap",gap:10}}>{earned.map(b=>(<div key={b.id} title={b.desc} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"10px 14px",background:"linear-gradient(135deg,rgba(200,137,90,0.12),rgba(122,74,30,0.08))",border:"1px solid rgba(200,137,90,0.3)",borderRadius:14,minWidth:70}}><span style={{fontSize:28}}>{b.icon}</span><span style={{fontSize:10,fontWeight:700,color:"#7a4a1e",textAlign:"center",lineHeight:1.3}}>{b.label}</span></div>))}{unearned.map(b=>(<div key={b.id} title={`Locked: ${b.desc}`} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"10px 14px",background:"rgba(200,200,200,0.08)",border:"1px solid rgba(200,200,200,0.2)",borderRadius:14,minWidth:70,opacity:0.4,filter:"grayscale(1)"}}><span style={{fontSize:28}}>{b.icon}</span><span style={{fontSize:10,fontWeight:700,color:"#9a9a9a",textAlign:"center",lineHeight:1.3}}>{b.label}</span></div>))}</div></div>);}
+
+function MoodChart({entries}){const last14=entries.filter(e=>e.mood).slice(0,14).reverse();if(last14.length<2)return null;const moodScore={Radiant:7,Happy:6,Calm:5,Neutral:4,Low:3,Sad:2,Frustrated:1};const points=last14.map((e,i)=>({x:i,y:moodScore[e.mood?.label]||4,mood:e.mood,date:e.date}));const w=280,h=80,pad=10;const xs=points.map((_,i)=>pad+i*(w-2*pad)/(points.length-1));const ys=points.map(p=>h-pad-(p.y-1)*(h-2*pad)/6);const path=points.map((p,i)=>`${i===0?"M":"L"}${xs[i]},${ys[i]}`).join(" ");return(<div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>Mood This Month</div><svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%",height:80}}><defs><linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#c8895a" stopOpacity="0.3"/><stop offset="100%" stopColor="#c8895a" stopOpacity="0"/></linearGradient></defs><path d={`${path} L${xs[xs.length-1]},${h} L${xs[0]},${h} Z`} fill="url(#moodGrad)"/><path d={path} fill="none" stroke="#c8895a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>{points.map((p,i)=><circle key={i} cx={xs[i]} cy={ys[i]} r="3" fill={p.mood?.color||"#c8895a"} stroke="#fff" strokeWidth="1.5"/>)}</svg><div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#b08060",marginTop:4}}><span>😢 Low</span><span>😌 Calm</span><span>🌟 Radiant</span></div></div>);}
+
+function MonthlyRecap({entries,user,onDismiss}){const now=new Date();const lastMonth=new Date(now.getFullYear(),now.getMonth()-1,1);const monthStr=lastMonth.toISOString().slice(0,7);const monthName=lastMonth.toLocaleDateString("en-US",{month:"long",year:"numeric"});const monthEntries=entries.filter(e=>e.date?.startsWith(monthStr));const streak=calcStreak(entries);const topMood=(()=>{const counts={};monthEntries.forEach(e=>{if(e.mood?.label)counts[e.mood.label]=(counts[e.mood.label]||0)+1;});return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];})();const topTag=(()=>{const counts={};monthEntries.forEach(e=>e.tags?.forEach(t=>{counts[t]=(counts[t]||0)+1;}));return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];})();return(<div style={{position:"fixed",inset:0,background:"rgba(90,46,14,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onDismiss}><div style={{background:"#fffdf8",borderRadius:28,padding:"36px 32px",maxWidth:400,width:"100%",boxShadow:"0 20px 60px rgba(90,46,14,0.3)",position:"relative"}} onClick={e=>e.stopPropagation()}><div style={{textAlign:"center",marginBottom:24}}><div style={{fontSize:48,marginBottom:8}}>🌿</div><h2 style={{fontFamily:"'Lora',serif",fontSize:24,color:"#5a2e0e",marginBottom:4,fontWeight:600}}>{monthName} Recap</h2><p style={{fontSize:13,color:"#b08060",fontStyle:"italic"}}>Look how far you've come</p></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>{[{label:"Entries Written",value:monthEntries.length,icon:"📖"},{label:"Current Streak",value:`${streak} days`,icon:"🔥"},{label:"Top Mood",value:topMood?`${MOODS.find(m=>m.label===topMood[0])?.emoji} ${topMood[0]}`:"—",icon:"💭"},{label:"Top Tag",value:topTag?`#${topTag[0]}`:"—",icon:"🏷️"}].map(s=>(<div key={s.label} style={{background:"rgba(200,137,90,0.07)",borderRadius:16,padding:"14px",textAlign:"center"}}><div style={{fontSize:22,marginBottom:4}}>{s.icon}</div><div style={{fontSize:20,fontWeight:800,color:"#7a4a1e",fontFamily:"'Lora',serif"}}>{s.value}</div><div style={{fontSize:11,color:"#b08060",marginTop:2}}>{s.label}</div></div>))}</div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",fontStyle:"italic",textAlign:"center",lineHeight:1.7,marginBottom:20}}>{monthEntries.length===0?"A new month is a fresh page. Start writing yours. 🌱":monthEntries.length<5?"Every entry matters. Keep showing up for yourself. 🌿":"You showed up for yourself this month. That's everything. ✨"}</p><button onClick={onDismiss} style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",border:"none",borderRadius:20,padding:"12px",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>Keep Going →</button></div></div>);}
+
+// fix #3 — IntentionBanner uses persist (intentional per-week data)
+function IntentionBanner({user,onWrite}){const weekKey=`intention_${user.email}_${Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000))}`;const [intention,setIntention]=useState(()=>persist.get(weekKey)||"");const [editing,setEditing]=useState(false);const [draft,setDraft]=useState("");function save(){persist.set(weekKey,draft);setIntention(draft);setEditing(false);}if(editing)return(<div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:20,padding:"20px 24px"}}><div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🎯 This Week's Intention</div><input style={{width:"100%",padding:"10px 14px",borderRadius:12,border:"1px solid rgba(155,126,184,0.3)",background:"rgba(255,255,255,0.8)",fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",outline:"none",marginBottom:12,boxSizing:"border-box"}} placeholder="I intend to..." value={draft} onChange={e=>setDraft(e.target.value)} autoFocus onKeyDown={e=>e.key==="Enter"&&save()}/><div style={{display:"flex",gap:8}}><button onClick={()=>setEditing(false)} style={{background:"none",border:"1px solid rgba(155,126,184,0.3)",borderRadius:14,padding:"7px 16px",color:"#9b7eb8",fontFamily:"'Nunito',sans-serif",fontSize:13,cursor:"pointer"}}>Cancel</button><button onClick={save} style={{background:"#9b7eb8",border:"none",borderRadius:14,padding:"7px 20px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Set Intention ✓</button></div></div>);return(<div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:20,padding:"18px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div style={{flex:1}}><div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:4}}>🎯 This Week's Intention</div>{intention?<p style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a3a1a",fontStyle:"italic"}}>{intention}</p>:<p style={{fontSize:13,color:"#b08060"}}>Set an intention for this week — something to come back to.</p>}</div><button onClick={()=>{setDraft(intention);setEditing(true);}} style={{background:"rgba(155,126,184,0.15)",border:"1px solid rgba(155,126,184,0.3)",borderRadius:14,padding:"7px 14px",color:"#9b7eb8",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{intention?"Edit":"Set →"}</button></div>);}
+
+function JourneyTab({entries,user}){const streak=calcStreak(entries);const thisMonth=new Date().toISOString().slice(0,7);const monthEntries=entries.filter(e=>e.date?.startsWith(thisMonth));const topMood=(()=>{const counts={};entries.forEach(e=>{if(e.mood?.label)counts[e.mood.label]=(counts[e.mood.label]||0)+1;});const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];return top?MOODS.find(m=>m.label===top[0]):null;})();const oneYearAgo=new Date();oneYearAgo.setFullYear(oneYearAgo.getFullYear()-1);const oneYearAgoStr=oneYearAgo.toISOString().split("T")[0];const onThisDay=entries.find(e=>e.date===oneYearAgoStr);return(<div style={{display:"flex",flexDirection:"column",gap:20}}><div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🌱 My Journey</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Your growth, all in one place</p></div><div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(155,126,184,0.2)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🖊️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>A note for your journey</span></div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,margin:0}}>{getWeeklyDeskNote()}</p><p style={{fontSize:11,color:"#b08060",marginTop:8}}>— Hallie 🌿</p></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:14}}>{[{icon:"📖",label:"Total Entries",value:entries.length},{icon:"🔥",label:"Current Streak",value:`${streak}d`},{icon:"📅",label:"This Month",value:monthEntries.length},{icon:"💭",label:"Top Mood",value:topMood?`${topMood.emoji} ${topMood.label}`:"—"}].map(s=>(<div key={s.label} style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:18,padding:"18px",textAlign:"center"}}><div style={{fontSize:26,marginBottom:6}}>{s.icon}</div><div style={{fontSize:22,fontWeight:800,color:"#7a4a1e",fontFamily:"'Lora',serif"}}>{s.value}</div><div style={{fontSize:11,color:"#b08060",marginTop:3,textTransform:"uppercase",letterSpacing:"0.4px"}}>{s.label}</div></div>))}</div>{onThisDay&&(<div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🗓️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>On this day, one year ago</span></div><p style={{fontFamily:"'Lora',serif",fontSize:15,fontWeight:600,color:"#5a2e0e",marginBottom:6}}>{onThisDay.title||"Untitled"}</p><p style={{fontFamily:"'Lora',serif",fontSize:13,color:"#7a5030",fontStyle:"italic",lineHeight:1.65}}>{(onThisDay.content||"").slice(0,160)}{(onThisDay.content||"").length>160?"…":""}</p></div>)}<MoodChart entries={entries}/><GrowthTree entries={entries}/><BadgesSection entries={entries} user={user}/><div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:20,padding:"20px 24px"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>This Month at a Glance</div><div style={{display:"flex",flexWrap:"wrap",gap:10}}>{(()=>{const tagCounts={};monthEntries.forEach(e=>e.tags?.forEach(t=>{tagCounts[t]=(tagCounts[t]||0)+1;}));return Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([tag,count])=>(<div key={tag} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:TAG_COLORS[tag]+"22",border:`1px solid ${TAG_COLORS[tag]}44`,borderRadius:12}}><span style={{fontSize:12,fontWeight:700,color:TAG_COLORS[tag]}}>{tag}</span><span style={{fontSize:11,color:"#b08060"}}>×{count}</span></div>));})()}{monthEntries.length===0&&<p style={{fontSize:13,color:"#b08060",fontStyle:"italic"}}>No entries yet this month — start writing! 🌱</p>}</div></div></div>);}
+
+// fix #15 — GentleNudge uses sessionStorage (not meant to persist forever)
+function GentleNudge({entries,theme}){const T=theme||THEMES.original;const [dismissed,setDismissed]=useState(()=>store.get("gentleNudgeDismissed")||false);if(dismissed)return null;const lastEntry=entries[0];if(!lastEntry)return null;const daysSince=Math.floor((Date.now()-new Date(lastEntry.date).getTime())/(24*60*60*1000));if(daysSince<5)return null;return(<div style={{background:`linear-gradient(135deg,${T.accent}10,${T.accent}06)`,border:`1px dashed ${T.accent}40`,borderRadius:18,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:28}}>🌱</span><div style={{flex:1}}><div style={{fontWeight:700,color:T.accentDark,fontSize:14}}>We've missed you</div><div style={{fontSize:13,color:T.subtext,marginTop:2}}>It's been {daysSince} days since your last entry. No pressure — just here when you're ready. 🌿</div></div><button onClick={()=>{store.set("gentleNudgeDismissed",true);setDismissed(true);}} style={{background:"none",border:"none",color:T.subtext,fontSize:18,cursor:"pointer",padding:4}}>×</button></div>);}
+
+function GrowthTree({entries}){const count=entries.length;const stage=count===0?0:count<5?1:count<15?2:count<30?3:count<60?4:5;const trees=["🌱","🌿","🪴","🌳","🌲","🎋"];const labels=["Plant your seed","Sprouting","Growing","Rooted","Thriving","Flourishing"];const next=[1,5,15,30,60,Infinity];const prevMilestone=stage>0?next[stage-1]:0;const nextMilestone=next[stage];const progress=stage>=5?1:Math.min(1,(count-prevMilestone)/(nextMilestone-prevMilestone));return(<div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px",textAlign:"center"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>Your Growth</div><div style={{fontSize:64,marginBottom:8}}>{trees[stage]}</div><div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{labels[stage]}</div><div style={{fontSize:13,color:"#b08060",marginBottom:12}}>{count} {count===1?"entry":"entries"} written</div>{stage<5&&(<div style={{background:"rgba(200,137,90,0.1)",borderRadius:12,height:8,overflow:"hidden"}}><div style={{background:"linear-gradient(90deg,#c8895a,#d4956a)",height:"100%",width:`${progress*100}%`,transition:"width 0.5s",borderRadius:12}}/></div>)}{stage<5&&<div style={{fontSize:11,color:"#b08060",marginTop:6}}>{nextMilestone-count} more entries to {labels[stage+1]}</div>}</div>);}
+
+// fix #3 — LettersTab uses persist (letters are long-term personal data)
+function LettersTab({user}){const [letters,setLetters]=useState(()=>persist.get(`letters_${user.email}`)||[]);const [writing,setWriting]=useState(false);const [form,setForm]=useState({title:"",content:"",deliverIn:30});function saveLetter(){if(!form.content.trim())return;const letter={id:Date.now(),title:form.title||"A letter to my future self",content:form.content,written:new Date().toISOString(),deliverOn:new Date(Date.now()+form.deliverIn*24*60*60*1000).toISOString(),deliverIn:form.deliverIn,opened:false};const updated=[letter,...letters];setLetters(updated);persist.set(`letters_${user.email}`,updated);setWriting(false);setForm({title:"",content:"",deliverIn:30});}function openLetter(id){const updated=letters.map(l=>l.id===id?{...l,opened:true}:l);setLetters(updated);persist.set(`letters_${user.email}`,updated);}const ready=letters.filter(l=>new Date(l.deliverOn)<=new Date());const waiting=letters.filter(l=>new Date(l.deliverOn)>new Date());return(<div style={{display:"flex",flexDirection:"column",gap:20}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>💌 Letters to Future Me</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Write to yourself across time</p></div><button onClick={()=>setWriting(true)} style={S.newBtn}>+ Write</button></div>{writing&&(<div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:24,padding:"28px 24px",boxShadow:"0 4px 24px rgba(160,100,50,0.12)"}}><input style={{...S.titleInput,marginBottom:16}} placeholder="Give this letter a title..." value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))}/><textarea style={{...S.textarea,minHeight:160,marginBottom:16}} placeholder="Dear future me..." value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))} autoFocus/><div style={{marginBottom:20}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Deliver in</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[{label:"30 days",val:30},{label:"60 days",val:60},{label:"90 days",val:90},{label:"6 months",val:180},{label:"1 year",val:365}].map(o=>(<button key={o.val} onClick={()=>setForm(f=>({...f,deliverIn:o.val}))} style={{padding:"6px 14px",borderRadius:14,border:`1px solid ${form.deliverIn===o.val?"#c8895a":"rgba(200,137,90,0.3)"}`,background:form.deliverIn===o.val?"rgba(200,137,90,0.15)":"transparent",color:form.deliverIn===o.val?"#7a4a1e":"#b08060",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>{o.label}</button>))}</div></div><div style={{display:"flex",justifyContent:"space-between"}}><button onClick={()=>setWriting(false)} style={S.ghostBtn}>Cancel</button><button onClick={saveLetter} style={S.saveBtn}>Seal & Send ✉️</button></div></div>)}{ready.length>0&&(<div><div style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>📬 Ready to open ({ready.length})</div><div style={{display:"flex",flexDirection:"column",gap:10}}>{ready.map(l=>(<div key={l.id} style={{background:"linear-gradient(135deg,rgba(200,137,90,0.1),rgba(122,74,30,0.07))",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}><div><div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600}}>{l.title}</div><div style={{fontSize:11,color:"#b08060",marginTop:2}}>Written {new Date(l.written).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div></div>{!l.opened&&<button onClick={()=>openLetter(l.id)} style={{...S.saveBtn,padding:"6px 16px",fontSize:12}}>Open ✉️</button>}</div>{l.opened&&<p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",lineHeight:1.75,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{l.content}</p>}</div>))}</div></div>)}{waiting.length>0&&(<div><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🔒 Sealed ({waiting.length})</div><div style={{display:"flex",flexDirection:"column",gap:10}}>{waiting.map(l=>(<div key={l.id} style={{background:"rgba(200,137,90,0.05)",border:"1px dashed rgba(200,137,90,0.25)",borderRadius:16,padding:"14px 18px",opacity:0.7}}><div style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{l.title}</div><div style={{fontSize:12,color:"#b08060"}}>Opens {new Date(l.deliverOn).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div></div>))}</div></div>)}{letters.length===0&&!writing&&(<div style={{textAlign:"center",padding:"60px 0"}}><div style={{fontSize:52,marginBottom:14}}>💌</div><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#b08060",fontStyle:"italic",marginBottom:20}}>Write a letter to your future self.<br/>It'll be waiting when you're ready.</p><button onClick={()=>setWriting(true)} style={S.saveBtn}>Write Your First Letter →</button></div>)}</div>);}
+
+// fix #13 — ProfileMenu consistent close behavior, admin accessible here
+function ProfileMenu({user,theme,T,onLogout,onTheme,onUpgradeTab,onAccountTab}){
+  const [open,setOpen]=useState(false);
+  const isAdmin=user.email===ADMIN_EMAIL;
+  const plan=PLANS[user.plan];
+  // fix #13 — close on all clicks
+  function pick(fn){fn();setOpen(false);}
+  return(<div style={{position:"relative"}}>
+    <button onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(200,137,90,0.08)",borderRadius:20,border:"1px solid rgba(200,137,90,0.18)",cursor:"pointer"}}>
+      <span style={{fontSize:12,fontWeight:600,color:"#7a4a1e"}}>👤 {user.username}</span>
+      <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:8,textTransform:"uppercase",background:plan?.color+"22",color:plan?.color}}>{plan?.name}</span>
+      <span style={{fontSize:10,color:"#b08060"}}>{open?"▲":"▼"}</span>
+    </button>
+    {open&&(<div style={{position:"absolute",right:0,top:"calc(100% + 8px)",background:"#fffdf8",border:"1px solid rgba(200,137,90,0.2)",borderRadius:18,padding:"12px",minWidth:200,boxShadow:"0 8px 32px rgba(120,70,20,0.2)",zIndex:200}}>
+      <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Theme</div>
+      <div style={{display:"flex",gap:6,marginBottom:12}}>{Object.entries(THEMES).map(([key,t])=>(<button key={key} onClick={()=>pick(()=>onTheme(key))} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"8px 4px",borderRadius:12,border:`1px solid ${theme===key?"#c8895a":"rgba(200,137,90,0.2)"}`,background:theme===key?"rgba(200,137,90,0.12)":"transparent",cursor:"pointer"}}><span style={{fontSize:20}}>{t.icon}</span><span style={{fontSize:9,fontWeight:600,color:theme===key?"#7a4a1e":"#b08060"}}>{t.name}</span></button>))}</div>
+      <div style={{height:1,background:"rgba(200,137,90,0.15)",marginBottom:10}}/>
+      <button onClick={()=>pick(onAccountTab)} style={{width:"100%",background:"rgba(200,137,90,0.08)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:14,padding:"8px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:8}}>⚙️ Account Settings</button>
+      <button onClick={()=>pick(onUpgradeTab)} style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",border:"none",borderRadius:14,padding:"8px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:8}}>💎 Plans & Upgrade</button>
+      {/* fix #5 — admin only in profile menu, hidden from nav */}
+      {isAdmin&&<button onClick={()=>pick(()=>{const e=new CustomEvent("hallie-nav",{detail:"admin"});window.dispatchEvent(e);})} style={{width:"100%",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",borderRadius:14,padding:"8px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",marginBottom:8}}>🔐 Admin Dashboard</button>}
+      <button onClick={()=>pick(onLogout)} style={{width:"100%",background:"none",border:"1px solid rgba(200,80,60,0.25)",borderRadius:14,padding:"8px",color:"#c05040",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>Sign out</button>
+    </div>)}
+  </div>);}
+
+function JournalingTimeBanner(){const [dismissed,setDismissed]=useState(()=>persist.get("journaling_banner_dismissed")||false);if(dismissed)return null;return(<div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.07),rgba(155,126,184,0.06))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:18,padding:"16px 20px",display:"flex",gap:14,alignItems:"flex-start"}}><span style={{fontSize:28,flexShrink:0}}>⏱️</span><div style={{flex:1}}><div style={{fontSize:11,fontWeight:700,color:"#9b7eb8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:5}}>The sweet spot</div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",fontStyle:"italic",lineHeight:1.65,marginBottom:4}}>"5 to 15 minutes is all it takes — and 10 is the sweet spot. Enough time to get past the surface and into something real."</p><p style={{fontSize:11,color:"#b08060"}}>— Hallie 🌿</p></div><button onClick={()=>{persist.set("journaling_banner_dismissed",true);setDismissed(true);}} style={{background:"none",border:"none",fontSize:16,color:"#c8b896",cursor:"pointer",flexShrink:0,padding:2}}>×</button></div>);}
+
+function StoryOfTheMonth({communityId,cfg}){const [stories,setStories]=useState([]);const [loading,setLoading]=useState(true);const [anonContent,setAnonContent]=useState("");const [submitting,setSubmitting]=useState(false);const [submitted,setSubmitted]=useState(false);useEffect(()=>{loadStories();},[communityId]);async function loadStories(){setLoading(true);try{const filters=communityId?`submit_to_sotm=eq.true&community_id=eq.${communityId}&order=created_at.desc`:`submit_to_sotm=eq.true&order=created_at.desc`;const data=await sbGet("community_posts",`${filters}&select=*`);if(Array.isArray(data))setStories(data);}catch(e){console.error(e);}setLoading(false);}async function submitAnon(){if(!anonContent.trim())return;setSubmitting(true);try{await sbInsert("community_posts",{user_id:"anonymous",community_id:communityId,content:anonContent.trim(),is_anonymous:true,submit_to_sotm:true,});setSubmitted(true);setAnonContent("");}catch(e){console.error(e);}setSubmitting(false);}return(<div style={{padding:"0 16px"}}><div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:18,padding:"20px",marginBottom:16,textAlign:"center"}}><div style={{fontSize:32,marginBottom:8}}>🎙️</div><h3 style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",marginBottom:6,fontWeight:600}}>Story of the Month</h3><p style={{fontSize:13,color:"#b08060",lineHeight:1.6,marginBottom:16,fontStyle:"italic",fontFamily:"'Lora',serif"}}>Hallie reads every submission and may feature your story — anonymously — on My Sister's Closet. No account needed.</p>{!submitted?(<div style={{textAlign:"left"}}><textarea style={{width:"100%",padding:"12px 14px",border:"1.5px solid rgba(200,137,90,0.2)",borderRadius:12,fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",resize:"none",outline:"none",lineHeight:1.7,marginBottom:10,background:"rgba(253,248,242,0.9)",boxSizing:"border-box",fontStyle:"italic",minHeight:100}} placeholder="Share something from your heart. It will always be kept anonymous." value={anonContent} onChange={e=>setAnonContent(e.target.value)} rows={4}/><button style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"white",border:"none",borderRadius:20,padding:"11px",fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700,opacity:!anonContent.trim()||submitting?0.5:1}} disabled={!anonContent.trim()||submitting} onClick={submitAnon}>{submitting?"Submitting...":"Submit Anonymously 🎙️"}</button></div>):(<div style={{background:"rgba(122,74,30,0.06)",borderRadius:14,padding:"16px"}}><div style={{fontSize:28,marginBottom:6}}>💛</div><p style={{fontFamily:"'Lora',serif",fontStyle:"italic",color:"#7a4a1e",fontSize:14,lineHeight:1.6}}>Your story has been submitted. Thank you for trusting us with it. Hallie will read it. 🌿</p></div>)}</div>{loading?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic"}}>Loading submissions...</div>:stories.length===0?<div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif"}}>No submissions yet — be the first. 🌿</div>:(stories.map(s=>(<div key={s.id} style={{background:"rgba(255,252,246,0.95)",borderRadius:16,padding:"16px",marginBottom:10,border:"1px solid rgba(122,74,30,0.1)"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><div style={{width:30,height:30,borderRadius:"50%",background:"linear-gradient(135deg,#b0a090,#9a8878)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700}}>👤</div><div><div style={{fontSize:12,fontWeight:700,color:"#5a2e0e"}}>Anonymous</div><div style={{fontSize:10,color:"#b08060"}}>Submitted for Story of the Month</div></div><span style={{marginLeft:"auto",fontSize:10,color:"#7a4a1e",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",padding:"2px 8px",borderRadius:10,fontWeight:700}}>🎙️ SOTM</span></div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a3a1a",lineHeight:1.8,fontStyle:"italic"}}>{s.content}</p></div>)))}</div>);}
