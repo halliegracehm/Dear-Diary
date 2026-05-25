@@ -353,35 +353,71 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
 }
 
 // ── UPGRADE TAB — Apple IAP via Natively/RevenueCat ──
-UpgradeTab({currentPlan,user,onUpgradePlan}){
+function UpgradeTab({currentPlan,user,onUpgradePlan}){
+  const [purchasing,setPurchasing]=useState(null);
+  const [restoring,setRestoring]=useState(false);
+  const [msg,setMsg]=useState("");
+  const inApp=isNativeApp();
+
+  async function handlePurchase(planKey){
+    if(!inApp){window.open("https://halliewho.com","_blank");return;}
+    setPurchasing(planKey);setMsg("");
+    await rcLogin(user.email,user.email);
+    const pkgId=planKey==="community"?"$rc_monthly":"offtherecord";
+    const result=await rcPurchase(pkgId);
+    if(result.status==="SUCCESS"){
+      const newPlan=await rcGetPlan(user.email);
+      if(newPlan&&newPlan!=="free"){await onUpgradePlan(newPlan);setMsg(`Welcome to ${PLANS[newPlan].name}! 🌿`);}
+      else{setMsg("Purchase complete! Sign out and back in to refresh. 🌿");}
+    }else if(!result.error?.includes("cancel")){
+      setMsg("Something went wrong. Try restoring purchases or email hello@halliewho.com");
+    }
+    setPurchasing(null);
+  }
+
+  async function handleRestore(){
+    if(!inApp){setMsg("Visit halliewho.com to manage your subscription.");return;}
+    setRestoring(true);setMsg("");
+    await rcLogin(user.email,user.email);
+    const result=await rcRestore();
+    if(result.status==="SUCCESS"){
+      const newPlan=await rcGetPlan(user.email);
+      if(newPlan&&newPlan!=="free"){await onUpgradePlan(newPlan);setMsg(`Restored! Welcome back to ${PLANS[newPlan].name} 🌿`);}
+      else{setMsg("No active purchases found.");}
+    }else{setMsg("Couldn't restore. Email hello@halliewho.com for help.");}
+    setRestoring(false);
+  }
+
   const plan=PLANS[currentPlan];
   return(
     <div style={{display:"flex",flexDirection:"column",gap:20,padding:"8px 0"}}>
       <div style={{textAlign:"center",padding:"24px 0 8px"}}>
         <div style={{fontSize:48,marginBottom:12}}>🌿</div>
         <h2 style={{fontFamily:"'Lora',serif",fontSize:28,color:"#5a2e0e",marginBottom:10,fontWeight:600}}>Go Deeper</h2>
-        <p style={{fontFamily:"'Lora',serif",fontSize:15,color:"#9a7050",fontStyle:"italic",lineHeight:1.75,maxWidth:380,margin:"0 auto"}}>Subscriptions are available at halliewho.com. Your access unlocks here automatically when you sign in.</p>
+        <p style={{fontFamily:"'Lora',serif",fontSize:15,color:"#9a7050",fontStyle:"italic",lineHeight:1.75,maxWidth:380,margin:"0 auto"}}>Build your inner world first. Choose the plan that fits where you are right now.</p>
       </div>
+      {msg&&<div style={{background:"rgba(100,170,100,0.1)",border:"1px solid rgba(100,170,100,0.3)",borderRadius:16,padding:"14px 20px",textAlign:"center",fontSize:14,color:"#3a8050",fontFamily:"'Lora',serif",fontStyle:"italic"}}>{msg}</div>}
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
         {Object.entries(PLANS).map(([key,p])=>(
           <div key={key} style={{background:"rgba(255,252,246,0.97)",border:`2px solid ${currentPlan===key?p.color:"rgba(200,137,90,0.15)"}`,borderRadius:20,padding:"20px 22px",position:"relative"}}>
             {currentPlan===key&&<div style={{position:"absolute",top:-12,left:20,background:p.color,color:"#fff",fontSize:10,fontWeight:800,padding:"3px 12px",borderRadius:20,textTransform:"uppercase",letterSpacing:"0.5px"}}>Current Plan</div>}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-              <div><div style={{fontFamily:"'Lora',serif",fontSize:18,fontWeight:600,color:"#5a2e0e"}}>{p.name}</div><div style={{fontSize:22,fontWeight:800,color:p.color,marginTop:2}}>{p.price}</div></div>
-            </div>
-            <ul style={{listStyle:"none",display:"flex",flexDirection:"column",gap:7}}>{p.features.map(f=><li key={f} style={{fontSize:13,color:"#7a5030",display:"flex",gap:8}}><span style={{color:p.color,fontWeight:700,flexShrink:0}}>✓</span>{f}</li>)}</ul>
+            <div style={{marginBottom:10}}><div style={{fontFamily:"'Lora',serif",fontSize:18,fontWeight:600,color:"#5a2e0e"}}>{p.name}</div><div style={{fontSize:22,fontWeight:800,color:p.color,marginTop:2}}>{p.price}</div></div>
+            <ul style={{listStyle:"none",display:"flex",flexDirection:"column",gap:7,marginBottom:currentPlan!==key&&key!=="free"?14:0}}>{p.features.map(f=><li key={f} style={{fontSize:13,color:"#7a5030",display:"flex",gap:8}}><span style={{color:p.color,fontWeight:700,flexShrink:0}}>✓</span>{f}</li>)}</ul>
+            {currentPlan!==key&&key!=="free"&&(
+              <button onClick={()=>handlePurchase(key)} disabled={!!purchasing} style={{...S.saveBtn,width:"100%",background:`linear-gradient(135deg,${p.color}cc,${p.color})`,opacity:purchasing===key?0.6:1}}>
+                {purchasing===key?"Opening...":inApp?`Join ${p.name} →`:`Subscribe at halliewho.com →`}
+              </button>
+            )}
           </div>
         ))}
       </div>
-      <div style={{background:"rgba(200,137,90,0.07)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:20,padding:"24px",textAlign:"center"}}>
-        <p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",fontStyle:"italic",lineHeight:1.7,marginBottom:18}}>Subscribe at halliewho.com. Your plan syncs automatically when you sign back in.</p>
-        <a href="https://halliewho.com" target="_blank" rel="noopener noreferrer" style={{display:"inline-block",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",borderRadius:24,padding:"13px 32px",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:700,textDecoration:"none",boxShadow:"0 4px 20px rgba(200,137,90,0.4)"}}>Visit halliewho.com →</a>
-        <p style={{fontSize:12,color:"#b08060",marginTop:12}}>Already subscribed? Sign out and back in to refresh.</p>
+      {inApp&&<button onClick={handleRestore} disabled={restoring} style={{...S.ghostBtn,width:"100%",textAlign:"center",opacity:restoring?0.6:1}}>{restoring?"Restoring...":"Restore Purchases"}</button>}
+      <div style={{textAlign:"center",fontSize:12,color:"#b08060",lineHeight:1.6}}>
+        {inApp?"Subscriptions auto-renew. Cancel anytime in Settings → Apple ID → Subscriptions.":<a href="https://halliewho.com" target="_blank" rel="noopener noreferrer" style={{color:"#c8895a"}}>Subscribe at halliewho.com →</a>}
       </div>
     </div>
   );
 }
-
 // ── ACCOUNT TAB ──
 function AccountTab({user,onLogout}){
   const [activeSection,setActiveSection]=useState(null);const [currentPw,setCurrentPw]=useState("");const [newPw,setNewPw]=useState("");const [confirmPw,setConfirmPw]=useState("");const [pwStatus,setPwStatus]=useState("");const [askMsg,setAskMsg]=useState("");const [askSent,setAskSent]=useState(false);const [askLoading,setAskLoading]=useState(false);
@@ -704,7 +740,7 @@ function IntentionBanner({user,onWrite}){const weekKey=`intention_${user.email}_
 
 function JourneyTab({entries,user}){const streak=calcStreak(entries);const thisMonth=new Date().toISOString().slice(0,7);const monthEntries=entries.filter(e=>e.date?.startsWith(thisMonth));const topMood=(()=>{const counts={};entries.forEach(e=>{if(e.mood?.label)counts[e.mood.label]=(counts[e.mood.label]||0)+1;});const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];return top?MOODS.find(m=>m.label===top[0]):null;})();const oneYearAgo=new Date();oneYearAgo.setFullYear(oneYearAgo.getFullYear()-1);const oneYearAgoStr=oneYearAgo.toISOString().split("T")[0];const onThisDay=entries.find(e=>e.date===oneYearAgoStr);return(<div style={{display:"flex",flexDirection:"column",gap:20}}><div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🌱 My Journey</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Your growth, all in one place</p></div><div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(155,126,184,0.2)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🖊️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>A note for your journey</span></div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,margin:0}}>{getWeeklyDeskNote()}</p><p style={{fontSize:11,color:"#b08060",marginTop:8}}>— Hallie 🌿</p></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:14}}>{[{icon:"📖",label:"Total Entries",value:entries.length},{icon:"🔥",label:"Current Streak",value:`${streak}d`},{icon:"📅",label:"This Month",value:monthEntries.length},{icon:"💭",label:"Top Mood",value:topMood?`${topMood.emoji} ${topMood.label}`:"—"}].map(s=>(<div key={s.label} style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:18,padding:"18px",textAlign:"center"}}><div style={{fontSize:26,marginBottom:6}}>{s.icon}</div><div style={{fontSize:22,fontWeight:800,color:"#7a4a1e",fontFamily:"'Lora',serif"}}>{s.value}</div><div style={{fontSize:11,color:"#b08060",marginTop:3,textTransform:"uppercase",letterSpacing:"0.4px"}}>{s.label}</div></div>))}</div>{onThisDay&&(<div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🗓️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>On this day, one year ago</span></div><p style={{fontFamily:"'Lora',serif",fontSize:15,fontWeight:600,color:"#5a2e0e",marginBottom:6}}>{onThisDay.title||"Untitled"}</p><p style={{fontFamily:"'Lora',serif",fontSize:13,color:"#7a5030",fontStyle:"italic",lineHeight:1.65}}>{(onThisDay.content||"").slice(0,160)}{(onThisDay.content||"").length>160?"…":""}</p></div>)}<MoodChart entries={entries}/><GrowthTree entries={entries}/><BadgesSection entries={entries} user={user}/><div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:20,padding:"20px 24px"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>This Month at a Glance</div><div style={{display:"flex",flexWrap:"wrap",gap:10}}>{(()=>{const tagCounts={};monthEntries.forEach(e=>e.tags?.forEach(t=>{tagCounts[t]=(tagCounts[t]||0)+1;}));return Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([tag,count])=>(<div key={tag} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:TAG_COLORS[tag]+"22",border:`1px solid ${TAG_COLORS[tag]}44`,borderRadius:12}}><span style={{fontSize:12,fontWeight:700,color:TAG_COLORS[tag]}}>{tag}</span><span style={{fontSize:11,color:"#b08060"}}>×{count}</span></div>));})()}{monthEntries.length===0&&<p style={{fontSize:13,color:"#b08060",fontStyle:"italic"}}>No entries yet this month — start writing! 🌱</p>}</div></div></div>);}
 
-function GentleNudge({entries,theme}){const T=theme||THEMES.original;const [dismissed,setDismissed]=useState(()=>store.get("nudge_"+(entries?.[0]?.user_email||""))||false);if(dismissed)return null;const lastEntry=entries[0];if(!lastEntry)return null;const daysSince=Math.floor((Date.now()-new Date(lastEntry.date).getTime())/(24*60*60*1000));if(daysSince<5)return null;return(<div style={{background:`linear-gradient(135deg,${T.accent}10,${T.accent}06)`,border:`1px dashed ${T.accent}40`,borderRadius:18,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:28}}>🌱</span><div style={{flex:1}}><div style={{fontWeight:700,color:T.accentDark,fontSize:14}}>We've missed you</div><div style={{fontSize:13,color:T.subtext,marginTop:2}}>It's been {daysSince} days since your last entry. No pressure — just here when you're ready. 🌿</div></div><button onClick={()=>{store.set("gentleNudgeDismissed",true);setDismissed(true);}} style={{background:"none",border:"none",color:T.subtext,fontSize:18,cursor:"pointer",padding:4}}>×</button></div>);}
+function GentleNudge({entries,theme}){const T=theme||THEMES.original;const [dismissed,setDismissed]=useState(()=>store.get("nudge_"+(entries?.[0]?.user_email||""))||false);if(dismissed)return null;const lastEntry=entries[0];if(!lastEntry)return null;const daysSince=Math.floor((Date.now()-new Date(lastEntry.date).getTime())/(24*60*60*1000));if(daysSince<5)return null;return(<div style={{background:`linear-gradient(135deg,${T.accent}10,${T.accent}06)`,border:`1px dashed ${T.accent}40`,borderRadius:18,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:28}}>🌱</span><div style={{flex:1}}><div style={{fontWeight:700,color:T.accentDark,fontSize:14}}>We've missed you</div><div style={{fontSize:13,color:T.subtext,marginTop:2}}>It's been {daysSince} days since your last entry. No pressure — just here when you're ready. 🌿</div></div><button onClick={()=>{store.set("nudge_"+(entries?.[0]?.user_email||"anon"),true);setDismissed(true);}} style={{background:"none",border:"none",color:T.subtext,fontSize:18,cursor:"pointer",padding:4}}>×</button></div>);}
 
 function GrowthTree({entries}){const count=entries.length;const stage=count===0?0:count<5?1:count<15?2:count<30?3:count<60?4:5;const trees=["🌱","🌿","🪴","🌳","🌲","🎋"];const labels=["Plant your seed","Sprouting","Growing","Rooted","Thriving","Flourishing"];const next=[1,5,15,30,60,Infinity];const prevMilestone=stage>0?next[stage-1]:0;const nextMilestone=next[stage];const progress=stage>=5?1:Math.min(1,(count-prevMilestone)/(nextMilestone-prevMilestone));return(<div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px",textAlign:"center"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>Your Growth</div><div style={{fontSize:64,marginBottom:8}}>{trees[stage]}</div><div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{labels[stage]}</div><div style={{fontSize:13,color:"#b08060",marginBottom:12}}>{count} {count===1?"entry":"entries"} written</div>{stage<5&&(<div style={{background:"rgba(200,137,90,0.1)",borderRadius:12,height:8,overflow:"hidden"}}><div style={{background:"linear-gradient(90deg,#c8895a,#d4956a)",height:"100%",width:`${progress*100}%`,transition:"width 0.5s",borderRadius:12}}/></div>)}{stage<5&&<div style={{fontSize:11,color:"#b08060",marginTop:6}}>{nextMilestone-count} more entries to {labels[stage+1]}</div>}</div>);}
 
