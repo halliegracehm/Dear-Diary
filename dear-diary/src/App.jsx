@@ -360,7 +360,7 @@ function UpgradeTab({currentPlan,user,onUpgradePlan}){
   const inApp=isNativeApp();
 
   async function handlePurchase(planKey){
-    if(!inApp){window.open("https://halliewho.com","_blank");return;}
+    if(!inApp){setMsg("To purchase, please use the My Inner Mind app downloaded from the App Store.");return;}
     setPurchasing(planKey);setMsg("");
     await rcLogin(user.email,user.email);
     const pkgId=planKey==="community"?"$rc_monthly":"offtherecord";
@@ -414,7 +414,7 @@ function UpgradeTab({currentPlan,user,onUpgradePlan}){
       {inApp&&<button onClick={handleRestore} disabled={restoring} style={{...S.ghostBtn,width:"100%",textAlign:"center",opacity:restoring?0.6:1}}>{restoring?"Restoring...":"Restore Purchases"}</button>}
       <div style={{textAlign:"center",fontSize:12,color:"#b08060",lineHeight:1.6}}>
         {inApp?"Subscriptions auto-renew. Cancel anytime in Settings → Apple ID → Subscriptions.":<a href="https://halliewho.com" target="_blank" rel="noopener noreferrer" style={{color:"#c8895a"}}>Subscribe at halliewho.com →</a>}
-     </div>
+      </div>
       <div style={{textAlign:"center",fontSize:12,color:"#b08060",lineHeight:1.8,display:"flex",gap:16,justifyContent:"center",flexWrap:"wrap"}}>
         <a href="https://halliewho.com/privacy-policy/" target="_blank" rel="noopener noreferrer" style={{color:"#c8895a",textDecoration:"underline"}}>Privacy Policy</a>
         <a href="https://halliewho.com/terms-of-use/" target="_blank" rel="noopener noreferrer" style={{color:"#c8895a",textDecoration:"underline"}}>Terms of Use</a>
