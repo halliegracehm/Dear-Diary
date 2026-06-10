@@ -360,7 +360,6 @@ function UpgradeTab({currentPlan,user,onUpgradePlan}){
   const inApp=isNativeApp();
 
   async function handlePurchase(planKey){
-    if(!inApp){setMsg("To purchase, please use the My Inner Mind app downloaded from the App Store.");return;}
     setPurchasing(planKey);setMsg("");
     await rcLogin(user.email,user.email);
     const pkgId=planKey==="community"?"$rc_monthly":"offtherecord";
@@ -405,13 +404,13 @@ function UpgradeTab({currentPlan,user,onUpgradePlan}){
             <ul style={{listStyle:"none",display:"flex",flexDirection:"column",gap:7,marginBottom:currentPlan!==key&&key!=="free"?14:0}}>{p.features.map(f=><li key={f} style={{fontSize:13,color:"#7a5030",display:"flex",gap:8}}><span style={{color:p.color,fontWeight:700,flexShrink:0}}>✓</span>{f}</li>)}</ul>
             {currentPlan!==key&&key!=="free"&&(
               <button onClick={()=>handlePurchase(key)} disabled={!!purchasing} style={{...S.saveBtn,width:"100%",background:`linear-gradient(135deg,${p.color}cc,${p.color})`,opacity:purchasing===key?0.6:1}}>
-                {purchasing===key?"Opening...":inApp?`Join ${p.name} →`:`Subscribe at halliewho.com →`}
+                {purchasing===key?"Opening...":`Join ${p.name} →`}
               </button>
             )}
           </div>
         ))}
       </div>
-      {inApp&&<button onClick={handleRestore} disabled={restoring} style={{...S.ghostBtn,width:"100%",textAlign:"center",opacity:restoring?0.6:1}}>{restoring?"Restoring...":"Restore Purchases"}</button>}
+      {<button onClick={handleRestore} disabled={restoring} style={{...S.ghostBtn,width:"100%",textAlign:"center",opacity:restoring?0.6:1}}>{restoring?"Restoring...":"Restore Purchases"}</button>}
       <div style={{textAlign:"center",fontSize:12,color:"#b08060",lineHeight:1.6}}>
         {inApp?"Subscriptions auto-renew. Cancel anytime in Settings → Apple ID → Subscriptions.":<a href="https://halliewho.com" target="_blank" rel="noopener noreferrer" style={{color:"#c8895a"}}>Subscribe at halliewho.com →</a>}
       </div>
