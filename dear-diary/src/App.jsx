@@ -333,7 +333,7 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
             <div style={{height:1,background:"linear-gradient(90deg,rgba(200,137,90,0.3),transparent)",marginBottom:24}}/>
             <p style={{fontFamily:"'Lora',serif",fontSize:16,lineHeight:1.9,color:"#6a4020",fontStyle:"italic",whiteSpace:"pre-wrap",marginBottom:32}}>{selectedEntry.content}</p>
             {isOTR&&(<div style={S.insightBox}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:insight?12:0}}><span style={{fontWeight:700,color:"#7a4a1e",fontSize:12,textTransform:"uppercase",letterSpacing:"0.5px"}}>✨ AI Reflection</span>{!insight&&<button onClick={()=>fetchInsight(selectedEntry)} disabled={insightLoading} style={S.softBtn}>{insightLoading?"Reflecting...":"Get Insight"}</button>}</div>{insightLoading&&<p style={{color:"#b08060",fontStyle:"italic",fontSize:14}}>Reading between the lines...</p>}{insight&&<p style={{fontFamily:"'Lora',serif",fontSize:15,lineHeight:1.75,color:"#6a4020",fontStyle:"italic"}}>{insight}</p>}</div>)}
-            {!isOTR&&(<div style={{...S.insightBox,textAlign:"center"}}><p style={{fontSize:13,color:"#9a7050",marginBottom:10}}>✨ AI Reflections are available on the Off the Record plan.</p><a href="https://halliewho.com" target="_blank" rel="noopener noreferrer" style={{...S.saveBtn,display:"inline-block",textDecoration:"none",fontSize:13,padding:"8px 20px"}}>Upgrade at halliewho.com →</a></div>)}
+            {!isOTR&&(<div style={{...S.insightBox,textAlign:"center"}}><p style={{fontSize:13,color:"#9a7050",marginBottom:10}}>✨ AI Reflections are available on the Off the Record plan.</p></div>)}
             <div style={{display:"flex",justifyContent:"space-between",marginTop:24}}><button onClick={()=>deleteEntry(selectedEntry)} style={S.deleteBtn}>🗑 Delete</button><button onClick={()=>startEdit(selectedEntry)} style={S.saveBtn}>✏️ Edit</button></div>
           </div>
         )}
@@ -409,10 +409,10 @@ function UpgradeTab({currentPlan,user,onUpgradePlan}){
             )}
           </div>
         ))}
-      </div>
+     </div>
       {<button onClick={handleRestore} disabled={restoring} style={{...S.ghostBtn,width:"100%",textAlign:"center",opacity:restoring?0.6:1}}>{restoring?"Restoring...":"Restore Purchases"}</button>}
       <div style={{textAlign:"center",fontSize:12,color:"#b08060",lineHeight:1.6}}>
-        {inApp?"Subscriptions auto-renew. Cancel anytime in Settings → Apple ID → Subscriptions.":<a href="https://halliewho.com" target="_blank" rel="noopener noreferrer" style={{color:"#c8895a"}}>Subscribe at halliewho.com →</a>}
+        Subscriptions auto-renew. Cancel anytime in Settings → Apple ID → Subscriptions.
       </div>
       <div style={{textAlign:"center",fontSize:12,color:"#b08060",lineHeight:1.8,display:"flex",gap:16,justifyContent:"center",flexWrap:"wrap"}}>
         <a href="https://halliewho.com/privacy-policy/" target="_blank" rel="noopener noreferrer" style={{color:"#c8895a",textDecoration:"underline"}}>Privacy Policy</a>
@@ -431,7 +431,7 @@ function AccountTab({user,onLogout}){
   const plan=PLANS[user.plan];
   const sections=[{id:"plan",icon:"💎",label:"My Plan"},{id:"password",icon:"🔑",label:"Change Password"},{id:"ask",icon:"💌",label:"Ask Hallie"},{id:"faq",icon:"🌿",label:"Help & FAQ"},{id:"delete",icon:"🗑️",label:"Delete Account"}];
   const FAQ=[
-    {q:"How do I upgrade my plan?",a:"Visit halliewho.com to subscribe. Your plan unlocks here automatically when you sign back in."},
+    {q:"How do I upgrade my plan?",a:"Tap Plans & Upgrade from your profile menu to subscribe directly in the app. Your plan unlocks immediately."},
     {q:"How do I cancel my subscription?",a:"Email hello@halliewho.com and we'll take care of it within 24 hours. No hard feelings — ever."},
     {q:"Is my journal private?",a:"Yes. Your entries are private by default. You choose what you share to the community feed."},
     {q:"What's Story of the Month?",a:"Each month, Hallie reads community submissions and may feature a story anonymously on My Sister's Closet podcast."},
@@ -456,8 +456,6 @@ function AccountTab({user,onLogout}){
                 <div style={{fontSize:20,fontWeight:700,color:"#7a4a1e",marginBottom:10}}>{plan.price}</div>
                 <ul style={{listStyle:"none",display:"flex",flexDirection:"column",gap:8,textAlign:"left"}}>{plan.features.map(f=><li key={f} style={{fontSize:13,color:"#7a5030",display:"flex",gap:8}}><span style={{color:plan.color,fontWeight:700}}>✓</span>{f}</li>)}</ul>
               </div>
-              {user.plan!=="offtherecord"&&<a href="https://halliewho.com" target="_blank" rel="noopener noreferrer" style={{display:"block",textAlign:"center",background:"linear-gradient(135deg,#d4956a,#c8895a)",color:"#fff",borderRadius:20,padding:"12px",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,textDecoration:"none"}}>Upgrade at halliewho.com →</a>}
-              {user.plan!=="free"&&<div style={{textAlign:"center",marginTop:10,fontSize:12,color:"#b08060"}}>To manage billing, email <strong>hello@halliewho.com</strong></div>}
             </div>
           )}
           {activeSection==="password"&&s.id==="password"&&(
