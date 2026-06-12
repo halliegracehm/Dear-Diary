@@ -655,7 +655,7 @@ function SharePromptCard({prompt, onClose}){
       if(ctx.measureText(test).width > W-320 && line){lines.push(line.trim());line="";}
       line += word + " ";
     }
-    if(line) lines.push('"' + line.trim());
+    if(line) lines.push(line.trim());
     if(lines.length > 0) lines[0] = '"' + lines[0];
     const lastIdx = lines.length - 1;
     lines[lastIdx] = lines[lastIdx] + '"';
