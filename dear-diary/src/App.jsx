@@ -362,7 +362,7 @@ function UpgradeTab({currentPlan,user,onUpgradePlan}){
   async function handlePurchase(planKey){
     setPurchasing(planKey);setMsg("");
     await rcLogin(user.email,user.email);
-    const pkgId=planKey==="community"?"$rc_monthly":"offtherecord";
+    const pkgId=planKey==="community"?"community2":"offtherecord2";
     const result=await rcPurchase(pkgId);
     if(result.status==="SUCCESS"){
       const newPlan=await rcGetPlan(user.email);
