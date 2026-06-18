@@ -25,6 +25,17 @@
 
     <!-- ── Favicon ── -->
     <link rel="icon" type="image/png" sizes="32x32" href="/icon-192.png" />
+    <script 
+        async 
+        onload="nativelyOnLoad()" 
+        src="https://cdn.jsdelivr.net/npm/natively@2.20.0/natively-frontend.min.js">
+    </script>
+    <script>
+        function nativelyOnLoad() {
+            window.natively.setDebug(true);
+            console.log("✅ Natively SDK loaded successfully.");
+        }
+    </script>
   </head>
   <body>
     <div id="root"></div>
