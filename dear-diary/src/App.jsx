@@ -649,7 +649,7 @@ function SharePromptCard({prompt, onClose}){
     ctx.fillStyle = "#c8895a";
     ctx.font = "bold 28px sans-serif";
     ctx.letterSpacing = "4px";
-    ctx.fillText("THIS WEEK'S PROMPT", W/2, 330);
+    ctx.fillText("BUILD YOUR INNER WORLD 🌿", W/2, 330);
 
     // Prompt text - wrapped
     ctx.fillStyle = "#5a2e0e";
