@@ -278,7 +278,7 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
             </div>
           </div>
           <nav style={{display:"flex",gap:2,width:"100%",justifyContent:"space-around"}}>
-            {[["journal","📖"],["nest","🪹"],["journey","🌱"],["challenges","🏆"],["letters","💌"],["community","🌿"]].map(([t,icon])=>(
+            {[["journal","📖"],["nest","🪹"],["grove","🌲"], ["journey","🌱"],["challenges","🏆"],["letters","💌"],["community","🌿"]].map(([t,icon])=>(
               <button key={t} onClick={()=>handleTabChange(t)} style={{...S.navBtn,...(tab===t?S.navBtnActive:{}),padding:"5px 8px",fontSize:11,display:"flex",flexDirection:"column",alignItems:"center",gap:2,flex:1}}>
                 <span style={{fontSize:18}}>{icon}</span><span style={{fontSize:9,textTransform:"capitalize",fontWeight:tab===t?700:500}}>{t}</span>
               </button>
@@ -347,7 +347,7 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
         {tab==="journey"&&<JourneyTab entries={entries} user={user}/>}
         {tab==="letters"&&<LettersTab user={user}/>}
         {tab==="challenges"&&<ChallengesTab entries={entries} user={user} onWrite={(prefill)=>{handleTabChange("journal");startNew(prefill);}}/>}
-        {tab==="community"&&<CommunitiesTab user={user} userTier={user.plan} onUpgrade={()=>handleTabChange("upgrade")}/>}
+        {tab==="community"&&<CommunitiesTab user={user} userTier={user.plan} onUpgrade={()=>handleTabChange("upgrade")}/>}{tab==="grove"&&<GroveTab user={user}/>}
       </main>
       {!pwaDismissed&&<PWABanner prompt={pwaPrompt} onDismiss={()=>{setPwaDismissed(true);onPwaInstalled();}}/>}
     </div>
@@ -750,7 +750,92 @@ function IntentionBanner({user,onWrite}){const weekKey=`intention_${user.email}_
 
 function JourneyTab({entries,user}){const streak=calcStreak(entries);const thisMonth=new Date().toISOString().slice(0,7);const monthEntries=entries.filter(e=>e.date?.startsWith(thisMonth));const topMood=(()=>{const counts={};entries.forEach(e=>{if(e.mood?.label)counts[e.mood.label]=(counts[e.mood.label]||0)+1;});const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];return top?MOODS.find(m=>m.label===top[0]):null;})();const oneYearAgo=new Date();oneYearAgo.setFullYear(oneYearAgo.getFullYear()-1);const oneYearAgoStr=oneYearAgo.toISOString().split("T")[0];const onThisDay=entries.find(e=>e.date===oneYearAgoStr);return(<div style={{display:"flex",flexDirection:"column",gap:20}}><div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>🌱 My Journey</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Your growth, all in one place</p></div><div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.08),rgba(200,137,90,0.05))",border:"1px solid rgba(155,126,184,0.2)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🖊️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>A note for your journey</span></div><p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#5a2e0e",fontStyle:"italic",lineHeight:1.75,margin:0}}>{getWeeklyDeskNote()}</p><p style={{fontSize:11,color:"#b08060",marginTop:8}}>— Hallie 🌿</p></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:14}}>{[{icon:"📖",label:"Total Entries",value:entries.length},{icon:"🔥",label:"Current Streak",value:`${streak}d`},{icon:"📅",label:"This Month",value:monthEntries.length},{icon:"💭",label:"Top Mood",value:topMood?`${topMood.emoji} ${topMood.label}`:"—"}].map(s=>(<div key={s.label} style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:18,padding:"18px",textAlign:"center"}}><div style={{fontSize:26,marginBottom:6}}>{s.icon}</div><div style={{fontSize:22,fontWeight:800,color:"#7a4a1e",fontFamily:"'Lora',serif"}}>{s.value}</div><div style={{fontSize:11,color:"#b08060",marginTop:3,textTransform:"uppercase",letterSpacing:"0.4px"}}>{s.label}</div></div>))}</div>{onThisDay&&(<div style={{background:"linear-gradient(135deg,rgba(155,126,184,0.1),rgba(200,137,90,0.07))",border:"1px solid rgba(155,126,184,0.25)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:16}}>🗓️</span><span style={{fontWeight:700,color:"#9b7eb8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.6px"}}>On this day, one year ago</span></div><p style={{fontFamily:"'Lora',serif",fontSize:15,fontWeight:600,color:"#5a2e0e",marginBottom:6}}>{onThisDay.title||"Untitled"}</p><p style={{fontFamily:"'Lora',serif",fontSize:13,color:"#7a5030",fontStyle:"italic",lineHeight:1.65}}>{(onThisDay.content||"").slice(0,160)}{(onThisDay.content||"").length>160?"…":""}</p></div>)}<MoodChart entries={entries}/><GrowthTree entries={entries}/><BadgesSection entries={entries} user={user}/><div style={{background:"linear-gradient(135deg,rgba(122,74,30,0.08),rgba(200,137,90,0.06))",border:"1px solid rgba(122,74,30,0.15)",borderRadius:20,padding:"20px 24px"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>This Month at a Glance</div><div style={{display:"flex",flexWrap:"wrap",gap:10}}>{(()=>{const tagCounts={};monthEntries.forEach(e=>e.tags?.forEach(t=>{tagCounts[t]=(tagCounts[t]||0)+1;}));return Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([tag,count])=>(<div key={tag} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:TAG_COLORS[tag]+"22",border:`1px solid ${TAG_COLORS[tag]}44`,borderRadius:12}}><span style={{fontSize:12,fontWeight:700,color:TAG_COLORS[tag]}}>{tag}</span><span style={{fontSize:11,color:"#b08060"}}>×{count}</span></div>));})()}{monthEntries.length===0&&<p style={{fontSize:13,color:"#b08060",fontStyle:"italic"}}>No entries yet this month — start writing! 🌱</p>}</div></div></div>);}
 
-function GentleNudge({entries,theme}){const T=theme||THEMES.original;const [dismissed,setDismissed]=useState(()=>store.get("nudge_"+(entries?.[0]?.user_email||""))||false);if(dismissed)return null;const lastEntry=entries[0];if(!lastEntry)return null;const daysSince=Math.floor((Date.now()-new Date(lastEntry.date).getTime())/(24*60*60*1000));if(daysSince<5)return null;return(<div style={{background:`linear-gradient(135deg,${T.accent}10,${T.accent}06)`,border:`1px dashed ${T.accent}40`,borderRadius:18,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:28}}>🌱</span><div style={{flex:1}}><div style={{fontWeight:700,color:T.accentDark,fontSize:14}}>We've missed you</div><div style={{fontSize:13,color:T.subtext,marginTop:2}}>It's been {daysSince} days since your last entry. No pressure — just here when you're ready. 🌿</div></div><button onClick={()=>{store.set("nudge_"+(entries?.[0]?.user_email||"anon"),true);setDismissed(true);}} style={{background:"none",border:"none",color:T.subtext,fontSize:18,cursor:"pointer",padding:4}}>×</button></div>);}
+const GROVE_MOODS=[{emoji:"🌱",label:"Grounded"},{emoji:"🌊",label:"Overwhelmed"},{emoji:"🔥",label:"Fired Up"},{emoji:"🌙",label:"Tired"},{emoji:"✨",label:"Hopeful"}];
+
+function GroveTab({user}){
+  const [entries,setEntries]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [selectedMood,setSelectedMood]=useState(null);
+  const [note,setNote]=useState("");
+  const [saving,setSaving]=useState(false);
+
+  useEffect(()=>{loadEntries();},[]);
+
+  async function loadEntries(){
+    setLoading(true);
+    try{
+      const data=await sbGet("grove_entries",`user_email=eq.${encodeURIComponent(user.email)}&order=created_at.desc&limit=10`);
+      if(Array.isArray(data))setEntries(data);
+    }catch(e){console.error(e);}
+    setLoading(false);
+  }
+
+  async function checkIn(){
+    if(!selectedMood)return;
+    setSaving(true);
+    try{
+      await sbInsert("grove_entries",{
+        id:`${user.email}_${Date.now()}`,
+        user_email:user.email,
+        mood:`${selectedMood.emoji} ${selectedMood.label}`,
+        note:note||null,
+      });
+      setSelectedMood(null);
+      setNote("");
+      await loadEntries();
+      spawnConfetti();
+    }catch(e){console.error(e);}
+    setSaving(false);
+  }
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+      <div style={{textAlign:"center",padding:"20px 0 8px"}}>
+        <div style={{fontSize:44,marginBottom:8}}>🌲</div>
+        <h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e",fontWeight:600}}>The Grove</h2>
+        <p style={{fontSize:13,color:"#b08060",fontStyle:"italic",marginTop:4}}>How are you feeling right now, sister?</p>
+      </div>
+
+      <div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(122,140,110,0.2)",borderRadius:20,padding:"20px"}}>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",marginBottom:14}}>
+          {GROVE_MOODS.map(m=>(
+            <button key={m.label} onClick={()=>setSelectedMood(selectedMood?.label===m.label?null:m)}
+              style={{padding:"10px 16px",borderRadius:16,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,
+                border:`1.5px solid ${selectedMood?.label===m.label?"#7a8c6e":"rgba(122,140,110,0.25)"}`,
+                background:selectedMood?.label===m.label?"rgba(122,140,110,0.15)":"transparent",
+                color:selectedMood?.label===m.label?"#5a6c4e":"#8a6040"}}>
+              {m.emoji} {m.label}
+            </button>
+          ))}
+        </div>
+        <textarea style={{...S.textarea,minHeight:70,marginBottom:12}} placeholder="Want to add a note? (optional)" value={note} onChange={e=>setNote(e.target.value)} rows={2}/>
+        <button onClick={checkIn} disabled={!selectedMood||saving}
+          style={{...S.saveBtn,width:"100%",background:"linear-gradient(135deg,#8ca07e,#7a8c6e)",opacity:!selectedMood||saving?0.5:1}}>
+          {saving?"Checking in...":"Check In 🌿"}
+        </button>
+      </div>
+
+      <div>
+        <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>Recent Check-Ins</div>
+        {loading?(
+          <div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic"}}>Loading...</div>
+        ):entries.length===0?(
+          <div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic",fontFamily:"'Lora',serif"}}>No check-ins yet — start above. 🌱</div>
+        ):(
+          entries.map(e=>(
+            <div key={e.id} style={{background:"rgba(255,252,246,0.93)",border:"1px solid rgba(122,140,110,0.15)",borderRadius:14,padding:"12px 16px",marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:e.note?6:0}}>
+                <span style={{fontWeight:700,color:"#5a6c4e",fontSize:14}}>{e.mood}</span>
+                <span style={{fontSize:11,color:"#b08060"}}>{new Date(e.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
+              </div>
+              {e.note&&<p style={{fontSize:13,color:"#8a6040",fontStyle:"italic",fontFamily:"'Lora',serif"}}>{e.note}</p>}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}function GentleNudge({entries,theme}){const T=theme||THEMES.original;const [dismissed,setDismissed]=useState(()=>store.get("nudge_"+(entries?.[0]?.user_email||""))||false);if(dismissed)return null;const lastEntry=entries[0];if(!lastEntry)return null;const daysSince=Math.floor((Date.now()-new Date(lastEntry.date).getTime())/(24*60*60*1000));if(daysSince<5)return null;return(<div style={{background:`linear-gradient(135deg,${T.accent}10,${T.accent}06)`,border:`1px dashed ${T.accent}40`,borderRadius:18,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:28}}>🌱</span><div style={{flex:1}}><div style={{fontWeight:700,color:T.accentDark,fontSize:14}}>We've missed you</div><div style={{fontSize:13,color:T.subtext,marginTop:2}}>It's been {daysSince} days since your last entry. No pressure — just here when you're ready. 🌿</div></div><button onClick={()=>{store.set("nudge_"+(entries?.[0]?.user_email||"anon"),true);setDismissed(true);}} style={{background:"none",border:"none",color:T.subtext,fontSize:18,cursor:"pointer",padding:4}}>×</button></div>);}
 
 function GrowthTree({entries}){const count=entries.length;const stage=count===0?0:count<5?1:count<15?2:count<30?3:count<60?4:5;const trees=["🌱","🌿","🪴","🌳","🌲","🎋"];const labels=["Plant your seed","Sprouting","Growing","Rooted","Thriving","Flourishing"];const next=[1,5,15,30,60,Infinity];const prevMilestone=stage>0?next[stage-1]:0;const nextMilestone=next[stage];const progress=stage>=5?1:Math.min(1,(count-prevMilestone)/(nextMilestone-prevMilestone));return(<div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px",textAlign:"center"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>Your Growth</div><div style={{fontSize:64,marginBottom:8}}>{trees[stage]}</div><div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{labels[stage]}</div><div style={{fontSize:13,color:"#b08060",marginBottom:12}}>{count} {count===1?"entry":"entries"} written</div>{stage<5&&(<div style={{background:"rgba(200,137,90,0.1)",borderRadius:12,height:8,overflow:"hidden"}}><div style={{background:"linear-gradient(90deg,#c8895a,#d4956a)",height:"100%",width:`${progress*100}%`,transition:"width 0.5s",borderRadius:12}}/></div>)}{stage<5&&<div style={{fontSize:11,color:"#b08060",marginTop:6}}>{nextMilestone-count} more entries to {labels[stage+1]}</div>}</div>);}
 
