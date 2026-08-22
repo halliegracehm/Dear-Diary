@@ -752,6 +752,43 @@ function JourneyTab({entries,user}){const streak=calcStreak(entries);const thisM
 
 const GROVE_MOODS=[{emoji:"🌱",label:"Grounded"},{emoji:"🌊",label:"Overwhelmed"},{emoji:"🔥",label:"Fired Up"},{emoji:"🌙",label:"Tired"},{emoji:"✨",label:"Hopeful"}];
 
+const GROVE_CATEGORIES=["Body Love","Stillness & Peace","Heart & Connection","Rest & Restore","Joy & Play","Morning & Intention"];
+
+const GROVE_ACTIVITIES=[
+  {key:"bath",emoji:"🛁",name:"Draw a slow bath",desc:"Add Epsom salts, dim the lights. Let it be a ritual, not a rush.",category:"Body Love"},
+  {key:"stretch",emoji:"🧘",name:"10 minutes of gentle stretching",desc:"Move your body with intention. Feel every muscle say thank you.",category:"Body Love"},
+  {key:"walk",emoji:"🚶",name:"A mindful walk outside",desc:"No destination. Just move and notice what's beautiful around you.",category:"Body Love"},
+  {key:"water",emoji:"💧",name:"Drink 3 full glasses of water",desc:"Your body is asking for this. Hydration is self love.",category:"Body Love"},
+  {key:"skincare",emoji:"✨",name:"Full skincare ritual",desc:"Cleanse, moisturize, massage. Touch yourself with genuine tenderness.",category:"Body Love"},
+  {key:"dance",emoji:"💃",name:"Dance it out",desc:"Put on a song that moves you and just go. No one is watching.",category:"Body Love"},
+  {key:"nourish",emoji:"🥗",name:"Cook something nourishing",desc:"A meal made with love for yourself. No guilt, just care.",category:"Body Love"},
+  {key:"candle",emoji:"🕯️",name:"Candle breathing moment",desc:"Light a candle. Breathe in for 4, hold for 4, out for 6. Five rounds.",category:"Stillness & Peace"},
+  {key:"tea",emoji:"🍵",name:"Slow tea ceremony",desc:"Make your favorite warm drink. Sit down. No phone. Just taste it.",category:"Stillness & Peace"},
+  {key:"silence",emoji:"🌙",name:"10 minutes of silence",desc:"No music, no scrolling. Just you and the quiet. Let it feel good.",category:"Stillness & Peace"},
+  {key:"breathe",emoji:"🌬️",name:"Box breathing practice",desc:"In for 4, hold for 4, out for 4, hold for 4. Repeat 5 times.",category:"Stillness & Peace"},
+  {key:"sunrise",emoji:"🌅",name:"Watch the sky change",desc:"Sunrise or sunset — step outside and witness something beautiful.",category:"Stillness & Peace"},
+  {key:"barefoot",emoji:"🌿",name:"Barefoot on the earth",desc:"Find grass, sand, or soil. Stand on it barefoot. Just breathe.",category:"Stillness & Peace"},
+  {key:"voicenote",emoji:"💌",name:"Send a voice note of love",desc:"Tell someone you're thinking of them. No reason needed.",category:"Heart & Connection"},
+  {key:"gratitude",emoji:"🙏",name:"Write 5 things you're grateful for",desc:"Real, specific things. Not generic. Things that actually moved you today.",category:"Heart & Connection"},
+  {key:"letter",emoji:"📝",name:"Write a letter to your future self",desc:"Tell her what you're working through. Tell her she's going to be okay.",category:"Heart & Connection"},
+  {key:"compliment",emoji:"💛",name:"Say something kind to yourself",desc:"In the mirror, out loud. Your name + something you genuinely love about yourself.",category:"Heart & Connection"},
+  {key:"forgive",emoji:"🌸",name:"Forgive yourself for something",desc:'Write it down then write: "I release this with love." Mean it.',category:"Heart & Connection"},
+  {key:"callsomeone",emoji:"📞",name:"Call someone you love",desc:"Not text — call. Let your voice be heard. Let theirs warm you.",category:"Heart & Connection"},
+  {key:"nap",emoji:"😴",name:"Take a guilt-free nap",desc:"Set a timer for 20-30 minutes. Rest is productive. You deserve this.",category:"Rest & Restore"},
+  {key:"earlybed",emoji:"🌙",name:"Go to bed 30 min early",desc:"Create a wind-down ritual. Your nervous system will thank you.",category:"Rest & Restore"},
+  {key:"journal",emoji:"📓",name:"Brain dump journaling",desc:"Write whatever is in your head for 10 minutes. Don't edit. Just release.",category:"Rest & Restore"},
+  {key:"offline",emoji:"📵",name:"1 hour completely offline",desc:"Put the phone in another room. No peeking. Just be present.",category:"Rest & Restore"},
+  {key:"cozy",emoji:"🧸",name:"Create a cozy moment",desc:"Soft blanket, warm drink, something comforting. Let yourself just be held.",category:"Rest & Restore"},
+  {key:"create",emoji:"🎨",name:"Make something creative",desc:"Draw, write, cook, build — anything made by your hands for joy.",category:"Joy & Play"},
+  {key:"laugh",emoji:"😂",name:"Watch something that makes you laugh",desc:"Belly laughs are medicine. Give yourself 20 minutes of pure joy.",category:"Joy & Play"},
+  {key:"music",emoji:"🎵",name:"Full album listen",desc:"Put on something you love. Lie down. Just listen all the way through.",category:"Joy & Play"},
+  {key:"flowers",emoji:"🌸",name:"Buy yourself flowers",desc:"Or pick something beautiful from outside. Put it where you'll see it.",category:"Joy & Play"},
+  {key:"newplace",emoji:"🗺️",name:"Go somewhere new",desc:"A coffee shop, a street, a park you've never visited. Novelty is joy.",category:"Joy & Play"},
+  {key:"morning",emoji:"☀️",name:"Intentional morning",desc:"Before your phone — water, stretch, one deep breath, one intention set.",category:"Morning & Intention"},
+  {key:"intention",emoji:"🌱",name:"Set a daily intention",desc:"Write one word or sentence that will guide your day. Return to it.",category:"Morning & Intention"},
+  {key:"affirmmorning",emoji:"🪞",name:"Morning mirror affirmation",desc:'Look yourself in the eyes and say: "Today I choose myself." Mean it.',category:"Morning & Intention"},
+];
+
 function GroveTab({user}){
   const [entries,setEntries]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -759,7 +796,13 @@ function GroveTab({user}){
   const [note,setNote]=useState("");
   const [saving,setSaving]=useState(false);
 
-  useEffect(()=>{loadEntries();},[]);
+  const [enabledKeys,setEnabledKeys]=useState(null);
+  const [todayCompletions,setTodayCompletions]=useState([]);
+  const [selectedActivities,setSelectedActivities]=useState([]);
+  const [completingActivities,setCompletingActivities]=useState(false);
+  const [customizing,setCustomizing]=useState(false);
+
+  useEffect(()=>{loadEntries();loadPrefs();loadTodayActivities();},[]);
 
   async function loadEntries(){
     setLoading(true);
@@ -768,6 +811,27 @@ function GroveTab({user}){
       if(Array.isArray(data))setEntries(data);
     }catch(e){console.error(e);}
     setLoading(false);
+  }
+
+  async function loadPrefs(){
+    try{
+      const data=await sbGet("grove_activity_prefs",`user_email=eq.${encodeURIComponent(user.email)}`);
+      if(Array.isArray(data)&&data.length&&Array.isArray(data[0].enabled_activities)&&data[0].enabled_activities.length){
+        setEnabledKeys(new Set(data[0].enabled_activities));
+      }else{
+        setEnabledKeys(new Set(GROVE_ACTIVITIES.map(a=>a.key)));
+      }
+    }catch(e){
+      setEnabledKeys(new Set(GROVE_ACTIVITIES.map(a=>a.key)));
+    }
+  }
+
+  async function loadTodayActivities(){
+    try{
+      const today=getTodayStr();
+      const data=await sbGet("grove_activity_log",`user_email=eq.${encodeURIComponent(user.email)}&date=eq.${today}`);
+      if(Array.isArray(data))setTodayCompletions(data.map(d=>d.activity_key));
+    }catch(e){console.error(e);}
   }
 
   async function checkIn(){
@@ -787,6 +851,55 @@ function GroveTab({user}){
     }catch(e){console.error(e);}
     setSaving(false);
   }
+
+  function toggleSelectActivity(key){
+    const remaining=5-todayCompletions.length;
+    if(selectedActivities.includes(key)){
+      setSelectedActivities(selectedActivities.filter(k=>k!==key));
+    }else{
+      if(selectedActivities.length>=remaining)return;
+      setSelectedActivities([...selectedActivities,key]);
+    }
+  }
+
+  async function completeSelectedActivities(){
+    if(selectedActivities.length===0)return;
+    setCompletingActivities(true);
+    const today=getTodayStr();
+    try{
+      for(const key of selectedActivities){
+        const activity=GROVE_ACTIVITIES.find(a=>a.key===key);
+        if(!activity)continue;
+        await sbInsert("grove_activity_log",{
+          id:`${user.email}_${key}_${Date.now()}`,
+          user_email:user.email,
+          activity_key:key,
+          activity_label:activity.name,
+          activity_emoji:activity.emoji,
+          date:today,
+        });
+      }
+      setTodayCompletions([...todayCompletions,...selectedActivities]);
+      setSelectedActivities([]);
+      spawnConfetti();
+    }catch(e){console.error(e);}
+    setCompletingActivities(false);
+  }
+
+  async function toggleActivityPref(key){
+    const next=new Set(enabledKeys);
+    if(next.has(key))next.delete(key);else next.add(key);
+    setEnabledKeys(next);
+    try{
+      await sbUpsert("grove_activity_prefs",{
+        user_email:user.email,
+        enabled_activities:Array.from(next),
+      });
+    }catch(e){console.error(e);}
+  }
+
+  const remaining=5-todayCompletions.length;
+  const enabledActivities=enabledKeys?GROVE_ACTIVITIES.filter(a=>enabledKeys.has(a.key)):[];
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
@@ -816,6 +929,78 @@ function GroveTab({user}){
       </div>
 
       <div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px"}}>Today's Self-Care Rituals</div>
+          <button onClick={()=>setCustomizing(!customizing)} style={{...S.ghostBtn,padding:"4px 12px",fontSize:11}}>
+            {customizing?"Done":"Customize"}
+          </button>
+        </div>
+
+        {customizing?(
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            <p style={{fontSize:12,color:"#b08060",fontStyle:"italic"}}>Turn off any activities you never want to see. Everything is on by default.</p>
+            {GROVE_CATEGORIES.map(cat=>(
+              <div key={cat}>
+                <div style={{fontSize:11,fontWeight:700,color:"#7a8c6e",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>{cat}</div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {GROVE_ACTIVITIES.filter(a=>a.category===cat).map(a=>(
+                    <label key={a.key} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"rgba(255,252,246,0.9)",border:"1px solid rgba(122,140,110,0.15)",borderRadius:12,cursor:"pointer"}}>
+                      <input type="checkbox" checked={enabledKeys?enabledKeys.has(a.key):true} onChange={()=>toggleActivityPref(a.key)} style={{accentColor:"#7a8c6e",width:16,height:16}}/>
+                      <span style={{fontSize:16}}>{a.emoji}</span>
+                      <span style={{fontSize:13,color:"#5a2e0e"}}>{a.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ):todayCompletions.length>=5?(
+          <div style={{textAlign:"center",padding:"30px 20px",background:"rgba(255,252,246,0.93)",border:"1px solid rgba(122,140,110,0.15)",borderRadius:20}}>
+            <div style={{fontSize:36,marginBottom:10}}>🌟</div>
+            <p style={{fontFamily:"'Lora',serif",fontStyle:"italic",color:"#5a6c4e",fontSize:15,lineHeight:1.7}}>You completed all 5 rituals today. Your grove is glowing. 🌿</p>
+          </div>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            {GROVE_CATEGORIES.map(cat=>{
+              const catActs=enabledActivities.filter(a=>a.category===cat);
+              if(!catActs.length)return null;
+              return(
+                <div key={cat}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#7a8c6e",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>{cat}</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {catActs.map(a=>{
+                      const isDone=todayCompletions.includes(a.key);
+                      const isSelected=selectedActivities.includes(a.key);
+                      return(
+                        <div key={a.key} onClick={()=>!isDone&&toggleSelectActivity(a.key)}
+                          style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:14,cursor:isDone?"default":"pointer",
+                            background:isDone?"rgba(212,168,67,0.08)":isSelected?"rgba(122,140,110,0.15)":"rgba(255,252,246,0.93)",
+                            border:`1px solid ${isDone?"rgba(212,168,67,0.2)":isSelected?"#7a8c6e":"rgba(122,140,110,0.15)"}`,opacity:isDone?0.6:1}}>
+                          <span style={{fontSize:22}}>{a.emoji}</span>
+                          <div style={{flex:1}}>
+                            <div style={{fontSize:14,fontWeight:600,color:"#5a2e0e"}}>{a.name}</div>
+                            <div style={{fontSize:11,color:"#b08060"}}>{a.desc}</div>
+                          </div>
+                          <div style={{width:22,height:22,borderRadius:"50%",border:"1px solid rgba(122,140,110,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,
+                            background:isDone?"#d4a843":isSelected?"#7a8c6e":"transparent",color:isDone||isSelected?"#fff":"transparent"}}>
+                            {isDone||isSelected?"✓":""}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+            <button onClick={completeSelectedActivities} disabled={selectedActivities.length===0||completingActivities}
+              style={{...S.saveBtn,width:"100%",background:"linear-gradient(135deg,#d4a843,#c8895a)",opacity:selectedActivities.length===0||completingActivities?0.5:1}}>
+              {completingActivities?"Blooming...":`Complete ${selectedActivities.length||""} & Bloom 🌿`}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div>
         <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>Recent Check-Ins</div>
         {loading?(
           <div style={{textAlign:"center",padding:"20px",color:"#b08060",fontStyle:"italic"}}>Loading...</div>
@@ -835,7 +1020,8 @@ function GroveTab({user}){
       </div>
     </div>
   );
-}function GentleNudge({entries,theme}){const T=theme||THEMES.original;const [dismissed,setDismissed]=useState(()=>store.get("nudge_"+(entries?.[0]?.user_email||""))||false);if(dismissed)return null;const lastEntry=entries[0];if(!lastEntry)return null;const daysSince=Math.floor((Date.now()-new Date(lastEntry.date).getTime())/(24*60*60*1000));if(daysSince<5)return null;return(<div style={{background:`linear-gradient(135deg,${T.accent}10,${T.accent}06)`,border:`1px dashed ${T.accent}40`,borderRadius:18,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:28}}>🌱</span><div style={{flex:1}}><div style={{fontWeight:700,color:T.accentDark,fontSize:14}}>We've missed you</div><div style={{fontSize:13,color:T.subtext,marginTop:2}}>It's been {daysSince} days since your last entry. No pressure — just here when you're ready. 🌿</div></div><button onClick={()=>{store.set("nudge_"+(entries?.[0]?.user_email||"anon"),true);setDismissed(true);}} style={{background:"none",border:"none",color:T.subtext,fontSize:18,cursor:"pointer",padding:4}}>×</button></div>);}
+}
+function GentleNudge({entries,theme}){const T=theme||THEMES.original;const [dismissed,setDismissed]=useState(()=>store.get("nudge_"+(entries?.[0]?.user_email||""))||false);if(dismissed)return null;const lastEntry=entries[0];if(!lastEntry)return null;const daysSince=Math.floor((Date.now()-new Date(lastEntry.date).getTime())/(24*60*60*1000));if(daysSince<5)return null;return(<div style={{background:`linear-gradient(135deg,${T.accent}10,${T.accent}06)`,border:`1px dashed ${T.accent}40`,borderRadius:18,padding:"14px 20px",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:28}}>🌱</span><div style={{flex:1}}><div style={{fontWeight:700,color:T.accentDark,fontSize:14}}>We've missed you</div><div style={{fontSize:13,color:T.subtext,marginTop:2}}>It's been {daysSince} days since your last entry. No pressure — just here when you're ready. 🌿</div></div><button onClick={()=>{store.set("nudge_"+(entries?.[0]?.user_email||"anon"),true);setDismissed(true);}} style={{background:"none",border:"none",color:T.subtext,fontSize:18,cursor:"pointer",padding:4}}>×</button></div>);}
 
 function GrowthTree({entries}){const count=entries.length;const stage=count===0?0:count<5?1:count<15?2:count<30?3:count<60?4:5;const trees=["🌱","🌿","🪴","🌳","🌲","🎋"];const labels=["Plant your seed","Sprouting","Growing","Rooted","Thriving","Flourishing"];const next=[1,5,15,30,60,Infinity];const prevMilestone=stage>0?next[stage-1]:0;const nextMilestone=next[stage];const progress=stage>=5?1:Math.min(1,(count-prevMilestone)/(nextMilestone-prevMilestone));return(<div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px",textAlign:"center"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>Your Growth</div><div style={{fontSize:64,marginBottom:8}}>{trees[stage]}</div><div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{labels[stage]}</div><div style={{fontSize:13,color:"#b08060",marginBottom:12}}>{count} {count===1?"entry":"entries"} written</div>{stage<5&&(<div style={{background:"rgba(200,137,90,0.1)",borderRadius:12,height:8,overflow:"hidden"}}><div style={{background:"linear-gradient(90deg,#c8895a,#d4956a)",height:"100%",width:`${progress*100}%`,transition:"width 0.5s",borderRadius:12}}/></div>)}{stage<5&&<div style={{fontSize:11,color:"#b08060",marginTop:6}}>{nextMilestone-count} more entries to {labels[stage+1]}</div>}</div>);}
 
