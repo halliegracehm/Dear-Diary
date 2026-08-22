@@ -140,7 +140,7 @@ export default function App() {
 
   useEffect(()=>{const handler=(e)=>{e.preventDefault();setPwaPrompt(e);};window.addEventListener("beforeinstallprompt",handler);return()=>window.removeEventListener("beforeinstallprompt",handler);},[]);
 
- useEffect(()=>{
+useEffect(()=>{
   if(window.location.pathname==="/set-it-down"){
     setScreen("setitdown");
     return;
@@ -155,13 +155,8 @@ export default function App() {
     return;
   }
 
-  const loadUser=async()=>{
-    try{
-      const result=await sbGet(
-        "users",
-        `email=eq.${encodeURIComponent(saved.email)}`
-      );
-
+  sbGet("users",`email=eq.${encodeURIComponent(saved.email)}`)
+    .then(result=>{
       const fresh=result?.length ? result[0] : saved;
 
       store.set("myinnerminduser",fresh);
@@ -171,40 +166,12 @@ export default function App() {
       if(justUpgraded){
         window.history.replaceState({}, "", "/");
       }
-    }catch(e){
+    })
+    .catch(e=>{
       console.error("Session refresh failed:",e);
       setCurrentUser(saved);
       setScreen("app");
-    }
-  };
-
-  loadUser();
-},[]);
-          })
-          .catch(()=>{
-            setCurrentUser(saved);
-            setScreen("app");
-          });
-      }else{
-        sbGet("users",`email=eq.${encodeURIComponent(saved.email)}`)
-          .then(result=>{
-            const fresh=result?.length?result[0]:saved;
-            store.set("myinnerminduser",fresh);
-            setCurrentUser(fresh);
-            setScreen("app");
-          })
-          .catch(()=>{
-            setCurrentUser(saved);
-            setScreen("app");
-          });
-      }
-    }catch(e){
-      store.remove("myinnerminduser");
-      setTimeout(()=>setScreen("landing"),1800);
-    }
-  }else{
-    setTimeout(()=>setScreen("landing"),1800);
-  }
+    });
 },[]);
   async function handleAuth(){
     setAuthError("");setAuthLoading(true);
