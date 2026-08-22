@@ -144,7 +144,19 @@ export default function App() {
     if(window.location.pathname==="/set-it-down"){setScreen("setitdown");return;}
     const params=new URLSearchParams(window.location.search);
     const justUpgraded=params.get("upgraded")==="true";
-    const saved=store.get("myinnerminduser");
+    else{
+  sbGet("users",`email=eq.${encodeURIComponent(saved.email)}`)
+    .then(result=>{
+      const fresh=result?.length?result[0]:saved;
+      store.set("myinnerminduser",fresh);
+      setCurrentUser(fresh);
+      setScreen("app");
+    })
+    .catch(()=>{
+      setCurrentUser(saved);
+      setScreen("app");
+    });
+}
     if(saved){
       try{
         if(justUpgraded){sbGet("users",`email=eq.${encodeURIComponent(saved.email)}`).then(result=>{const fresh=result?.length?result[0]:saved;store.set("myinnerminduser",fresh);setCurrentUser(fresh);setScreen("app");window.history.replaceState({},"","/");}).catch(()=>{setCurrentUser(saved);setScreen("app");});}
