@@ -844,7 +844,12 @@ function GroveTab({user}){
     setLoading(true);
     try{
       const data=await sbGet("grove_entries",`user_email=eq.${encodeURIComponent(user.email)}&order=created_at.desc&limit=10`);
-      if(Array.isArray(data))setEntries(data);
+      if(Array.isArray(data)){
+  setEntries(data.map(e=>({
+    ...e,
+    date:e.created_at
+  })));
+}
     }catch(e){console.error(e);}
     setLoading(false);
   }
