@@ -116,7 +116,16 @@ function getTodayStr(){
   const day=String(d.getDate()).padStart(2,"0");
   return `${year}-${month}-${day}`;
 }
-function formatDate(d){return new Date(d).toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"});}
+function formatDate(d){
+  const date=new Date(d);
+  return date.toLocaleDateString("en-US",{
+    weekday:"long",
+    year:"numeric",
+    month:"long",
+    day:"numeric",
+    timeZone:"America/New_York"
+  });
+}
 function hashStr(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return String(h);}
 function calcStreak(entries){if(!entries?.length)return 0;const dates=[...new Set(entries.map(e=>e.date))].sort().reverse();let streak=0,check=getTodayStr();for(const d of dates){if(d===check){streak++;check=prevDay(check);}else if(d<check)break;}return streak;}
 function prevDay(dateStr){const d=new Date(dateStr);d.setDate(d.getDate()-1);return d.toISOString().split("T")[0];}
