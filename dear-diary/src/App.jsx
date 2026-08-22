@@ -1033,66 +1033,75 @@ function ProfileMenu({user,theme,T,onLogout,onTheme,onUpgradeTab,onAccountTab}){
   function pick(fn){fn();setOpen(false);}
   return(<div style={{position:"relative"}}><button onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(200,137,90,0.08)",borderRadius:20,border:"1px solid rgba(200,137,90,0.18)",cursor:"pointer"}}><span style={{fontSize:12,fontWeight:600,color:"#7a4a1e"}}>👤 {user.username}</span><span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:8,textTransform:"uppercase",background:plan?.color+"22",color:plan?.color}}>{plan?.name}</span><span style={{fontSize:10,color:"#b08060"}}>{open?"▲":"▼"}</span></button>{open&&(<div style={{position:"absolute",right:0,top:"calc(100% + 8px)",background:"#fffdf8",border:"1px solid rgba(200,137,90,0.2)",borderRadius:18,padding:"12px",minWidth:200,boxShadow:"0 8px 32px rgba(120,70,20,0.2)",zIndex:200}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Theme</div><div style={{display:"flex",gap:6,marginBottom:12}}>{Object.entries(THEMES).map(([key,t])=>(<button key={key} onClick={()=>pick(()=>onTheme(key))} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"8px 4px",borderRadius:12,border:`1px solid ${theme===key?"#c8895a":"rgba(200,137,90,0.2)"}`,background:theme===key?"rgba(200,137,90,0.12)":"transparent",cursor:"pointer"}}><span style={{fontSize:20}}>{t.icon}</span><span style={{fontSize:9,fontWeight:600,color:theme===key?"#7a4a1e":"#b08060"}}>{t.name}</span></button>))}</div><div style={{height:1,background:"rgba(200,137,90,0.15)",marginBottom:10}}/><button onClick={()=>pick(onAccountTab)} style={{width:"100%",background:"rgba(200,137,90,0.08)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:14,padding:"8px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:8}}>⚙️ Account Settings</button><button onClick={()=>pick(onUpgradeTab)} style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",border:"none",borderRadius:14,padding:"8px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:8}}>💎 Plans & Upgrade</button>{isAdmin&&<button onClick={()=>pick(()=>{const e=new CustomEvent("hallie-nav",{detail:"admin"});window.dispatchEvent(e);})} style={{width:"100%",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",borderRadius:14,padding:"8px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",marginBottom:8}}>🔐 Admin Dashboard</button>}<button onClick={()=>pick(onLogout)} style={{width:"100%",background:"none",border:"1px solid rgba(200,80,60,0.25)",borderRadius:14,padding:"8px",color:"#c05040",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>Sign out</button></div>)}</div>);
 }
-// HomeTab.jsx
-// Paste this whole function into App.jsx, right after the GroveTab function
-// (or anywhere alongside your other Tab components — order doesn't matter).
+// REPLACES your existing HomeTab function entirely.
 
 function HomeTab({user}){
   const g=getTimeGreeting();
+  const hour=new Date().getHours();
+
+  // sky gradient shifts with real time of day
+  let sky,groundTop,groundBottom,textColor,showMoon,showSun;
+  if(hour>=5&&hour<8){ // dawn
+    sky="linear-gradient(180deg,#f5c6a0 0%,#f0a8a0 30%,#d99bb0 55%,#8a7a9e 80%,#6b5a8e 100%)";
+    groundTop="#4a3a5e";groundBottom="#3a2a4e";textColor="#fff";showSun=true;showMoon=false;
+  }else if(hour>=8&&hour<17){ // day
+    sky="linear-gradient(180deg,#a8d0e8 0%,#c8e0d8 40%,#e0d8b8 70%,#d4b88a 100%)";
+    groundTop="#7a8c5e";groundBottom="#5a7048";textColor="#3a2e1e";showSun=true;showMoon=false;
+  }else if(hour>=17&&hour<20){ // dusk
+    sky="linear-gradient(180deg,#c8895a 0%,#d4956a 25%,#a8708e 55%,#5a3a6e 80%,#3a2450 100%)";
+    groundTop="#2f2248";groundBottom="#241a3a";textColor="#fff";showSun=false;showMoon=false;
+  }else{ // night
+    sky="linear-gradient(180deg,#2d1b4e 0%,#3a2a5c 35%,#4a3a6e 55%,#6b5a7e 75%,#8a7a8e 100%)";
+    groundTop="#1a1230";groundBottom="#241a3a";textColor="#fff";showSun=false;showMoon=true;
+  }
+
   return(
-    <div style={{display:"flex",flexDirection:"column",gap:0}}>
-      <div style={{position:"relative",width:"100%",height:400,borderRadius:24,overflow:"hidden",background:"linear-gradient(180deg,#2d1b4e 0%,#3a2a5c 35%,#4a3a6e 55%,#6b5a7e 75%,#8a7a8e 100%)"}}>
-        {/* moon */}
-        <div style={{position:"absolute",top:24,right:28,width:40,height:40,borderRadius:"50%",background:"radial-gradient(circle at 35% 35%,#fff9e8,#e8d9b8)",boxShadow:"0 0 28px rgba(255,249,232,0.5)"}}/>
+    <div style={{margin:"-24px -16px -100px -16px",minHeight:"calc(100vh - 64px)",position:"relative",overflow:"hidden",background:sky}}>
+      {showMoon&&(<div style={{position:"absolute",top:24,right:28,width:40,height:40,borderRadius:"50%",background:"radial-gradient(circle at 35% 35%,#fff9e8,#e8d9b8)",boxShadow:"0 0 28px rgba(255,249,232,0.5)"}}/>)}
+      {showSun&&(<div style={{position:"absolute",top:28,right:28,width:44,height:44,borderRadius:"50%",background:"radial-gradient(circle at 35% 35%,#fff8d8,#ffd88a)",boxShadow:"0 0 30px rgba(255,216,138,0.6)"}}/>)}
 
-        {/* greeting */}
-        <div style={{position:"absolute",top:36,left:0,right:0,textAlign:"center",color:"#fff",padding:"0 20px"}}>
-          <div style={{fontFamily:"'Lora',serif",fontSize:20,fontWeight:600,marginBottom:4}}>{g.greeting}</div>
-          <div style={{fontSize:12,opacity:0.75,fontStyle:"italic"}}>{g.sub}</div>
-        </div>
-
-        {/* hills */}
-        <div style={{position:"absolute",bottom:0,left:0,right:0,height:140,background:"#1a1230",borderRadius:"50% 50% 0 0 / 30% 30% 0 0",transform:"scaleX(1.4)"}}/>
-        <div style={{position:"absolute",bottom:0,left:0,right:0,height:100,background:"#241a3a",borderRadius:"40% 40% 0 0 / 25% 25% 0 0",transform:"scaleX(1.6) translateX(-5%)"}}/>
-
-        {/* trees */}
-        <svg style={{position:"absolute",bottom:38,left:8}} width="52" height="96" viewBox="0 0 70 130">
-          <path d="M35 130 L35 60" stroke="#2a1f42" strokeWidth="6" fill="none"/>
-          <ellipse cx="35" cy="45" rx="30" ry="42" fill="#3a2a5c"/>
-          <ellipse cx="20" cy="55" rx="18" ry="24" fill="#4a3a6e"/>
-          <ellipse cx="50" cy="55" rx="18" ry="24" fill="#4a3a6e"/>
-        </svg>
-        <svg style={{position:"absolute",bottom:24,right:4}} width="64" height="118" viewBox="0 0 90 160">
-          <path d="M45 160 L45 70" stroke="#241a3a" strokeWidth="8" fill="none"/>
-          <ellipse cx="45" cy="50" rx="38" ry="52" fill="#2f2248"/>
-          <ellipse cx="24" cy="62" rx="22" ry="30" fill="#3a2a5c"/>
-          <ellipse cx="66" cy="62" rx="22" ry="30" fill="#3a2a5c"/>
-        </svg>
-        <svg style={{position:"absolute",bottom:24,left:90}} width="36" height="66" viewBox="0 0 50 90">
-          <path d="M25 90 L25 45" stroke="#2a1f42" strokeWidth="4" fill="none"/>
-          <ellipse cx="25" cy="32" rx="20" ry="28" fill="#4a3a6e"/>
-        </svg>
-
-        {/* fireflies */}
-        {[...Array(9)].map((_,i)=>(
-          <div key={i} style={{
-            position:"absolute",width:5,height:5,borderRadius:"50%",background:"#f5d98a",
-            boxShadow:"0 0 8px 3px rgba(245,217,138,0.7)",
-            left:`${10+((i*37)%80)}%`,bottom:`${60+((i*53)%150)}px`,
-            animation:`groveFloat ${5+(i%3)}s ease-in-out infinite`,animationDelay:`${i*0.6}s`,
-          }}/>
-        ))}
-
-        {/* flowers */}
-        <div style={{position:"absolute",bottom:52,left:60}}>
-          <svg width="18" height="28" viewBox="0 0 20 30"><line x1="10" y1="30" x2="10" y2="12" stroke="#5a8c6e" strokeWidth="2"/><circle cx="10" cy="8" r="6" fill="#d4a8e0" opacity="0.9"/><circle cx="10" cy="6" r="2.5" fill="#f5d98a"/></svg>
-        </div>
-        <div style={{position:"absolute",bottom:52,right:80}}>
-          <svg width="18" height="28" viewBox="0 0 20 30"><line x1="10" y1="30" x2="10" y2="12" stroke="#5a8c6e" strokeWidth="2"/><circle cx="10" cy="8" r="6" fill="#e0a8c8" opacity="0.9"/><circle cx="10" cy="6" r="2.5" fill="#f5d98a"/></svg>
-        </div>
-
-        <div style={{position:"absolute",bottom:14,left:0,right:0,textAlign:"center",color:"rgba(255,255,255,0.75)",fontSize:12,fontStyle:"italic"}}>✨ your inner world, quietly growing</div>
+      <div style={{position:"absolute",top:36,left:0,right:0,textAlign:"center",color:textColor,padding:"0 20px"}}>
+        <div style={{fontFamily:"'Lora',serif",fontSize:20,fontWeight:600,marginBottom:4}}>{g.greeting}</div>
+        <div style={{fontSize:12,opacity:0.75,fontStyle:"italic"}}>welcome back to your inner world</div>
       </div>
+
+      <div style={{position:"absolute",bottom:0,left:0,right:0,height:140,background:groundTop,borderRadius:"50% 50% 0 0 / 30% 30% 0 0",transform:"scaleX(1.4)"}}/>
+      <div style={{position:"absolute",bottom:0,left:0,right:0,height:100,background:groundBottom,borderRadius:"40% 40% 0 0 / 25% 25% 0 0",transform:"scaleX(1.6) translateX(-5%)"}}/>
+
+      <svg style={{position:"absolute",bottom:38,left:8}} width="52" height="96" viewBox="0 0 70 130">
+        <path d="M35 130 L35 60" stroke={groundTop} strokeWidth="6" fill="none"/>
+        <ellipse cx="35" cy="45" rx="30" ry="42" fill={groundBottom}/>
+        <ellipse cx="20" cy="55" rx="18" ry="24" fill={groundTop}/>
+        <ellipse cx="50" cy="55" rx="18" ry="24" fill={groundTop}/>
+      </svg>
+      <svg style={{position:"absolute",bottom:24,right:4}} width="64" height="118" viewBox="0 0 90 160">
+        <path d="M45 160 L45 70" stroke={groundBottom} strokeWidth="8" fill="none"/>
+        <ellipse cx="45" cy="50" rx="38" ry="52" fill={groundBottom}/>
+        <ellipse cx="24" cy="62" rx="22" ry="30" fill={groundTop}/>
+        <ellipse cx="66" cy="62" rx="22" ry="30" fill={groundTop}/>
+      </svg>
+      <svg style={{position:"absolute",bottom:24,left:90}} width="36" height="66" viewBox="0 0 50 90">
+        <path d="M25 90 L25 45" stroke={groundTop} strokeWidth="4" fill="none"/>
+        <ellipse cx="25" cy="32" rx="20" ry="28" fill={groundTop}/>
+      </svg>
+
+      {!showSun&&[...Array(9)].map((_,i)=>(
+        <div key={i} style={{
+          position:"absolute",width:5,height:5,borderRadius:"50%",background:"#f5d98a",
+          boxShadow:"0 0 8px 3px rgba(245,217,138,0.7)",
+          left:`${10+((i*37)%80)}%`,bottom:`${60+((i*53)%150)}px`,
+          animation:`groveFloat ${5+(i%3)}s ease-in-out infinite`,animationDelay:`${i*0.6}s`,
+        }}/>
+      ))}
+
+      <div style={{position:"absolute",bottom:52,left:60}}>
+        <svg width="18" height="28" viewBox="0 0 20 30"><line x1="10" y1="30" x2="10" y2="12" stroke="#5a8c6e" strokeWidth="2"/><circle cx="10" cy="8" r="6" fill="#d4a8e0" opacity="0.9"/><circle cx="10" cy="6" r="2.5" fill="#f5d98a"/></svg>
+      </div>
+      <div style={{position:"absolute",bottom:52,right:80}}>
+        <svg width="18" height="28" viewBox="0 0 20 30"><line x1="10" y1="30" x2="10" y2="12" stroke="#5a8c6e" strokeWidth="2"/><circle cx="10" cy="8" r="6" fill="#e0a8c8" opacity="0.9"/><circle cx="10" cy="6" r="2.5" fill="#f5d98a"/></svg>
+      </div>
+
+      <div style={{position:"absolute",bottom:14,left:0,right:0,textAlign:"center",color:textColor,opacity:0.75,fontSize:12,fontStyle:"italic"}}>✨ your inner world, quietly growing</div>
 
       <style>{`@keyframes groveFloat{0%,100%{transform:translate(0,0);opacity:0.3}50%{transform:translate(12px,-16px);opacity:1}}`}</style>
     </div>
