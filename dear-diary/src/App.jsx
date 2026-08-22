@@ -876,7 +876,7 @@ function GroveTab({user}){
       if(!activity)continue;
 
       await sbInsert("grove_activity_log",{
-        id:`${user.email}_${key}_${today}`,
+        id:`${user.email}_${key}_${Date.now()}`,
         user_email:user.email,
         activity_key:key,
         activity_label:activity.name,
