@@ -906,7 +906,7 @@ function GroveTab({user}){
       <div style={{textAlign:"center",padding:"20px 0 8px"}}>
         <div style={{fontSize:44,marginBottom:8}}>🌲</div>
         <h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e",fontWeight:600}}>The Grove</h2>
-        <p style={{fontSize:13,color:"#b08060",fontStyle:"italic",marginTop:4}}>How are you feeling right now, sister?</p>
+        <p style={{fontSize:13,color:"#b08060",fontStyle:"italic",marginTop:4}}>How are you feeling right now?</p>
       </div>
 
       <div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(122,140,110,0.2)",borderRadius:20,padding:"20px"}}>
