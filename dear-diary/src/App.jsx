@@ -864,28 +864,37 @@ function GroveTab({user}){
   }
 
   async function completeSelectedActivities(){
-    if(selectedActivities.length===0)return;
-    setCompletingActivities(true);
-    const today=getTodayStr();
-    try{
-      for(const key of selectedActivities){
-        const activity=GROVE_ACTIVITIES.find(a=>a.key===key);
-        if(!activity)continue;
-        await sbInsert("grove_activity_log",{
-          id:`${user.email}_${key}_${Date.now()}`,
-          user_email:user.email,
-          activity_key:key,
-          activity_label:activity.name,
-          activity_emoji:activity.emoji,
-          date:today,
-        });
-      }
-      setTodayCompletions([...todayCompletions,...selectedActivities]);
-      setSelectedActivities([]);
-      spawnConfetti();
-    }catch(e){console.error(e);}
-    setCompletingActivities(false);
+  if(selectedActivities.length===0)return;
+
+  setCompletingActivities(true);
+
+  const today=getTodayStr();
+
+  try{
+    for(const key of selectedActivities){
+      const activity=GROVE_ACTIVITIES.find(a=>a.key===key);
+      if(!activity)continue;
+
+      await sbInsert("grove_activity_log",{
+        id:`${user.email}_${key}_${today}`,
+        user_email:user.email,
+        activity_key:key,
+        activity_label:activity.name,
+        activity_emoji:activity.emoji,
+        date:today,
+      });
+    }
+
+    await loadTodayActivities();
+    setSelectedActivities([]);
+    spawnConfetti();
+
+  }catch(e){
+    console.error(e);
   }
+
+  setCompletingActivities(false);
+}
 
   async function toggleActivityPref(key){
     const next=new Set(enabledKeys);
