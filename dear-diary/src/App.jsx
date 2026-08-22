@@ -141,30 +141,51 @@ export default function App() {
   useEffect(()=>{const handler=(e)=>{e.preventDefault();setPwaPrompt(e);};window.addEventListener("beforeinstallprompt",handler);return()=>window.removeEventListener("beforeinstallprompt",handler);},[]);
 
   useEffect(()=>{
-    if(window.location.pathname==="/set-it-down"){setScreen("setitdown");return;}
-    const params=new URLSearchParams(window.location.search);
-    const justUpgraded=params.get("upgraded")==="true";
-    else{
-  sbGet("users",`email=eq.${encodeURIComponent(saved.email)}`)
-    .then(result=>{
-      const fresh=result?.length?result[0]:saved;
-      store.set("myinnerminduser",fresh);
-      setCurrentUser(fresh);
-      setScreen("app");
-    })
-    .catch(()=>{
-      setCurrentUser(saved);
-      setScreen("app");
-    });
-}
-    if(saved){
-      try{
-        if(justUpgraded){sbGet("users",`email=eq.${encodeURIComponent(saved.email)}`).then(result=>{const fresh=result?.length?result[0]:saved;store.set("myinnerminduser",fresh);setCurrentUser(fresh);setScreen("app");window.history.replaceState({},"","/");}).catch(()=>{setCurrentUser(saved);setScreen("app");});}
-        else{setCurrentUser(saved);setScreen("app");}
-      }catch(e){store.remove("myinnerminduser");setTimeout(()=>setScreen("landing"),1800);}
-    }else{setTimeout(()=>setScreen("landing"),1800);}
-  },[]);
+  if(window.location.pathname==="/set-it-down"){
+    setScreen("setitdown");
+    return;
+  }
 
+  const params=new URLSearchParams(window.location.search);
+  const justUpgraded=params.get("upgraded")==="true";
+  const saved=store.get("myinnerminduser");
+
+  if(saved){
+    try{
+      if(justUpgraded){
+        sbGet("users",`email=eq.${encodeURIComponent(saved.email)}`)
+          .then(result=>{
+            const fresh=result?.length?result[0]:saved;
+            store.set("myinnerminduser",fresh);
+            setCurrentUser(fresh);
+            setScreen("app");
+            window.history.replaceState({},"","/");
+          })
+          .catch(()=>{
+            setCurrentUser(saved);
+            setScreen("app");
+          });
+      }else{
+        sbGet("users",`email=eq.${encodeURIComponent(saved.email)}`)
+          .then(result=>{
+            const fresh=result?.length?result[0]:saved;
+            store.set("myinnerminduser",fresh);
+            setCurrentUser(fresh);
+            setScreen("app");
+          })
+          .catch(()=>{
+            setCurrentUser(saved);
+            setScreen("app");
+          });
+      }
+    }catch(e){
+      store.remove("myinnerminduser");
+      setTimeout(()=>setScreen("landing"),1800);
+    }
+  }else{
+    setTimeout(()=>setScreen("landing"),1800);
+  }
+},[]);
   async function handleAuth(){
     setAuthError("");setAuthLoading(true);
     const email=authForm.email.toLowerCase().trim();
