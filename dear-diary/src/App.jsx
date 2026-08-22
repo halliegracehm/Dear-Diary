@@ -861,7 +861,10 @@ function GroveTab({user}){
       setNote("");
       await loadEntries();
       spawnConfetti();
-    }catch(e){console.error(e);}
+    }catch(e){
+  console.error("Check-in save failed:",e);
+  alert("Your check-in couldn't be saved. Please try again.");
+}
     setSaving(false);
   }
 
