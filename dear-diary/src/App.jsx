@@ -109,7 +109,13 @@ function getDailyAffirmation(){return AFFIRMATIONS[Math.floor(Date.now()/(24*60*
 const NIGHT_PROMPTS=["What's one thing you're leaving in today that you don't want to carry into tomorrow?","How does your body feel right now — honestly?","What would you tell yourself at the start of today if you could go back?","What went unsaid today that you want to say here?","What are you grateful for that you didn't get to acknowledge today?","What does quiet feel like for you tonight?","If today had a color, what would it be and why?","What do you need more of right now — rest, connection, or solitude?"];
 function getNightPrompt(){return NIGHT_PROMPTS[Math.floor(Date.now()/(24*60*60*1000))%NIGHT_PROMPTS.length];}
 function isNightTime(){return new Date().getHours()>=20;}
-function getTodayStr(){return new Date().toISOString().split("T")[0];}
+function getTodayStr(){
+  const d=new Date();
+  const year=d.getFullYear();
+  const month=String(d.getMonth()+1).padStart(2,"0");
+  const day=String(d.getDate()).padStart(2,"0");
+  return `${year}-${month}-${day}`;
+}
 function formatDate(d){return new Date(d).toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"});}
 function hashStr(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return String(h);}
 function calcStreak(entries){if(!entries?.length)return 0;const dates=[...new Set(entries.map(e=>e.date))].sort().reverse();let streak=0,check=getTodayStr();for(const d of dates){if(d===check){streak++;check=prevDay(check);}else if(d<check)break;}return streak;}
