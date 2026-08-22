@@ -884,8 +884,6 @@ function GroveTab({user}){
         date:today,
       });
     }
-
-    await loadTodayActivities();
     setSelectedActivities([]);
     spawnConfetti();
 
