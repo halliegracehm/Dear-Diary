@@ -1077,12 +1077,132 @@ function GentleNudge({entries,theme}){const T=theme||THEMES.original;const [dism
 
 function GrowthTree({entries}){const count=entries.length;const stage=count===0?0:count<5?1:count<15?2:count<30?3:count<60?4:5;const trees=["🌱","🌿","🪴","🌳","🌲","🎋"];const labels=["Plant your seed","Sprouting","Growing","Rooted","Thriving","Flourishing"];const next=[1,5,15,30,60,Infinity];const prevMilestone=stage>0?next[stage-1]:0;const nextMilestone=next[stage];const progress=stage>=5?1:Math.min(1,(count-prevMilestone)/(nextMilestone-prevMilestone));return(<div style={{background:"rgba(255,252,246,0.9)",border:"1px solid rgba(200,137,90,0.15)",borderRadius:20,padding:"20px 22px",textAlign:"center"}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:12}}>Your Growth</div><div style={{fontSize:64,marginBottom:8}}>{trees[stage]}</div><div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{labels[stage]}</div><div style={{fontSize:13,color:"#b08060",marginBottom:12}}>{count} {count===1?"entry":"entries"} written</div>{stage<5&&(<div style={{background:"rgba(200,137,90,0.1)",borderRadius:12,height:8,overflow:"hidden"}}><div style={{background:"linear-gradient(90deg,#c8895a,#d4956a)",height:"100%",width:`${progress*100}%`,transition:"width 0.5s",borderRadius:12}}/></div>)}{stage<5&&<div style={{fontSize:11,color:"#b08060",marginTop:6}}>{nextMilestone-count} more entries to {labels[stage+1]}</div>}</div>);}
 
-function LettersTab({user}){const [letters,setLetters]=useState(()=>persist.get(`letters_${user.email}`)||[]);const [writing,setWriting]=useState(false);const [form,setForm]=useState({title:"",content:"",deliverIn:30});function saveLetter(){if(!form.content.trim())return;const letter={id:Date.now(),title:form.title||"A letter to my future self",content:form.content,written:new Date().toISOString(),deliverOn:new Date(Date.now()+form.deliverIn*24*60*60*1000).toISOString(),deliverIn:form.deliverIn,opened:false};const updated=[letter,...letters];setLetters(updated);persist.set(`letters_${user.email}`,updated);setWriting(false);setForm({title:"",content:"",deliverIn:30});}function openLetter(id){const updated=letters.map(l=>l.id===id?{...l,opened:true}:l);setLetters(updated);persist.set(`letters_${user.email}`,updated);}const ready=letters.filter(l=>new Date(l.deliverOn)<=new Date());const waiting=letters.filter(l=>new Date(l.deliverOn)>new Date());return(<div style={{display:"flex",flexDirection:"column",gap:20}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>💌 Letters to Future Me</h2><p style={{color:"#b08060",fontSize:13,marginTop:4}}>Write to yourself across time</p></div><button onClick={()=>setWriting(true)} style={S.newBtn}>+ Write</button></div>{writing&&(<div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:24,padding:"28px 24px",boxShadow:"0 4px 24px rgba(160,100,50,0.12)"}}><input style={{...S.titleInput,marginBottom:16}} placeholder="Give this letter a title..." value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))}/><textarea style={{...S.textarea,minHeight:160,marginBottom:16}} placeholder="Dear future me..." value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))} autoFocus/><div style={{marginBottom:20}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Deliver in</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[{label:"30 days",val:30},{label:"60 days",val:60},{label:"90 days",val:90},{label:"6 months",val:180},{label:"1 year",val:365}].map(o=>(<button key={o.val} onClick={()=>setForm(f=>({...f,deliverIn:o.val}))} style={{padding:"6px 14px",borderRadius:14,border:`1px solid ${form.deliverIn===o.val?"#c8895a":"rgba(200,137,90,0.3)"}`,background:form.deliverIn===o.val?"rgba(200,137,90,0.15)":"transparent",color:form.deliverIn===o.val?"#7a4a1e":"#b08060",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>{o.label}</button>))}</div></div><div style={{display:"flex",justifyContent:"space-between"}}><button onClick={()=>setWriting(false)} style={S.ghostBtn}>Cancel</button><button onClick={saveLetter} style={S.saveBtn}>Seal & Send ✉️</button></div></div>)}{ready.length>0&&(<div><div style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>📬 Ready to open ({ready.length})</div><div style={{display:"flex",flexDirection:"column",gap:10}}>{ready.map(l=>(<div key={l.id} style={{background:"linear-gradient(135deg,rgba(200,137,90,0.1),rgba(122,74,30,0.07))",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"18px 20px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}><div><div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600}}>{l.title}</div><div style={{fontSize:11,color:"#b08060",marginTop:2}}>Written {new Date(l.written).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div></div>{!l.opened&&<button onClick={()=>openLetter(l.id)} style={{...S.saveBtn,padding:"6px 16px",fontSize:12}}>Open ✉️</button>}</div>{l.opened&&<p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",lineHeight:1.75,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{l.content}</p>}</div>))}</div></div>)}{waiting.length>0&&(<div><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🔒 Sealed ({waiting.length})</div><div style={{display:"flex",flexDirection:"column",gap:10}}>{waiting.map(l=>(<div key={l.id} style={{background:"rgba(200,137,90,0.05)",border:"1px dashed rgba(200,137,90,0.25)",borderRadius:16,padding:"14px 18px",opacity:0.7}}><div style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{l.title}</div><div style={{fontSize:12,color:"#b08060"}}>Opens {new Date(l.deliverOn).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div></div>))}</div></div>)}{letters.length===0&&!writing&&(<div style={{textAlign:"center",padding:"60px 0"}}><div style={{fontSize:52,marginBottom:14}}>💌</div><p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#b08060",fontStyle:"italic",marginBottom:20}}>Write a letter to your future self.<br/>It'll be waiting when you're ready.</p><button onClick={()=>setWriting(true)} style={S.saveBtn}>Write Your First Letter →</button></div>)}</div>);}
+// REPLACES your existing LettersTab function entirely.
 
-function ProfileMenu({user,theme,T,onLogout,onTheme,onUpgradeTab,onAccountTab}){
-  const [open,setOpen]=useState(false);const isAdmin=user.email===ADMIN_EMAIL;const plan=PLANS[user.plan];
-  function pick(fn){fn();setOpen(false);}
-  return(<div style={{position:"relative"}}><button onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(200,137,90,0.08)",borderRadius:20,border:"1px solid rgba(200,137,90,0.18)",cursor:"pointer"}}><span style={{fontSize:12,fontWeight:600,color:"#7a4a1e"}}>👤 {user.username}</span><span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:8,textTransform:"uppercase",background:plan?.color+"22",color:plan?.color}}>{plan?.name}</span><span style={{fontSize:10,color:"#b08060"}}>{open?"▲":"▼"}</span></button>{open&&(<div style={{position:"absolute",right:0,top:"calc(100% + 8px)",background:"#fffdf8",border:"1px solid rgba(200,137,90,0.2)",borderRadius:18,padding:"12px",minWidth:200,boxShadow:"0 8px 32px rgba(120,70,20,0.2)",zIndex:200}}><div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Theme</div><div style={{display:"flex",gap:6,marginBottom:12}}>{Object.entries(THEMES).map(([key,t])=>(<button key={key} onClick={()=>pick(()=>onTheme(key))} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"8px 4px",borderRadius:12,border:`1px solid ${theme===key?"#c8895a":"rgba(200,137,90,0.2)"}`,background:theme===key?"rgba(200,137,90,0.12)":"transparent",cursor:"pointer"}}><span style={{fontSize:20}}>{t.icon}</span><span style={{fontSize:9,fontWeight:600,color:theme===key?"#7a4a1e":"#b08060"}}>{t.name}</span></button>))}</div><div style={{height:1,background:"rgba(200,137,90,0.15)",marginBottom:10}}/><button onClick={()=>pick(onAccountTab)} style={{width:"100%",background:"rgba(200,137,90,0.08)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:14,padding:"8px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:8}}>⚙️ Account Settings</button><button onClick={()=>pick(onUpgradeTab)} style={{width:"100%",background:"linear-gradient(135deg,#d4956a,#c8895a)",border:"none",borderRadius:14,padding:"8px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:8}}>💎 Plans & Upgrade</button>{isAdmin&&<button onClick={()=>pick(()=>{const e=new CustomEvent("hallie-nav",{detail:"admin"});window.dispatchEvent(e);})} style={{width:"100%",background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.15)",borderRadius:14,padding:"8px",color:"#7a4a1e",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",marginBottom:8}}>🔐 Admin Dashboard</button>}<button onClick={()=>pick(onLogout)} style={{width:"100%",background:"none",border:"1px solid rgba(200,80,60,0.25)",borderRadius:14,padding:"8px",color:"#c05040",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>Sign out</button></div>)}</div>);
+function LettersTab({user}){
+  const [letters,setLetters]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [writing,setWriting]=useState(false);
+  const [form,setForm]=useState({title:"",content:"",deliverIn:30});
+
+  useEffect(()=>{loadLetters();},[]);
+
+  async function loadLetters(){
+    setLoading(true);
+    try{
+      const data=await sbGet("letters",`user_email=eq.${encodeURIComponent(user.email)}&order=written.desc`);
+      if(Array.isArray(data))setLetters(data);
+    }catch(e){console.error(e);}
+    setLoading(false);
+  }
+
+  async function saveLetter(){
+    if(!form.content.trim())return;
+    const deliverOn=new Date(Date.now()+form.deliverIn*24*60*60*1000).toISOString();
+    try{
+      await sbInsert("letters",{
+        id:`${user.email}_${Date.now()}`,
+        user_email:user.email,
+        title:form.title||"A letter to my future self",
+        content:form.content,
+        deliver_on:deliverOn,
+        deliver_in:form.deliverIn,
+        opened:false,
+      });
+      await loadLetters();
+      setWriting(false);
+      setForm({title:"",content:"",deliverIn:30});
+    }catch(e){console.error(e);}
+  }
+
+  async function openLetter(id){
+    try{
+      await sbUpdate("letters",`id=eq.${id}`,{opened:true});
+      setLetters(letters.map(l=>l.id===id?{...l,opened:true}:l));
+    }catch(e){console.error(e);}
+  }
+
+  const ready=letters.filter(l=>new Date(l.deliver_on)<=new Date());
+  const waiting=letters.filter(l=>new Date(l.deliver_on)>new Date());
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div>
+          <h2 style={{fontFamily:"'Lora',serif",fontSize:26,color:"#5a2e0e"}}>💌 Letters to Future Me</h2>
+          <p style={{color:"#b08060",fontSize:13,marginTop:4}}>Write to yourself across time</p>
+        </div>
+        <button onClick={()=>setWriting(true)} style={S.newBtn}>+ Write</button>
+      </div>
+
+      {writing&&(
+        <div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:24,padding:"28px 24px",boxShadow:"0 4px 24px rgba(160,100,50,0.12)"}}>
+          <input style={{...S.titleInput,marginBottom:16}} placeholder="Give this letter a title..." value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))}/>
+          <textarea style={{...S.textarea,minHeight:160,marginBottom:16}} placeholder="Dear future me..." value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))} autoFocus/>
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Deliver in</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {[{label:"30 days",val:30},{label:"60 days",val:60},{label:"90 days",val:90},{label:"6 months",val:180},{label:"1 year",val:365}].map(o=>(
+                <button key={o.val} onClick={()=>setForm(f=>({...f,deliverIn:o.val}))} style={{padding:"6px 14px",borderRadius:14,border:`1px solid ${form.deliverIn===o.val?"#c8895a":"rgba(200,137,90,0.3)"}`,background:form.deliverIn===o.val?"rgba(200,137,90,0.15)":"transparent",color:form.deliverIn===o.val?"#7a4a1e":"#b08060",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>{o.label}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between"}}>
+            <button onClick={()=>setWriting(false)} style={S.ghostBtn}>Cancel</button>
+            <button onClick={saveLetter} style={S.saveBtn}>Seal & Send ✉️</button>
+          </div>
+        </div>
+      )}
+
+      {loading?(
+        <div style={{textAlign:"center",padding:"40px 0",color:"#b08060",fontStyle:"italic"}}>Loading your letters...</div>
+      ):(
+        <>
+          {ready.length>0&&(
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:"#c8895a",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>📬 Ready to open ({ready.length})</div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {ready.map(l=>(
+                  <div key={l.id} style={{background:"linear-gradient(135deg,rgba(200,137,90,0.1),rgba(122,74,30,0.07))",border:"1px solid rgba(200,137,90,0.3)",borderRadius:18,padding:"18px 20px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                      <div>
+                        <div style={{fontFamily:"'Lora',serif",fontSize:16,color:"#5a2e0e",fontWeight:600}}>{l.title}</div>
+                        <div style={{fontSize:11,color:"#b08060",marginTop:2}}>Written {new Date(l.written).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div>
+                      </div>
+                      {!l.opened&&<button onClick={()=>openLetter(l.id)} style={{...S.saveBtn,padding:"6px 16px",fontSize:12}}>Open ✉️</button>}
+                    </div>
+                    {l.opened&&<p style={{fontFamily:"'Lora',serif",fontSize:14,color:"#7a5030",lineHeight:1.75,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{l.content}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {waiting.length>0&&(
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:"#b08060",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:10}}>🔒 Sealed ({waiting.length})</div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {waiting.map(l=>(
+                  <div key={l.id} style={{background:"rgba(200,137,90,0.05)",border:"1px dashed rgba(200,137,90,0.25)",borderRadius:16,padding:"14px 18px",opacity:0.7}}>
+                    <div style={{fontFamily:"'Lora',serif",fontSize:15,color:"#5a2e0e",fontWeight:600,marginBottom:4}}>{l.title}</div>
+                    <div style={{fontSize:12,color:"#b08060"}}>Opens {new Date(l.deliver_on).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {letters.length===0&&!writing&&(
+            <div style={{textAlign:"center",padding:"60px 0"}}>
+              <div style={{fontSize:52,marginBottom:14}}>💌</div>
+              <p style={{fontFamily:"'Lora',serif",fontSize:16,color:"#b08060",fontStyle:"italic",marginBottom:20}}>Write a letter to your future self.<br/>It'll be waiting when you're ready.</p>
+              <button onClick={()=>setWriting(true)} style={S.saveBtn}>Write Your First Letter →</button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 // REPLACES your existing HomeTab function entirely.
 
