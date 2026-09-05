@@ -840,11 +840,12 @@ function GroveTab({user}){
 
   useEffect(()=>{loadEntries();loadPrefs();loadTodayActivities();},[]);
 
-  async function loadEntries(){
+ async function loadEntries(){
     setLoading(true);
     try{
       const data=await sbGet("grove_entries",`user_email=eq.${encodeURIComponent(user.email)}&order=created_at.desc&limit=10`);
       if(Array.isArray(data)){
+  console.log("GROVE DATE FROM SUPABASE:", data[0]?.created_at);
   setEntries(data.map(e=>({
     ...e,
     date:e.created_at
