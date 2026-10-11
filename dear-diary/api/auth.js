@@ -166,6 +166,7 @@ export default async function handler(req, res) {
         del(`letters?user_email=eq.${e}`),
         del(`trackers?user_email=eq.${e}`),
         del(`tracker_logs?user_email=eq.${e}`),
+        del(`therapy_items?user_email=eq.${e}`),
         del(`community_posts?user_id=eq.${e}`),
         del(`community_members?user_id=eq.${e}`),
         del(`post_reactions?user_id=eq.${e}`),
