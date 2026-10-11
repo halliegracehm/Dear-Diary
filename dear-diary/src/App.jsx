@@ -32,7 +32,8 @@ function SetItDownPage() {
   const handleSubmit = async () => {
     const trimmed = word.trim(); if (!trimmed) return; setStatus("submitting");
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/set_it_down_submissions`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ word: trimmed.toLowerCase(), event_tag: "set-it-down-saturday" }) });
+      const res = await fetch("/api/db", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: "set_it_down_submissions", method: "POST", prefer: "return=minimal", body: { word: trimmed.toLowerCase(), event_tag: "set-it-down-saturday" } }) });
+      if (res.status === 503) { await sbDirect("set_it_down_submissions", { method: "POST", prefer: "return=minimal", body: JSON.stringify({ word: trimmed.toLowerCase(), event_tag: "set-it-down-saturday" }) }); setStep("success"); setStatus("idle"); setWord(""); setCharCount(0); return; }
       if (!res.ok) throw new Error("Failed");
       setStep("success"); setStatus("idle"); setWord(""); setCharCount(0);
     } catch (e) { console.error(e); setStatus("error"); }
@@ -92,7 +93,13 @@ function getWeeklyHalliePrompt(){const w=Math.ceil((new Date()-new Date(new Date
 
 function spawnConfetti(){const emojis=["🌸","✨","🌿","💛","🌟","💫","🍃","🌺","⭐","💕"];for(let i=0;i<18;i++){setTimeout(()=>{const el=document.createElement("div");el.textContent=emojis[Math.floor(Math.random()*emojis.length)];el.style.cssText=`position:fixed;pointer-events:none;z-index:9999;font-size:${14+Math.random()*18}px;left:${10+Math.random()*80}%;top:${20+Math.random()*40}%;transition:all ${0.8+Math.random()*1}s ease-out;opacity:1;transform:translate(0,0) rotate(0deg)`;document.body.appendChild(el);requestAnimationFrame(()=>{el.style.transform=`translate(${-80+Math.random()*160}px,${-120-Math.random()*120}px) rotate(${-180+Math.random()*360}deg)`;el.style.opacity="0";});setTimeout(()=>el.remove(),2000);},i*60);}}
 
-async function sbQuery(path,options={}){try{const res=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json","Prefer":options.prefer||"return=representation",...(options.headers||{})},...options});if(res.status===204)return[];const data=await res.json();if(data?.code||data?.error){console.error("Supabase error:",data);return[];}return data;}catch(e){console.error("Network error:",e);return[];}}
+// Session token from /api/auth. The server decides what each signed-in person can read or change.
+const TOKEN_KEY="myinnermind_token";
+function getToken(){try{return localStorage.getItem(TOKEN_KEY)||"";}catch{return "";}}
+function setToken(t){try{t?localStorage.setItem(TOKEN_KEY,t):localStorage.removeItem(TOKEN_KEY);}catch{}}
+async function authCall(action,payload={}){const t=getToken();const res=await fetch("/api/auth",{method:"POST",headers:{"Content-Type":"application/json",...(t?{Authorization:`Bearer ${t}`}:{})},body:JSON.stringify({action,...payload})});let data={};try{data=await res.json();}catch{}if(res.status===401&&data?.error==="signed_out")window.dispatchEvent(new Event("mim-signed-out"));return{ok:res.ok,status:res.status,...data};}
+async function sbDirect(path,options={}){const res=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{method:options.method||"GET",headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json","Prefer":options.prefer||"return=representation"},body:options.body});if(res.status===204)return[];return res.json();}
+async function sbQuery(path,options={}){try{const t=getToken();const res=await fetch("/api/db",{method:"POST",headers:{"Content-Type":"application/json",...(t?{Authorization:`Bearer ${t}`}:{})},body:JSON.stringify({path,method:options.method||"GET",body:options.body?JSON.parse(options.body):undefined,prefer:options.prefer||"return=representation"})});let data=null;if(res.status===503){data=await sbDirect(path,options);}else{if(res.status===401){window.dispatchEvent(new Event("mim-signed-out"));return[];}const text=await res.text();data=text?JSON.parse(text):[];}if(data===null||data===undefined)return[];if(data?.code||data?.error){console.error("Database error:",data);return[];}return data;}catch(e){console.error("Network error:",e);return[];}}
 async function sbGet(table,filters=""){return sbQuery(`${table}?${filters}`);}
 async function sbInsert(table,data){return sbQuery(table,{method:"POST",body:JSON.stringify(data)});}
 async function sbUpdate(table,filters,data){return sbQuery(`${table}?${filters}`,{method:"PATCH",body:JSON.stringify(data)});}
@@ -153,6 +160,7 @@ export default function App() {
   const [authLoading,setAuthLoading]=useState(false);
   const [pwaPrompt,setPwaPrompt]=useState(null);
 
+  useEffect(()=>{const h=()=>{store.remove("myinnerminduser");setToken("");setCurrentUser(null);setAuthMode("login");setAuthError("Please sign in again. 🌿");setScreen("auth");};window.addEventListener("mim-signed-out",h);return()=>window.removeEventListener("mim-signed-out",h);},[]);
   useEffect(()=>{const handler=(e)=>{e.preventDefault();setPwaPrompt(e);};window.addEventListener("beforeinstallprompt",handler);return()=>window.removeEventListener("beforeinstallprompt",handler);},[]);
 
 useEffect(()=>{
@@ -165,14 +173,16 @@ useEffect(()=>{
   const justUpgraded=params.get("upgraded")==="true";
   const saved=store.get("myinnerminduser");
 
-  if(!saved){
+  if(!saved||!getToken()){
+    if(saved){store.remove("myinnerminduser");setAuthError("For your privacy, we've upgraded how accounts are protected. Please sign in once more. 🌿");setAuthForm(f=>({...f,email:saved.email||""}));setTimeout(()=>{setAuthMode("login");setScreen("auth");},1800);return;}
     setTimeout(()=>setScreen("landing"),1800);
     return;
   }
 
-  sbGet("users",`email=eq.${encodeURIComponent(saved.email)}`)
+  authCall("me")
     .then(result=>{
-      const fresh=result?.length ? result[0] : saved;
+      if(result.status===401){store.remove("myinnerminduser");setToken("");setAuthMode("login");setScreen("auth");return;}
+      const fresh=result?.user||saved;
 
       store.set("myinnerminduser",fresh);
       setCurrentUser(fresh);
@@ -195,20 +205,19 @@ useEffect(()=>{
       if(authMode==="register"){
         if(!authForm.username||!email||!authForm.password){setAuthError("All fields are required.");return;}
         if(authForm.password.length<6){setAuthError("Password must be at least 6 characters.");return;}
-        const existing=await sbGet("users",`email=eq.${encodeURIComponent(email)}`);
-        if(existing?.length>0){setAuthError("An account with that email already exists.");return;}
-        const result=await sbInsert("users",{email,username:authForm.username,password_hash:hashStr(authForm.password),plan:"free"});
-        if(result?.length>0){const u=result[0];store.set("myinnerminduser",u);fetch("/api/add-to-mailchimp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,name:authForm.username})}).catch(()=>{});setCurrentUser(u);setScreen("onboarding");}
+        const r=await authCall("register",{email,username:authForm.username,password:authForm.password});
+        if(r.status===503){const existing=await sbGet("users",`email=eq.${encodeURIComponent(email)}`);if(existing?.length>0){setAuthError("An account with that email already exists.");return;}const result=await sbInsert("users",{email,username:authForm.username,password_hash:hashStr(authForm.password),plan:"free"});if(result?.length>0){r.ok=true;r.user=result[0];r.token="legacy";}}
+        if(!r.ok&&r.error){setAuthError(r.error);return;}
+        if(r.user&&r.token){const u=r.user;setToken(r.token);store.set("myinnerminduser",u);fetch("/api/add-to-mailchimp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,name:authForm.username})}).catch(()=>{});setCurrentUser(u);setScreen("onboarding");}
         else{setAuthError("Something went wrong. Please try again.");}
       }else{
         if(!email||!authForm.password){setAuthError("Email and password are required.");return;}
-        const result=await sbGet("users",`email=eq.${encodeURIComponent(email)}`);
-        if(!result?.length){setAuthError("No account found with that email.");return;}
-        const user=result[0];
-        if(user.password_hash!==hashStr(authForm.password)){setAuthError("Incorrect password.");return;}
+        const r=await authCall("login",{email,password:authForm.password});
+        if(r.status===503){const result=await sbGet("users",`email=eq.${encodeURIComponent(email)}`);if(!result?.length){setAuthError("No account found with that email.");return;}if(result[0].password_hash!==hashStr(authForm.password)){setAuthError("Incorrect password.");return;}r.ok=true;r.user=result[0];r.token="legacy";}
+        if(!r.ok||!r.user||!r.token){setAuthError(r.error||"Something went wrong. Please try again.");return;}
+        const user=r.user;setToken(r.token);
         store.set("myinnerminduser",user);setCurrentUser(user);setScreen("app");
         if(isNativeApp())rcLogin(user.email,user.email).then(()=>{});
-        rcGetPlan(user.email).then(plan=>{if(plan&&plan!=="free"&&plan!==user.plan){sbUpdate("users",`email=eq.${encodeURIComponent(user.email)}`,{plan});const updated={...user,plan};store.set("myinnerminduser",updated);setCurrentUser(updated);}}).catch(()=>{});
       }
     }catch(e){setAuthError("Connection error. Please try again.");}
     finally{setAuthLoading(false);}
@@ -216,15 +225,15 @@ useEffect(()=>{
 
   function handleLogout(){
     if(ambientStopRef.current){ambientStopRef.current();ambientStopRef.current=null;}
-    store.remove("myinnerminduser");setCurrentUser(null);setScreen("landing");
+    store.remove("myinnerminduser");setToken("");setCurrentUser(null);setScreen("landing");
     setAuthForm({username:"",email:"",password:""});
     if(window.location.pathname!=="/"){window.history.replaceState({},"","/");}
   }
 
   async function upgradePlan(plan){
     if(!currentUser)return;
-    await sbUpdate("users",`email=eq.${encodeURIComponent(currentUser.email)}`,{plan});
-    const updated={...currentUser,plan};store.set("myinnerminduser",updated);setCurrentUser(updated);
+    const r=await authCall("sync_plan");
+    const updated=r.user||currentUser;store.set("myinnerminduser",updated);setCurrentUser(updated);
   }
 
   if(screen==="splash")return <Splash/>;
@@ -239,20 +248,22 @@ function Splash(){return(<div style={{...S.page,justifyContent:"center",alignIte
 
 function PWABanner({prompt,onDismiss}){const [installing,setInstalling]=useState(false);if(!prompt)return null;async function handleInstall(){setInstalling(true);prompt.prompt();const result=await prompt.userChoice;if(result.outcome==="accepted")onDismiss();setInstalling(false);}return(<div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",zIndex:999,width:"calc(100% - 32px)",maxWidth:440,background:"linear-gradient(135deg,#7a4a1e,#c8895a)",borderRadius:20,padding:"14px 20px",boxShadow:"0 8px 32px rgba(120,70,20,0.35)",display:"flex",alignItems:"center",gap:14}}><span style={{fontSize:32}}>🌿</span><div style={{flex:1}}><div style={{color:"#fff",fontWeight:700,fontSize:14,fontFamily:"'Nunito',sans-serif"}}>Add to your Home Screen</div><div style={{color:"rgba(255,255,255,0.8)",fontSize:12,marginTop:2}}>Open My Inner Mind like an app, anytime</div></div><div style={{display:"flex",gap:8}}><button onClick={onDismiss} style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:12,padding:"7px 12px",color:"#fff",fontSize:12,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>Later</button><button onClick={handleInstall} disabled={installing} style={{background:"#fff",border:"none",borderRadius:12,padding:"7px 14px",color:"#7a4a1e",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>{installing?"...":"Install"}</button></div></div>);}
 
+function PasswordInput({style,...props}){const [show,setShow]=useState(false);return(<div style={{position:"relative"}}><input {...props} type={show?"text":"password"} autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{...style,paddingRight:52}}/><button type="button" onClick={()=>setShow(v=>!v)} aria-label={show?"Hide password":"Show password"} style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",width:40,height:36,border:"none",background:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#b08060",padding:0}}>{show?(<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.5 10.5 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1"/><path d="M6.6 6.6C3.7 8.4 2 12 2 12s3.5 7 10 7a9.8 9.8 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>):(<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>)}</button></div>);}
+
 function AuthScreen({mode,form,error,loading,pwaPrompt,onChange,onSubmit,onToggle}){
   const [showForgot,setShowForgot]=useState(false);const [pwaDismissed,setPwaDismissed]=useState(false);
   if(showForgot)return <ForgotPasswordScreen onBack={()=>setShowForgot(false)}/>;
   return(<div style={{...S.page,justifyContent:"center",alignItems:"center"}}><div style={S.texture}/><GlobalStyles/><div style={S.authCard}><div style={{textAlign:"center",marginBottom:28}}><div style={{fontSize:44,marginBottom:10}}>🌿</div><div style={{fontFamily:"'Lora',serif",fontSize:26,color:"#7a4a1e",fontWeight:600}}>My Inner Mind</div><div style={{color:"#b08060",fontSize:13,marginTop:5,fontStyle:"italic"}}>{mode==="login"?"Welcome back":"Begin your journey inward"}</div></div>{mode==="register"&&(<Field label="Name"><input style={S.input} placeholder="Your name" value={form.username} onChange={e=>onChange({username:e.target.value})}/></Field>)}
     {mode==="register"&&(<p style={{fontSize:11,color:"#b08060",lineHeight:1.6,marginBottom:14,textAlign:"center"}}>By creating an account, you agree to our <a href="https://halliewho.com/terms-of-use/" target="_blank" rel="noopener noreferrer" style={{color:"#c8895a",textDecoration:"underline"}}>Terms of Use</a> and <a href="https://halliewho.com/privacy-policy/" target="_blank" rel="noopener noreferrer" style={{color:"#c8895a",textDecoration:"underline"}}>Privacy Policy</a>.</p>)}
-  <Field label="Email"><input style={S.input} type="email" placeholder="you@email.com" value={form.email} onChange={e=>onChange({email:e.target.value})} onKeyDown={e=>e.key==="Enter"&&onSubmit()}/></Field><Field label="Password"><input style={S.input} type="password" placeholder="••••••••" value={form.password} onChange={e=>onChange({password:e.target.value})} onKeyDown={e=>e.key==="Enter"&&onSubmit()}/></Field>{mode==="login"&&(<div style={{textAlign:"right",marginTop:-8,marginBottom:12}}><button onClick={()=>setShowForgot(true)} style={{background:"none",border:"none",color:"#c8895a",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>Forgot password?</button></div>)}{error&&<div style={S.errorBox}>{error}</div>}<button onClick={onSubmit} disabled={loading} style={{...S.saveBtn,width:"100%",padding:"13px",fontSize:15,marginTop:4}}>{loading?"One moment...":mode==="login"?"Sign In →":"Create My Journal →"}</button><div style={{textAlign:"center",marginTop:18,fontSize:13,color:"#b08060"}}>{mode==="login"?"New here? ":"Already have an account? "}<button onClick={onToggle} style={{background:"none",border:"none",color:"#c8895a",fontWeight:700,cursor:"pointer",fontSize:13}}>{mode==="login"?"Create an account":"Sign in"}</button></div></div>{!pwaDismissed&&<PWABanner prompt={pwaPrompt} onDismiss={()=>setPwaDismissed(true)}/>}</div>);
+  <Field label="Email"><input style={S.input} type="email" placeholder="you@email.com" value={form.email} onChange={e=>onChange({email:e.target.value})} onKeyDown={e=>e.key==="Enter"&&onSubmit()}/></Field><Field label="Password"><PasswordInput style={S.input} placeholder="••••••••" value={form.password} onChange={e=>onChange({password:e.target.value})} onKeyDown={e=>e.key==="Enter"&&onSubmit()}/></Field>{mode==="login"&&(<div style={{textAlign:"right",marginTop:-8,marginBottom:12}}><button onClick={()=>setShowForgot(true)} style={{background:"none",border:"none",color:"#c8895a",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>Forgot password?</button></div>)}{error&&<div style={S.errorBox}>{error}</div>}<button onClick={onSubmit} disabled={loading} style={{...S.saveBtn,width:"100%",padding:"13px",fontSize:15,marginTop:4}}>{loading?"One moment...":mode==="login"?"Sign In →":"Create My Journal →"}</button><div style={{textAlign:"center",marginTop:18,fontSize:13,color:"#b08060"}}>{mode==="login"?"New here? ":"Already have an account? "}<button onClick={onToggle} style={{background:"none",border:"none",color:"#c8895a",fontWeight:700,cursor:"pointer",fontSize:13}}>{mode==="login"?"Create an account":"Sign in"}</button></div></div>{!pwaDismissed&&<PWABanner prompt={pwaPrompt} onDismiss={()=>setPwaDismissed(true)}/>}</div>);
 }
 
 function ForgotPasswordScreen({onBack}){
   const [step,setStep]=useState("email");const [email,setEmail]=useState("");const [code,setCode]=useState("");const [newPassword,setNewPassword]=useState("");const [confirmPassword,setConfirmPassword]=useState("");const [error,setError]=useState("");const [loading,setLoading]=useState(false);const [sentTo,setSentTo]=useState("");
-  async function handleSendCode(){setError("");setLoading(true);const normalizedEmail=email.toLowerCase().trim();try{const result=await sbGet("users",`email=eq.${encodeURIComponent(normalizedEmail)}`);if(!result?.length){setError("No account found with that email address.");return;}const resetCode=String(Math.floor(100000+Math.random()*900000));const expiry=Date.now()+15*60*1000;await sbUpdate("users",`email=eq.${encodeURIComponent(normalizedEmail)}`,{reset_code:resetCode,reset_expiry:expiry});await fetch("/api/send-reset-email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:normalizedEmail,code:resetCode})});setSentTo(normalizedEmail);setStep("verify");}catch{setError("Something went wrong. Please try again.");}finally{setLoading(false);}}
-  async function handleVerifyCode(){setError("");setLoading(true);try{const result=await sbGet("users",`email=eq.${encodeURIComponent(sentTo)}`);const user=result?.[0];if(!user){setError("Something went wrong.");return;}if(user.reset_code!==code){setError("That code is incorrect.");return;}if(Date.now()>user.reset_expiry){setError("That code has expired. Please request a new one.");return;}setStep("reset");}catch{setError("Connection error. Please try again.");}finally{setLoading(false);}}
-  async function handleResetPassword(){setError("");if(newPassword.length<6){setError("Password must be at least 6 characters.");return;}if(newPassword!==confirmPassword){setError("Passwords don't match.");return;}setLoading(true);try{await sbUpdate("users",`email=eq.${encodeURIComponent(sentTo)}`,{password_hash:hashStr(newPassword),reset_code:null,reset_expiry:null});setStep("done");}catch{setError("Something went wrong. Please try again.");}finally{setLoading(false);}}
-  return(<div style={{...S.page,justifyContent:"center",alignItems:"center"}}><div style={S.texture}/><GlobalStyles/><div style={S.authCard}><div style={{textAlign:"center",marginBottom:24}}><div style={{fontSize:40,marginBottom:10}}>🔑</div><div style={{fontFamily:"'Lora',serif",fontSize:22,color:"#7a4a1e",fontWeight:600}}>Reset Password</div></div>{step==="email"&&<><p style={{fontSize:13,color:"#9a7050",marginBottom:20,lineHeight:1.6,textAlign:"center"}}>Enter your email and we'll send you a reset code.</p><Field label="Email"><input style={S.input} type="email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleSendCode()}/></Field>{error&&<div style={S.errorBox}>{error}</div>}<button onClick={handleSendCode} disabled={loading||!email} style={{...S.saveBtn,width:"100%",padding:"13px",marginTop:4}}>{loading?"Checking...":"Send Reset Code →"}</button><div style={{textAlign:"center",marginTop:16}}><button onClick={onBack} style={{background:"none",border:"none",color:"#b08060",fontSize:13,cursor:"pointer"}}>← Back to sign in</button></div></>}{step==="verify"&&<><div style={{background:"rgba(200,137,90,0.08)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:12,padding:"12px 16px",marginBottom:20,fontSize:13,color:"#9a7050",lineHeight:1.6,textAlign:"center"}}>A reset code has been sent to <strong>{sentTo}</strong>. Check your inbox!</div><Field label="Enter 6-digit code"><input style={{...S.input,letterSpacing:"4px",fontSize:20,textAlign:"center"}} placeholder="000000" maxLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,""))} onKeyDown={e=>e.key==="Enter"&&handleVerifyCode()}/></Field>{error&&<div style={S.errorBox}>{error}</div>}<button onClick={handleVerifyCode} disabled={loading||code.length!==6} style={{...S.saveBtn,width:"100%",padding:"13px",marginTop:4}}>{loading?"Verifying...":"Verify Code →"}</button><div style={{textAlign:"center",marginTop:16}}><button onClick={()=>setStep("email")} style={{background:"none",border:"none",color:"#b08060",fontSize:13,cursor:"pointer"}}>← Try a different email</button></div></>}{step==="reset"&&<><p style={{fontSize:13,color:"#9a7050",marginBottom:20,lineHeight:1.6,textAlign:"center"}}>Choose a new password for your account.</p><Field label="New Password"><input style={S.input} type="password" placeholder="At least 6 characters" value={newPassword} onChange={e=>setNewPassword(e.target.value)}/></Field><Field label="Confirm Password"><input style={S.input} type="password" placeholder="Type it again" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleResetPassword()}/></Field>{error&&<div style={S.errorBox}>{error}</div>}<button onClick={handleResetPassword} disabled={loading} style={{...S.saveBtn,width:"100%",padding:"13px",marginTop:4}}>{loading?"Saving...":"Set New Password →"}</button></>}{step==="done"&&<div style={{textAlign:"center",padding:"10px 0"}}><div style={{fontSize:48,marginBottom:14}}>✅</div><p style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",marginBottom:8}}>Password updated!</p><p style={{fontSize:13,color:"#b08060",marginBottom:24}}>You can now sign in with your new password.</p><button onClick={onBack} style={{...S.saveBtn,padding:"12px 32px"}}>Sign In →</button></div>}</div></div>);
+  async function handleSendCode(){setError("");setLoading(true);const normalizedEmail=email.toLowerCase().trim();try{const r=await authCall("reset_send",{email:normalizedEmail});if(!r.ok){setError(r.error||"Something went wrong. Please try again.");return;}setSentTo(normalizedEmail);setStep("verify");}catch{setError("Something went wrong. Please try again.");}finally{setLoading(false);}}
+  async function handleVerifyCode(){setError("");setLoading(true);try{const r=await authCall("reset_verify",{email:sentTo,code});if(!r.ok){setError(r.error||"That code is incorrect.");return;}setStep("reset");}catch{setError("Connection error. Please try again.");}finally{setLoading(false);}}
+  async function handleResetPassword(){setError("");if(newPassword.length<6){setError("Password must be at least 6 characters.");return;}if(newPassword!==confirmPassword){setError("Passwords don't match.");return;}setLoading(true);try{const r=await authCall("reset_password",{email:sentTo,code,password:newPassword});if(!r.ok){setError(r.error||"Something went wrong. Please try again.");return;}setStep("done");}catch{setError("Something went wrong. Please try again.");}finally{setLoading(false);}}
+  return(<div style={{...S.page,justifyContent:"center",alignItems:"center"}}><div style={S.texture}/><GlobalStyles/><div style={S.authCard}><div style={{textAlign:"center",marginBottom:24}}><div style={{fontSize:40,marginBottom:10}}>🔑</div><div style={{fontFamily:"'Lora',serif",fontSize:22,color:"#7a4a1e",fontWeight:600}}>Reset Password</div></div>{step==="email"&&<><p style={{fontSize:13,color:"#9a7050",marginBottom:20,lineHeight:1.6,textAlign:"center"}}>Enter your email and we'll send you a reset code.</p><Field label="Email"><input style={S.input} type="email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleSendCode()}/></Field>{error&&<div style={S.errorBox}>{error}</div>}<button onClick={handleSendCode} disabled={loading||!email} style={{...S.saveBtn,width:"100%",padding:"13px",marginTop:4}}>{loading?"Checking...":"Send Reset Code →"}</button><div style={{textAlign:"center",marginTop:16}}><button onClick={onBack} style={{background:"none",border:"none",color:"#b08060",fontSize:13,cursor:"pointer"}}>← Back to sign in</button></div></>}{step==="verify"&&<><div style={{background:"rgba(200,137,90,0.08)",border:"1px solid rgba(200,137,90,0.2)",borderRadius:12,padding:"12px 16px",marginBottom:20,fontSize:13,color:"#9a7050",lineHeight:1.6,textAlign:"center"}}>A reset code has been sent to <strong>{sentTo}</strong>. Check your inbox!</div><Field label="Enter 6-digit code"><input style={{...S.input,letterSpacing:"4px",fontSize:20,textAlign:"center"}} placeholder="000000" maxLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,""))} onKeyDown={e=>e.key==="Enter"&&handleVerifyCode()}/></Field>{error&&<div style={S.errorBox}>{error}</div>}<button onClick={handleVerifyCode} disabled={loading||code.length!==6} style={{...S.saveBtn,width:"100%",padding:"13px",marginTop:4}}>{loading?"Verifying...":"Verify Code →"}</button><div style={{textAlign:"center",marginTop:16}}><button onClick={()=>setStep("email")} style={{background:"none",border:"none",color:"#b08060",fontSize:13,cursor:"pointer"}}>← Try a different email</button></div></>}{step==="reset"&&<><p style={{fontSize:13,color:"#9a7050",marginBottom:20,lineHeight:1.6,textAlign:"center"}}>Choose a new password for your account.</p><Field label="New Password"><PasswordInput style={S.input} placeholder="At least 6 characters" value={newPassword} onChange={e=>setNewPassword(e.target.value)}/></Field><Field label="Confirm Password"><PasswordInput style={S.input} placeholder="Type it again" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleResetPassword()}/></Field>{error&&<div style={S.errorBox}>{error}</div>}<button onClick={handleResetPassword} disabled={loading} style={{...S.saveBtn,width:"100%",padding:"13px",marginTop:4}}>{loading?"Saving...":"Set New Password →"}</button></>}{step==="done"&&<div style={{textAlign:"center",padding:"10px 0"}}><div style={{fontSize:48,marginBottom:14}}>✅</div><p style={{fontFamily:"'Lora',serif",fontSize:18,color:"#5a2e0e",marginBottom:8}}>Password updated!</p><p style={{fontSize:13,color:"#b08060",marginBottom:24}}>You can now sign in with your new password.</p><button onClick={onBack} style={{...S.saveBtn,padding:"12px 32px"}}>Sign In →</button></div>}</div></div>);
 }
 
 function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
@@ -470,7 +481,7 @@ function UpgradeTab({currentPlan,user,onUpgradePlan}){
 function AccountTab({user,onLogout}){
   const [activeSection,setActiveSection]=useState(null);const [currentPw,setCurrentPw]=useState("");const [newPw,setNewPw]=useState("");const [confirmPw,setConfirmPw]=useState("");const [pwStatus,setPwStatus]=useState("");const [askMsg,setAskMsg]=useState("");const [askSent,setAskSent]=useState(false);const [askLoading,setAskLoading]=useState(false);
 
-  async function handlePasswordChange(){setPwStatus("");if(!currentPw||!newPw||!confirmPw){setPwStatus("error:All fields required.");return;}if(newPw.length<6){setPwStatus("error:New password must be at least 6 characters.");return;}if(newPw!==confirmPw){setPwStatus("error:Passwords don't match.");return;}const result=await sbGet("users",`email=eq.${encodeURIComponent(user.email)}`);if(!result?.length){setPwStatus("error:Could not verify account.");return;}if(result[0].password_hash!==hashStr(currentPw)){setPwStatus("error:Current password is incorrect.");return;}await sbUpdate("users",`email=eq.${encodeURIComponent(user.email)}`,{password_hash:hashStr(newPw)});setPwStatus("success:Password updated! 🌿");setCurrentPw("");setNewPw("");setConfirmPw("");}
+  async function handlePasswordChange(){setPwStatus("");if(!currentPw||!newPw||!confirmPw){setPwStatus("error:All fields required.");return;}if(newPw.length<6){setPwStatus("error:New password must be at least 6 characters.");return;}if(newPw!==confirmPw){setPwStatus("error:Passwords don't match.");return;}const r=await authCall("change_password",{current:currentPw,next:newPw});if(!r.ok){setPwStatus("error:"+(r.error||"Could not update password."));return;}setPwStatus("success:Password updated! 🌿");setCurrentPw("");setNewPw("");setConfirmPw("");}
   async function handleAskHallie(){if(!askMsg.trim())return;setAskLoading(true);try{await fetch("/api/ask-hallie",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:user.email,username:user.username,message:askMsg})});setAskSent(true);setAskMsg("");}catch{setAskSent(true);}setAskLoading(false);}
 
   const plan=PLANS[user.plan];
@@ -505,9 +516,9 @@ function AccountTab({user,onLogout}){
           )}
           {activeSection==="password"&&s.id==="password"&&(
             <div style={{padding:"0 20px 20px",display:"flex",flexDirection:"column",gap:12}}>
-              <Field label="Current Password"><input style={S.input} type="password" placeholder="••••••••" value={currentPw} onChange={e=>setCurrentPw(e.target.value)}/></Field>
-              <Field label="New Password"><input style={S.input} type="password" placeholder="At least 6 characters" value={newPw} onChange={e=>setNewPw(e.target.value)}/></Field>
-              <Field label="Confirm New Password"><input style={S.input} type="password" placeholder="Type it again" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)}/></Field>
+              <Field label="Current Password"><PasswordInput style={S.input} placeholder="••••••••" value={currentPw} onChange={e=>setCurrentPw(e.target.value)}/></Field>
+              <Field label="New Password"><PasswordInput style={S.input} placeholder="At least 6 characters" value={newPw} onChange={e=>setNewPw(e.target.value)}/></Field>
+              <Field label="Confirm New Password"><PasswordInput style={S.input} placeholder="Type it again" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)}/></Field>
               {pwStatus&&<div style={{padding:"10px 14px",borderRadius:12,fontSize:13,fontWeight:600,background:pwStatus.startsWith("success")?"rgba(100,170,100,0.1)":"rgba(200,80,60,0.08)",border:pwStatus.startsWith("success")?"1px solid rgba(100,170,100,0.3)":"1px solid rgba(200,80,60,0.2)",color:pwStatus.startsWith("success")?"#3a8050":"#c05040"}}>{pwStatus.replace(/^(success|error):/,"")}</div>}
               <button onClick={handlePasswordChange} style={S.saveBtn}>Update Password →</button>
             </div>
@@ -536,12 +547,8 @@ function DeleteAccountSection({user,onDeleted}){
   async function handleDelete(){
     setLoading(true);
     try{
-      await sbDelete("entries",`user_email=eq.${encodeURIComponent(user.email)}`);
-      await sbDelete("community_posts",`user_id=eq.${encodeURIComponent(user.email)}`);
-      await sbDelete("community_members",`user_id=eq.${encodeURIComponent(user.email)}`);
-      await sbDelete("post_reactions",`user_id=eq.${encodeURIComponent(user.email)}`);
-      await sbDelete("users",`email=eq.${encodeURIComponent(user.email)}`);
-      store.remove("myinnerminduser");
+      const r=await authCall("delete_account");if(!r.ok)throw new Error(r.error||"delete failed");
+      store.remove("myinnerminduser");setToken("");
       persist.remove("challenges_joined_"+user.email);
       persist.remove("letters_"+user.email);
       persist.remove("theme_"+user.email);
