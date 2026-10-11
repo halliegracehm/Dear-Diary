@@ -57,6 +57,7 @@ async function checkResetCode(email, code) {
 }
 
 export default async function handler(req, res) {
+  if (req.method === "GET") return res.status(200).json({ service: "my-inner-mind-auth", configured: !!config() });
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!config()) return res.status(503).json({ error: "not_configured" });
   const body = readBody(req);

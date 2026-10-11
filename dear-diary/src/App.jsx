@@ -206,12 +206,14 @@ useEffect(()=>{
         if(!authForm.username||!email||!authForm.password){setAuthError("All fields are required.");return;}
         if(authForm.password.length<6){setAuthError("Password must be at least 6 characters.");return;}
         const r=await authCall("register",{email,username:authForm.username,password:authForm.password});
+        if(r.status===503){const existing=await sbGet("users",`email=eq.${encodeURIComponent(email)}`);if(existing?.length>0){setAuthError("An account with that email already exists.");return;}const result=await sbInsert("users",{email,username:authForm.username,password_hash:hashStr(authForm.password),plan:"free"});if(result?.length>0){r.ok=true;r.user=result[0];r.token="legacy";}}
         if(!r.ok&&r.error){setAuthError(r.error);return;}
         if(r.user&&r.token){const u=r.user;setToken(r.token);store.set("myinnerminduser",u);fetch("/api/add-to-mailchimp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,name:authForm.username})}).catch(()=>{});setCurrentUser(u);setScreen("onboarding");}
         else{setAuthError("Something went wrong. Please try again.");}
       }else{
         if(!email||!authForm.password){setAuthError("Email and password are required.");return;}
         const r=await authCall("login",{email,password:authForm.password});
+        if(r.status===503){const result=await sbGet("users",`email=eq.${encodeURIComponent(email)}`);if(!result?.length){setAuthError("No account found with that email.");return;}if(result[0].password_hash!==hashStr(authForm.password)){setAuthError("Incorrect password.");return;}r.ok=true;r.user=result[0];r.token="legacy";}
         if(!r.ok||!r.user||!r.token){setAuthError(r.error||"Something went wrong. Please try again.");return;}
         const user=r.user;setToken(r.token);
         store.set("myinnerminduser",user);setCurrentUser(user);setScreen("app");
