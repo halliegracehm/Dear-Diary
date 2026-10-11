@@ -107,7 +107,7 @@ export default async function handler(req, res) {
       if (table === "community_posts") list = list.map((r) => (r.is_anonymous === true && r.user_id === "anonymous" ? r : { ...r, user_id: me }));
       if (table === "post_reactions") list = list.map((r) => ({ ...r, user_id: me }));
       if (table === "reports") list = list.map((r) => ({ ...r, reporter_id: me }));
-      if (table === "set_it_down_submissions") list = list.map((r) => ({ word: String(r.word || "").trim().slice(0, r.event_tag === "app" ? 140 : 40), event_tag: r.event_tag === "app" ? "app" : (r.event_tag || "set-it-down-saturday") }));
+      if (table === "set_it_down_submissions") list = list.map((r) => ({ word: String(r.word || "").trim().slice(0, ["app", "walk"].includes(r.event_tag) ? 140 : 40), event_tag: ["app", "walk"].includes(r.event_tag) ? r.event_tag : (r.event_tag || "set-it-down-saturday") }));
       const r = await sb(table, { method: "POST", body: Array.isArray(body) ? list : list[0], prefer });
       let out = r.data;
       if (table === "community_posts" || table === "post_reactions") out = hideMember(out, "user_id", me, isAdmin);
