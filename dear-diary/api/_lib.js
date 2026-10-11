@@ -4,15 +4,21 @@ import crypto from "crypto";
 export const ADMIN_EMAIL = "halliegracehm@gmail.com";
 const RC_PUBLIC_KEY = "appl_fzxjgNhvORlWaNPqmUTHtIaVytR";
 
+const DEFAULT_SUPABASE_URL = "https://xwhpyslvwnnbvyydimmg.supabase.co"; // public project URL
+
+function serviceKey() {
+  return process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
+}
+
 export function config() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const key = serviceKey();
   return url && key ? { url: url.replace(/\/$/, ""), key } : null;
 }
 
 // Signing key for session tokens. SESSION_SECRET if set, otherwise derived from the service key.
 function signingKey() {
-  const base = process.env.SESSION_SECRET || process.env.SUPABASE_SERVICE_KEY || "";
+  const base = process.env.SESSION_SECRET || serviceKey();
   return crypto.createHmac("sha256", base).update("myinnermind-session-v1").digest();
 }
 
@@ -76,7 +82,8 @@ export async function sb(path, { method = "GET", body, prefer } = {}) {
     method,
     headers: {
       apikey: c.key,
-      Authorization: `Bearer ${c.key}`,
+      // Legacy service_role keys are JWTs and go in both headers; new sb_secret_ keys go in apikey only
+      ...(c.key.startsWith("eyJ") ? { Authorization: `Bearer ${c.key}` } : {}),
       "Content-Type": "application/json",
       Prefer: prefer || "return=representation",
     },
