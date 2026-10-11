@@ -7,7 +7,12 @@ const RC_PUBLIC_KEY = "appl_fzxjgNhvORlWaNPqmUTHtIaVytR";
 const DEFAULT_SUPABASE_URL = "https://xwhpyslvwnnbvyydimmg.supabase.co"; // public project URL
 
 function serviceKey() {
-  return process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
+  const env = process.env;
+  const named = env.SUPABASE_SERVICE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE;
+  if (named) return named;
+  // Otherwise use any SUPABASE_* variable whose name mentions SERVICE or SECRET
+  const k = Object.keys(env).find((n) => /^SUPABASE/i.test(n) && /(SERVICE|SECRET)/i.test(n) && env[n]);
+  return k ? env[k] : "";
 }
 
 export function config() {
