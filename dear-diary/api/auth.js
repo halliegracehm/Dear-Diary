@@ -57,7 +57,19 @@ async function checkResetCode(email, code) {
 }
 
 export default async function handler(req, res) {
-  if (req.method === "GET") return res.status(200).json({ service: "my-inner-mind-auth", configured: !!config(), version: 3, supabaseVars: Object.keys(process.env).filter((n) => /SUPA/i.test(n)).map((n) => `${n}${process.env[n] ? "" : " (empty)"}`) });
+  if (req.method === "GET") {
+    const c = config();
+    let keyType = "missing", database = "not checked";
+    if (c) {
+      if (c.key.startsWith("sb_secret_")) keyType = "secret";
+      else if (c.key.startsWith("sb_publishable_")) keyType = "publishable (wrong key)";
+      else if (c.key.startsWith("eyJ")) { try { keyType = JSON.parse(Buffer.from(c.key.split(".")[1], "base64url").toString()).role || "unknown"; } catch { keyType = "unreadable"; } }
+      else keyType = "unknown";
+      const r = await sb("users?select=id&limit=1").catch(() => ({ ok: false, status: 0 }));
+      database = r.ok ? "ok" : `error ${r.status}`;
+    }
+    return res.status(200).json({ service: "my-inner-mind-auth", version: 4, configured: !!c, keyType, database });
+  }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!config()) return res.status(503).json({ error: "not_configured" });
   const body = readBody(req);
