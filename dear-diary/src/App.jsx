@@ -896,6 +896,203 @@ const GROVE_ACTIVITIES=[
   {key:"affirmmorning",emoji:"🪞",name:"Morning mirror affirmation",desc:'Look yourself in the eyes and say: "Today I choose myself." Mean it.',category:"Morning & Intention"},
 ];
 
+// ── MY TRACKERS — personal symptom, habit and ritual tracking with a shareable report ──
+const TRACKER_KINDS=[{k:"scale",label:"1 to 5 scale",hint:"How strong or how good"},{k:"yesno",label:"Yes / No",hint:"Did it happen today"},{k:"number",label:"Number",hint:"Hours, glasses, minutes"},{k:"note",label:"Quick note",hint:"A few words"}];
+const TRACKER_PRESETS=[{name:"Sleep quality",emoji:"😴",kind:"scale"},{name:"Energy",emoji:"⚡",kind:"scale"},{name:"Anxiety",emoji:"🌀",kind:"scale"},{name:"Headache",emoji:"🤕",kind:"scale"},{name:"Took my meds",emoji:"💊",kind:"yesno"},{name:"Water",emoji:"💧",kind:"number",unit:"glasses"},{name:"Hours slept",emoji:"🛏️",kind:"number",unit:"hours"},{name:"Movement",emoji:"🚶‍♀️",kind:"yesno"},{name:"Cycle",emoji:"🌸",kind:"yesno"}];
+const T_GREEN="#7a8c6e";const T_INK="#5a2e0e";const T_MUTED="#b08060";
+function tDateStr(d){const x=new Date(d);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`;}
+function tDaysAgo(n){const d=new Date();d.setDate(d.getDate()-n);return tDateStr(d);}
+function tUid(){try{return crypto.randomUUID();}catch{return `${Date.now()}_${Math.random().toString(36).slice(2,10)}`;}}
+function tPretty(ds){return new Date(ds+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});}
+
+function summarizeTracker(t,logs){
+  const vals=logs.filter(l=>l.tracker_id===t.id).sort((a,b)=>a.date.localeCompare(b.date));
+  const days=vals.length;
+  const notes=vals.filter(l=>l.note&&String(l.note).trim()).map(l=>({date:l.date,note:String(l.note).trim()}));
+  if(t.kind==="scale"||t.kind==="number"){
+    const nums=vals.map(l=>Number(l.value)).filter(v=>!isNaN(v));
+    if(!nums.length)return{days,notes,line:"No entries in this period"};
+    const avg=nums.reduce((a,b)=>a+b,0)/nums.length;const half=Math.floor(nums.length/2);
+    let trend="";if(nums.length>=4){const a=nums.slice(0,half).reduce((x,y)=>x+y,0)/half;const b=nums.slice(half).reduce((x,y)=>x+y,0)/(nums.length-half);const diff=b-a;trend=Math.abs(diff)<(t.kind==="scale"?0.3:Math.max(0.05*Math.abs(a),0.1))?"steady":diff>0?"going up":"going down";}
+    const unit=t.kind==="scale"?" / 5":(t.unit?` ${t.unit}`:"");
+    return{days,notes,avg,min:Math.min(...nums),max:Math.max(...nums),trend,series:vals.map(l=>({date:l.date,v:Number(l.value)})),line:`Average ${avg.toFixed(1)}${unit} · range ${Math.min(...nums)} to ${Math.max(...nums)}${trend?` · ${trend}`:""}`};
+  }
+  if(t.kind==="yesno"){const yes=vals.filter(l=>Number(l.value)===1).length;return{days,notes,yes,series:vals.map(l=>({date:l.date,v:Number(l.value)})),line:days?`Yes on ${yes} of ${days} logged days (${Math.round(yes/days*100)}%)`:"No entries in this period"};}
+  return{days,notes,line:days?`${days} notes`:"No entries in this period"};
+}
+
+function TrackerSection({user}){
+  const [trackers,setTrackers]=useState([]);const [logs,setLogs]=useState([]);const [loading,setLoading]=useState(true);
+  const [editing,setEditing]=useState(null);const [showReport,setShowReport]=useState(false);const [openNote,setOpenNote]=useState(null);
+  const today=tDateStr(new Date());
+  useEffect(()=>{load();},[]);
+  async function load(){setLoading(true);const [t,l]=await Promise.all([sbGet("trackers","archived=eq.false&order=sort.asc"),sbGet("tracker_logs",`date=gte.${tDaysAgo(120)}&order=date.asc`)]);setTrackers(Array.isArray(t)?t:[]);setLogs(Array.isArray(l)?l:[]);setLoading(false);}
+  function logFor(id,date=today){return logs.find(l=>l.tracker_id===id&&l.date===date);}
+  async function saveLog(t,patch){
+    const prev=logFor(t.id);const row={id:`${t.id}_${today}`,tracker_id:t.id,date:today,value:prev?.value??null,note:prev?.note??null,...patch};
+    setLogs(ls=>[...ls.filter(l=>!(l.tracker_id===t.id&&l.date===today)),row]);
+    await sbUpsert("tracker_logs",row);
+  }
+  async function clearLog(t){setLogs(ls=>ls.filter(l=>!(l.tracker_id===t.id&&l.date===today)));await sbDelete("tracker_logs",`id=eq.${encodeURIComponent(`${t.id}_${today}`)}`);}
+  async function saveTracker(t){
+    const row={id:t.id||tUid(),name:t.name.trim(),emoji:t.emoji||"🌿",kind:t.kind,unit:t.kind==="number"?(t.unit||"").trim()||null:null,archived:false,sort:t.sort??trackers.length};
+    setTrackers(ts=>{const i=ts.findIndex(x=>x.id===row.id);return i>=0?ts.map(x=>x.id===row.id?row:x):[...ts,row];});setEditing(null);
+    await sbUpsert("trackers",row);
+  }
+  async function removeTracker(t){if(!window.confirm(`Remove "${t.name}"? Its history will be hidden from reports.`))return;setTrackers(ts=>ts.filter(x=>x.id!==t.id));setEditing(null);await sbUpdate("trackers",`id=eq.${encodeURIComponent(t.id)}`,{archived:true});}
+
+  const card={background:"rgba(255,252,246,0.97)",border:"1px solid rgba(122,140,110,0.2)",borderRadius:20,padding:"18px"};
+  const pill=(on)=>({padding:"8px 0",flex:1,borderRadius:12,border:`1.5px solid ${on?T_GREEN:"rgba(122,140,110,0.22)"}`,background:on?"rgba(122,140,110,0.16)":"transparent",color:on?"#4a5c3e":"#8a6040",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif"});
+
+  if(showReport)return <TrackerReport user={user} trackers={trackers} onClose={()=>setShowReport(false)}/>;
+
+  return(<div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:10,gap:10}}>
+      <div><div style={{fontSize:11,fontWeight:700,color:T_MUTED,textTransform:"uppercase",letterSpacing:"0.6px"}}>My Trackers</div><div style={{fontSize:12,color:T_MUTED,fontStyle:"italic",marginTop:2}}>Notice your patterns. Share them if you want to.</div></div>
+      <div style={{display:"flex",gap:6,flexShrink:0}}>
+        {trackers.length>0&&<button onClick={()=>setShowReport(true)} style={{...S.ghostBtn,padding:"5px 12px",fontSize:11}}>Report</button>}
+        <button onClick={()=>setEditing({name:"",emoji:"🌿",kind:"scale"})} style={{...S.ghostBtn,padding:"5px 12px",fontSize:11}}>+ Add</button>
+      </div>
+    </div>
+
+    {editing&&(<div style={{...card,marginBottom:12,border:`1px solid ${T_GREEN}55`}}>
+      <div style={{fontWeight:700,color:T_INK,fontSize:14,marginBottom:12}}>{editing.id?"Edit tracker":"New tracker"}</div>
+      <div style={{display:"flex",gap:8,marginBottom:10}}>
+        <input value={editing.emoji} onChange={e=>setEditing({...editing,emoji:[...e.target.value].slice(-2).join("")})} style={{...S.input,width:56,textAlign:"center",fontSize:20,padding:"10px 0"}} aria-label="Emoji"/>
+        <input value={editing.name} onChange={e=>setEditing({...editing,name:e.target.value})} placeholder="What do you want to track?" style={{...S.input,flex:1}} maxLength={40}/>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+        {TRACKER_KINDS.map(k=>(<button key={k.k} onClick={()=>setEditing({...editing,kind:k.k})} style={{...pill(editing.kind===k.k),padding:"10px 8px",textAlign:"left",flex:"none"}}><div>{k.label}</div><div style={{fontSize:10,fontWeight:500,opacity:0.8,marginTop:2}}>{k.hint}</div></button>))}
+      </div>
+      {editing.kind==="number"&&<input value={editing.unit||""} onChange={e=>setEditing({...editing,unit:e.target.value})} placeholder="Unit (optional): hours, glasses, mg..." style={{...S.input,marginBottom:10}} maxLength={20}/>}
+      {!editing.id&&(<div style={{marginBottom:12}}><div style={{fontSize:11,color:T_MUTED,marginBottom:6}}>Or start from an idea:</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{TRACKER_PRESETS.filter(p=>!trackers.some(t=>t.name===p.name)).map(p=>(<button key={p.name} onClick={()=>setEditing({...editing,...p})} style={{padding:"5px 10px",borderRadius:14,border:"1px solid rgba(122,140,110,0.25)",background:"transparent",fontSize:12,color:"#6a5030",cursor:"pointer"}}>{p.emoji} {p.name}</button>))}</div></div>)}
+      <div style={{display:"flex",gap:8,justifyContent:"space-between"}}>
+        {editing.id?<button onClick={()=>removeTracker(editing)} style={S.deleteBtn}>Remove</button>:<span/>}
+        <div style={{display:"flex",gap:8}}><button onClick={()=>setEditing(null)} style={S.ghostBtn}>Cancel</button><button disabled={!editing.name.trim()} onClick={()=>saveTracker(editing)} style={{...S.saveBtn,background:`linear-gradient(135deg,#8ca07e,${T_GREEN})`,opacity:editing.name.trim()?1:0.5}}>Save</button></div>
+      </div>
+    </div>)}
+
+    {loading?<p style={{fontSize:13,color:T_MUTED,fontStyle:"italic"}}>Loading your trackers...</p>:trackers.length===0&&!editing?(
+      <div style={{...card,textAlign:"center"}}>
+        <div style={{fontSize:30,marginBottom:6}}>📈</div>
+        <p style={{fontFamily:"'Lora',serif",fontSize:15,color:T_INK,marginBottom:4}}>Track what matters to you</p>
+        <p style={{fontSize:12,color:T_MUTED,lineHeight:1.55,marginBottom:14}}>Symptoms, sleep, meds, energy, anything. Log it in a tap, see your patterns, and make a report for your doctor or therapist when you need one.</p>
+        <button onClick={()=>setEditing({name:"",emoji:"🌿",kind:"scale"})} style={{...S.saveBtn,background:`linear-gradient(135deg,#8ca07e,${T_GREEN})`}}>Create my first tracker</button>
+      </div>
+    ):(
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {trackers.map(t=>{const l=logFor(t.id);const v=l?.value;const hist=[...Array(14)].map((_,i)=>logFor(t.id,tDaysAgo(13-i)));return(
+          <div key={t.id} style={card}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+              <span style={{fontSize:22}}>{t.emoji}</span>
+              <div style={{flex:1,minWidth:0}}><div style={{fontWeight:700,color:T_INK,fontSize:14}}>{t.name}</div><div style={{fontSize:11,color:T_MUTED}}>{l?"Logged today":"Not logged today"}</div></div>
+              <div style={{display:"flex",gap:2,alignItems:"flex-end",height:22}} aria-label="Last 14 days">{hist.map((h,i)=>{const val=h?.value;let ht=4,op=0.18;if(h){if(t.kind==="scale")ht=4+Number(val)*3.6;else if(t.kind==="yesno")ht=Number(val)===1?18:6;else ht=12;op=0.85;}return <span key={i} style={{width:4,height:ht,borderRadius:2,background:T_GREEN,opacity:op}}/>;})}</div>
+              <button onClick={()=>setEditing({...t})} aria-label={`Edit ${t.name}`} style={{background:"none",border:"none",color:T_MUTED,fontSize:16,cursor:"pointer",padding:"0 2px"}}>⋯</button>
+            </div>
+            {t.kind==="scale"&&(<div><div style={{display:"flex",gap:6}}>{[1,2,3,4,5].map(n=>(<button key={n} onClick={()=>Number(v)===n?clearLog(t):saveLog(t,{value:n})} style={pill(Number(v)===n)}>{n}</button>))}</div><div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:T_MUTED,marginTop:4,padding:"0 4px"}}><span>low</span><span>high</span></div></div>)}
+            {t.kind==="yesno"&&(<div style={{display:"flex",gap:6}}>{[[1,"Yes"],[0,"No"]].map(([n,lab])=>(<button key={n} onClick={()=>l&&Number(v)===n?clearLog(t):saveLog(t,{value:n})} style={pill(l&&Number(v)===n)}>{lab}</button>))}</div>)}
+            {t.kind==="number"&&(<div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>saveLog(t,{value:Math.max(0,(Number(v)||0)-1)})} style={{...pill(false),flex:"none",width:44}}>−</button><input inputMode="decimal" value={v??""} placeholder="0" onChange={e=>{const x=e.target.value.replace(/[^0-9.]/g,"");if(x==="")clearLog(t);else saveLog(t,{value:Number(x)});}} style={{...S.input,textAlign:"center",flex:1,padding:"9px"}}/><button onClick={()=>saveLog(t,{value:(Number(v)||0)+1})} style={{...pill(false),flex:"none",width:44}}>+</button>{t.unit&&<span style={{fontSize:12,color:T_MUTED,minWidth:40}}>{t.unit}</span>}</div>)}
+            {t.kind==="note"&&(<textarea defaultValue={l?.note||""} placeholder="A few words about today..." onBlur={e=>{const x=e.target.value.trim();if(!x&&l)clearLog(t);else if(x!==(l?.note||""))saveLog(t,{note:x,value:null});}} style={{...S.textarea,minHeight:60}} rows={2}/>)}
+            {t.kind!=="note"&&(openNote===t.id?(<textarea autoFocus defaultValue={l?.note||""} placeholder="Add a note for today (optional)" onBlur={e=>{const x=e.target.value.trim();setOpenNote(null);if(x!==(l?.note||""))saveLog(t,{note:x||null});}} style={{...S.textarea,minHeight:52,marginTop:10}} rows={2}/>):(<button onClick={()=>setOpenNote(t.id)} style={{background:"none",border:"none",color:T_MUTED,fontSize:12,cursor:"pointer",marginTop:8,padding:0}}>{l?.note?`📝 ${l.note.length>48?l.note.slice(0,48)+"…":l.note}`:"+ add a note"}</button>))}
+          </div>);})}
+      </div>
+    )}
+    <p style={{fontSize:11,color:T_MUTED,fontStyle:"italic",textAlign:"center",marginTop:10,lineHeight:1.5}}>Your trackers are private to you. They're for noticing patterns, not for diagnosing anything.</p>
+  </div>);
+}
+
+function TrackerReport({user,trackers,onClose}){
+  const [range,setRange]=useState(30);const [picked,setPicked]=useState(()=>new Set(trackers.map(t=>t.id)));const [incMood,setIncMood]=useState(true);const [incRituals,setIncRituals]=useState(true);const [incNotes,setIncNotes]=useState(true);
+  const [logs,setLogs]=useState([]);const [moods,setMoods]=useState([]);const [rituals,setRituals]=useState([]);const [loading,setLoading]=useState(true);const [msg,setMsg]=useState("");
+  const from=tDaysAgo(range-1);const to=tDateStr(new Date());
+  useEffect(()=>{(async()=>{setLoading(true);const [l,m,r]=await Promise.all([sbGet("tracker_logs",`date=gte.${from}&order=date.asc`),sbGet("grove_entries",`created_at=gte.${from}T00:00:00&order=created_at.asc`),sbGet("grove_activity_log",`date=gte.${from}&order=date.asc`)]);setLogs(Array.isArray(l)?l:[]);setMoods(Array.isArray(m)?m:[]);setRituals(Array.isArray(r)?r:[]);setLoading(false);})();},[range]);
+  const chosen=trackers.filter(t=>picked.has(t.id));
+  const sums=chosen.map(t=>({t,s:summarizeTracker(t,logs)}));
+  const moodCounts={};moods.forEach(m=>{const k=String(m.mood||"").trim();if(k)moodCounts[k]=(moodCounts[k]||0)+1;});
+  const moodList=Object.entries(moodCounts).sort((a,b)=>b[1]-a[1]);
+  const ritualCounts={};rituals.forEach(r=>{const k=`${r.activity_emoji||""} ${r.activity_label||r.activity_key}`.trim();ritualCounts[k]=(ritualCounts[k]||0)+1;});
+  const ritualList=Object.entries(ritualCounts).sort((a,b)=>b[1]-a[1]);
+  const periodLabel=`${tPretty(from)} to ${tPretty(to)}, ${new Date().getFullYear()}`;
+
+  function textSummary(){
+    const L=[`My Inner Mind: personal tracking summary`,`${user.username||""} · ${periodLabel}`,``];
+    sums.forEach(({t,s})=>{L.push(`${t.emoji} ${t.name}: ${s.line} (${s.days} days logged)`);if(incNotes)s.notes.forEach(n=>L.push(`   ${tPretty(n.date)}: ${n.note}`));});
+    if(incMood&&moodList.length){L.push("",`Mood check-ins (${moods.length}):`);moodList.forEach(([k,c])=>L.push(`   ${k}: ${c}`));}
+    if(incRituals&&ritualList.length){L.push("",`Self-care rituals completed (${rituals.length}):`);ritualList.forEach(([k,c])=>L.push(`   ${k}: ${c}`));}
+    L.push("","Self-reported tracking for personal reflection. Not a medical record or diagnosis.");return L.join("\n");
+  }
+
+  async function buildPdf(){
+    const {jsPDF}=await import("jspdf");const doc=new jsPDF({unit:"pt",format:"letter"});
+    const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=54;let y=M;
+    const ink=[90,46,14],muted=[150,110,80],green=[122,140,110],line=[230,215,200];
+    const clean=s=>String(s||"").replace(/[^\x20-\x7E -ÿ]/g,"").replace(/\s+/g," ").trim();
+    const need=h=>{if(y+h>H-M){doc.addPage();y=M;}};
+    doc.setFont("times","bold");doc.setFontSize(22);doc.setTextColor(...ink);doc.text("Personal Tracking Summary",M,y);y+=20;
+    doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(...muted);doc.text(`${clean(user.username)||"My Inner Mind member"}  ·  ${periodLabel}  ·  Generated ${tPretty(to)}`,M,y);y+=12;
+    doc.setDrawColor(...line);doc.line(M,y,W-M,y);y+=24;
+    sums.forEach(({t,s})=>{
+      need(110);doc.setFont("helvetica","bold");doc.setFontSize(13);doc.setTextColor(...ink);doc.text(clean(t.name),M,y);
+      doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(...muted);doc.text(`${s.days} of ${range} days logged`,W-M,y,{align:"right"});y+=15;
+      doc.setFontSize(10.5);doc.setTextColor(60,40,25);doc.text(clean(s.line),M,y);y+=12;
+      if(s.series&&s.series.length){
+        const cw=W-2*M,ch=46,x0=M,y0=y+6;const max=t.kind==="scale"?5:t.kind==="yesno"?1:Math.max(...s.series.map(p=>p.v),1);
+        doc.setDrawColor(...line);doc.setLineWidth(0.5);doc.line(x0,y0+ch,x0+cw,y0+ch);
+        const day0=new Date(from+"T12:00:00").getTime();const bw=Math.max(1.5,cw/range-1.5);
+        doc.setFillColor(...green);
+        s.series.forEach(p=>{const i=Math.round((new Date(p.date+"T12:00:00").getTime()-day0)/86400000);if(i<0||i>=range)return;const hgt=Math.max(1.5,(p.v/max)*ch);doc.rect(x0+i*(cw/range),y0+ch-hgt,bw,hgt,"F");});
+        doc.setFontSize(8);doc.setTextColor(...muted);doc.text(tPretty(from),x0,y0+ch+11);doc.text(tPretty(to),x0+cw,y0+ch+11,{align:"right"});
+        if(t.kind!=="yesno")doc.text(`max ${max}`,x0,y0-2);
+        y=y0+ch+24;
+      }else y+=8;
+      if(incNotes&&s.notes.length){doc.setFontSize(9.5);doc.setTextColor(...muted);doc.text("Notes",M,y);y+=12;doc.setTextColor(60,40,25);s.notes.forEach(n=>{const lines=doc.splitTextToSize(`${tPretty(n.date)}: ${clean(n.note)}`,W-2*M-10);need(lines.length*12+4);doc.text(lines,M+10,y);y+=lines.length*12+2;});y+=6;}
+      y+=10;
+    });
+    const block=(title,list,total)=>{need(40+list.length*13);doc.setFont("helvetica","bold");doc.setFontSize(13);doc.setTextColor(...ink);doc.text(title,M,y);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(...muted);doc.text(`${total} total`,W-M,y,{align:"right"});y+=16;doc.setFontSize(10.5);doc.setTextColor(60,40,25);list.forEach(([k,c])=>{doc.text(`${clean(k)||"Other"}`,M,y);doc.text(String(c),W-M,y,{align:"right"});y+=13;});y+=14;};
+    if(incMood&&moodList.length)block("Mood check-ins",moodList,moods.length);
+    if(incRituals&&ritualList.length)block("Self-care rituals completed",ritualList,rituals.length);
+    need(40);doc.setDrawColor(...line);doc.line(M,y,W-M,y);y+=16;doc.setFontSize(8.5);doc.setTextColor(...muted);
+    doc.text(doc.splitTextToSize("Self-reported by the person named above using the My Inner Mind app, for personal reflection and to support conversations with their care team. This is not a medical record, assessment or diagnosis.",W-2*M),M,y);
+    return doc;
+  }
+  async function sharePdf(){
+    setMsg("");try{const doc=await buildPdf();const blob=doc.output("blob");const name=`tracking-summary-${to}.pdf`;const file=new File([blob],name,{type:"application/pdf"});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"My tracking summary"});return;}
+      const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);setMsg("Your PDF has been downloaded.");
+    }catch(e){if(e?.name!=="AbortError"){console.error(e);setMsg("Couldn't make the PDF here. Try Copy summary instead.");}}
+  }
+  async function copySummary(){try{await navigator.clipboard.writeText(textSummary());setMsg("Summary copied. Paste it into an email or message.");}catch{setMsg("Couldn't copy on this device.");}}
+
+  const chip=(on)=>({padding:"7px 12px",borderRadius:14,border:`1.5px solid ${on?T_GREEN:"rgba(122,140,110,0.22)"}`,background:on?"rgba(122,140,110,0.14)":"transparent",color:on?"#4a5c3e":"#8a6040",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif"});
+  const card={background:"rgba(255,252,246,0.97)",border:"1px solid rgba(122,140,110,0.2)",borderRadius:20,padding:"18px"};
+  return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><button onClick={onClose} style={S.ghostBtn}>← Trackers</button><div style={{fontSize:11,fontWeight:700,color:T_MUTED,textTransform:"uppercase",letterSpacing:"0.6px"}}>Share a report</div></div>
+    <div style={card}>
+      <div style={{fontSize:12,fontWeight:700,color:T_INK,marginBottom:8}}>Time period</div>
+      <div style={{display:"flex",gap:6,marginBottom:14}}>{[7,30,90].map(n=>(<button key={n} onClick={()=>setRange(n)} style={{...chip(range===n),flex:1}}>{n} days</button>))}</div>
+      <div style={{fontSize:12,fontWeight:700,color:T_INK,marginBottom:8}}>Include</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+        {trackers.map(t=>(<button key={t.id} onClick={()=>{const n=new Set(picked);n.has(t.id)?n.delete(t.id):n.add(t.id);setPicked(n);}} style={chip(picked.has(t.id))}>{t.emoji} {t.name}</button>))}
+        <button onClick={()=>setIncMood(v=>!v)} style={chip(incMood)}>🌲 Mood check-ins</button>
+        <button onClick={()=>setIncRituals(v=>!v)} style={chip(incRituals)}>🌿 Rituals</button>
+        <button onClick={()=>setIncNotes(v=>!v)} style={chip(incNotes)}>📝 My notes</button>
+      </div>
+    </div>
+    <div style={card}>
+      <div style={{fontFamily:"'Lora',serif",fontSize:17,color:T_INK,fontWeight:600}}>Preview</div>
+      <div style={{fontSize:11,color:T_MUTED,marginBottom:12}}>{periodLabel}</div>
+      {loading?<p style={{fontSize:13,color:T_MUTED,fontStyle:"italic"}}>Gathering your data...</p>:(<div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {sums.map(({t,s})=>(<div key={t.id}><div style={{fontWeight:700,color:T_INK,fontSize:13}}>{t.emoji} {t.name} <span style={{fontWeight:500,color:T_MUTED,fontSize:11}}>· {s.days} days logged</span></div><div style={{fontSize:12,color:"#6a4020",marginTop:2}}>{s.line}</div>{incNotes&&s.notes.length>0&&<div style={{fontSize:11,color:T_MUTED,marginTop:4}}>{s.notes.length} note{s.notes.length>1?"s":""} included</div>}</div>))}
+        {incMood&&<div><div style={{fontWeight:700,color:T_INK,fontSize:13}}>🌲 Mood check-ins <span style={{fontWeight:500,color:T_MUTED,fontSize:11}}>· {moods.length}</span></div><div style={{fontSize:12,color:"#6a4020",marginTop:2}}>{moodList.length?moodList.slice(0,4).map(([k,c])=>`${k} ×${c}`).join(" · "):"None in this period"}</div></div>}
+        {incRituals&&<div><div style={{fontWeight:700,color:T_INK,fontSize:13}}>🌿 Rituals completed <span style={{fontWeight:500,color:T_MUTED,fontSize:11}}>· {rituals.length}</span></div><div style={{fontSize:12,color:"#6a4020",marginTop:2}}>{ritualList.length?ritualList.slice(0,4).map(([k,c])=>`${k} ×${c}`).join(" · "):"None in this period"}</div></div>}
+      </div>)}
+    </div>
+    <div style={{display:"flex",gap:8}}><button disabled={loading} onClick={sharePdf} style={{...S.saveBtn,flex:1,background:`linear-gradient(135deg,#8ca07e,${T_GREEN})`}}>Share PDF</button><button disabled={loading} onClick={copySummary} style={{...S.ghostBtn,flex:1}}>Copy summary</button></div>
+    {msg&&<p style={{fontSize:12,color:T_GREEN,textAlign:"center"}}>{msg}</p>}
+    <p style={{fontSize:11,color:T_MUTED,fontStyle:"italic",textAlign:"center",lineHeight:1.5}}>Nothing is sent anywhere unless you share it. You choose who sees this.</p>
+  </div>);
+}
+
 function GroveTab({user}){
   const [entries,setEntries]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -1050,6 +1247,8 @@ function GroveTab({user}){
           {saving?"Checking in...":"Check In 🌿"}
         </button>
       </div>
+
+      <TrackerSection user={user}/>
 
       <div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
