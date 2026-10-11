@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     await resend.emails.send({
       from: "My Inner Mind <noreply@halliewho.com>",
       to: "halliegracehm@gmail.com",
-      subject: `💌 Ask Hallie — message from ${username || "a member"}`,
+      subject: `💌 Ask Hallie: message from ${username || "a member"}`,
       html: `
         <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; background: #fdf6ec; padding: 40px; border-radius: 16px;">
           <div style="text-align: center; margin-bottom: 32px;">
