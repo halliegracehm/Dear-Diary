@@ -920,7 +920,7 @@ function AmbientPlayer({playing,onToggle}){const toggle=onToggle;return(<div sty
 function NestTab({user,isPro,isOTR,aiPrompt,promptLoading,onWrite,theme,ambientPlaying,onToggleAmbient}){
   const T=theme||THEMES.original;const [openSections,setOpenSections]=useState([]);const isOpen=(id)=>openSections.includes(id);const affirmation=getDailyAffirmation();const weekIndex=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*24*60*60*1000))%WEEKLY_BREATHWORK.length;const weeklyBreath=WEEKLY_BREATHWORK[weekIndex];const nightTime=isNightTime();
   function toggleSection(id){setOpenSections(o=>o.includes(id)?o.filter(x=>x!==id):[...o,id]);}
-  return(<div style={{display:"flex",flexDirection:"column",gap:0}}><div style={{padding:"0 0 20px"}}><PageHeader kicker="A soft place" title="Your Nest" sub="Pause here. Breathe here. Come back to yourself here."/></div><div style={{display:"flex",flexDirection:"column",gap:14}}><NestCard icon="💫" title="Daily Affirmation" subtitle="Your daily reminder to soften and center" color={T.accent} onOpen={()=>toggleSection("affirmation")} open={isOpen("affirmation")}>{isOpen("affirmation")&&(<div style={{textAlign:"center",padding:"16px 0 8px"}}><p style={{fontFamily:"'Lora',serif",fontSize:18,color:T.text,fontStyle:"italic",lineHeight:1.65,marginBottom:14}}>"{affirmation}"</p><button onClick={(e)=>{e.stopPropagation();if(window._setSharePrompt)window._setSharePrompt(affirmation);}} style={{...S.softBtn,background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.2)",color:"#7a4a1e"}}>Share 💫</button></div>)}</NestCard><NestCard icon="🌬️" title="Breathwork" subtitle={`This week: ${weeklyBreath.name}: ${weeklyBreath.desc}`} color="#7a8c6e" onOpen={()=>toggleSection("breath")} open={isOpen("breath")}>{isOpen("breath")&&<BreathworkPlayer exercise={weeklyBreath}/>}</NestCard><NestCard icon="🧘" title="2-min Meditation" subtitle="Pause for 2 minutes. Sit back, settle in, return to calm." color="#9b7eb8" onOpen={()=>toggleSection("meditation")} open={isOpen("meditation")}>{isOpen("meditation")&&<MeditationPlayer isOTR={isOTR}/>}</NestCard><NestCard icon="🎵" title="Ambient Sounds" subtitle="Birds, leaves, waves, or white noise. Find your calm." color="#5b8fa8" onOpen={()=>toggleSection("sound")} open={isOpen("sound")}>{isOpen("sound")&&<AmbientPlayer playing={ambientPlaying} onToggle={onToggleAmbient}/>}</NestCard><NestCard icon="🪨" title="Set It Down" subtitle="Put down what you've been carrying. It goes to Hallie, anonymously." color="#7c5cbf" onOpen={()=>toggleSection("setitdown")} open={isOpen("setitdown")}>{isOpen("setitdown")&&<div style={{background:"linear-gradient(175deg,#2b2443 0%,#3d3354 60%,#54476a 100%)",borderRadius:16,padding:"20px 18px"}}><SetItDownPanel compact/></div>}</NestCard><NestCard icon="🎙️" title="Listen" subtitle="The latest from the My Inner Mind podcast." color="#9b7eb8" onOpen={()=>toggleSection("podcast")} open={isOpen("podcast")}>{isOpen("podcast")&&<PodcastPlayer/>}</NestCard><NestCard icon={nightTime?"🌙":"✨"} title={nightTime?"Tonight's Reflection":"Today's Prompt"} subtitle={nightTime?"Softly close the day with intention.":"A gentle nudge for self-reflection."} color={nightTime?"#6b5ba8":"#c8895a"} onOpen={()=>toggleSection("prompt")} open={isOpen("prompt")}>{isOpen("prompt")&&(<div style={{padding:"12px 0 4px"}}><p style={{fontFamily:"'Lora',serif",fontSize:15,color:T.text,fontStyle:"italic",lineHeight:1.7,marginBottom:14}}>{nightTime?getNightPrompt():(promptLoading?"Finding your prompt...":aiPrompt||"What are you grateful for right now?")}</p><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button onClick={(e)=>{e.stopPropagation();onWrite(nightTime?getNightPrompt():aiPrompt);}} style={S.softBtn}>Write to this →</button><button onClick={(e)=>{e.stopPropagation();if(window._setSharePrompt)window._setSharePrompt(nightTime?getNightPrompt():aiPrompt);}} style={{...S.softBtn,background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.2)",color:"#7a4a1e"}}>Share 🌿</button></div></div>)}</NestCard></div></div>);
+  return(<div style={{display:"flex",flexDirection:"column",gap:0}}><div style={{padding:"0 0 18px"}}><NestScene/></div><div style={{display:"flex",flexDirection:"column",gap:14}}><NestCard icon="💫" title="Daily Affirmation" subtitle="Your daily reminder to soften and center" color={T.accent} onOpen={()=>toggleSection("affirmation")} open={isOpen("affirmation")}>{isOpen("affirmation")&&(<div style={{textAlign:"center",padding:"16px 0 8px"}}><p style={{fontFamily:"'Lora',serif",fontSize:18,color:T.text,fontStyle:"italic",lineHeight:1.65,marginBottom:14}}>"{affirmation}"</p><button onClick={(e)=>{e.stopPropagation();if(window._setSharePrompt)window._setSharePrompt(affirmation);}} style={{...S.softBtn,background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.2)",color:"#7a4a1e"}}>Share 💫</button></div>)}</NestCard><NestCard icon="🌬️" title="Breathwork" subtitle={`This week: ${weeklyBreath.name}: ${weeklyBreath.desc}`} color="#7a8c6e" onOpen={()=>toggleSection("breath")} open={isOpen("breath")}>{isOpen("breath")&&<BreathworkPlayer exercise={weeklyBreath}/>}</NestCard><NestCard icon="🧘" title="2-min Meditation" subtitle="Pause for 2 minutes. Sit back, settle in, return to calm." color="#9b7eb8" onOpen={()=>toggleSection("meditation")} open={isOpen("meditation")}>{isOpen("meditation")&&<MeditationPlayer isOTR={isOTR}/>}</NestCard><NestCard icon="🎵" title="Ambient Sounds" subtitle="Birds, leaves, waves, or white noise. Find your calm." color="#5b8fa8" onOpen={()=>toggleSection("sound")} open={isOpen("sound")}>{isOpen("sound")&&<AmbientPlayer playing={ambientPlaying} onToggle={onToggleAmbient}/>}</NestCard><NestCard icon="🪨" title="Set It Down" subtitle="Put down what you've been carrying. It goes to Hallie, anonymously." color="#7c5cbf" onOpen={()=>toggleSection("setitdown")} open={isOpen("setitdown")}>{isOpen("setitdown")&&<div style={{background:"linear-gradient(175deg,#2b2443 0%,#3d3354 60%,#54476a 100%)",borderRadius:16,padding:"20px 18px"}}><SetItDownPanel compact/></div>}</NestCard><NestCard icon="🎙️" title="Listen" subtitle="The latest from the My Inner Mind podcast." color="#9b7eb8" onOpen={()=>toggleSection("podcast")} open={isOpen("podcast")}>{isOpen("podcast")&&<PodcastPlayer/>}</NestCard><NestCard icon={nightTime?"🌙":"✨"} title={nightTime?"Tonight's Reflection":"Today's Prompt"} subtitle={nightTime?"Softly close the day with intention.":"A gentle nudge for self-reflection."} color={nightTime?"#6b5ba8":"#c8895a"} onOpen={()=>toggleSection("prompt")} open={isOpen("prompt")}>{isOpen("prompt")&&(<div style={{padding:"12px 0 4px"}}><p style={{fontFamily:"'Lora',serif",fontSize:15,color:T.text,fontStyle:"italic",lineHeight:1.7,marginBottom:14}}>{nightTime?getNightPrompt():(promptLoading?"Finding your prompt...":aiPrompt||"What are you grateful for right now?")}</p><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button onClick={(e)=>{e.stopPropagation();onWrite(nightTime?getNightPrompt():aiPrompt);}} style={S.softBtn}>Write to this →</button><button onClick={(e)=>{e.stopPropagation();if(window._setSharePrompt)window._setSharePrompt(nightTime?getNightPrompt():aiPrompt);}} style={{...S.softBtn,background:"rgba(122,74,30,0.08)",border:"1px solid rgba(122,74,30,0.2)",color:"#7a4a1e"}}>Share 🌿</button></div></div>)}</NestCard></div></div>);
 }
 
 function NestCard({icon,title,subtitle,color,onOpen,open,children}){const lastChildren=useRef(children);if(open&&children)lastChildren.current=children;const [mounted,setMounted]=useState(open);useEffect(()=>{if(open){setMounted(true);return;}const t=setTimeout(()=>setMounted(false),320);return()=>clearTimeout(t);},[open]);const body=open?children:(mounted?lastChildren.current:null);return(<div style={{background:"rgba(255,252,246,0.93)",border:`1px solid ${open?color+"55":"rgba(200,137,90,0.12)"}`,borderRadius:20,overflow:"hidden",transition:"border-color 0.3s, box-shadow 0.3s",boxShadow:open?"0 6px 22px rgba(90,46,14,0.07)":"none"}}><button onClick={onOpen} aria-expanded={open} style={{width:"100%",background:"none",border:"none",padding:"18px 20px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",textAlign:"left"}} type="button"><div style={{width:44,height:44,borderRadius:14,background:`${color}18`,border:`1px solid ${color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{icon}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#5a2e0e",fontSize:15,fontFamily:"'Nunito',sans-serif"}}>{title}</div><div style={{fontSize:12,color:"#b08060",marginTop:2,lineHeight:1.4}}>{subtitle}</div></div><span style={{width:30,height:30,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,background:open?`${color}22`:"rgba(200,137,90,0.08)",transition:"background 0.3s"}}><svg width="14" height="14" viewBox="0 0 14 14" style={{transition:"transform 0.32s ease",transform:open?"rotate(180deg)":"rotate(0deg)"}}><path d="M3 5.5 L7 9.5 L11 5.5" stroke={open?color:"#b08060"} strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg></span></button><div style={{display:"grid",gridTemplateRows:open?"1fr":"0fr",transition:"grid-template-rows 0.32s ease"}}><div style={{overflow:"hidden",minHeight:0}}><div style={{padding:"0 20px 18px",opacity:open?1:0,transition:"opacity 0.25s ease"}}>{body}</div></div></div></div>);}
@@ -1401,6 +1401,86 @@ function TrackerReport({user,trackers,onClose}){
   </div>);
 }
 
+// ── LIVING SCENES (Grove + Nest headers), same skies as Home ──
+function scenePalette(){const h=new Date().getHours();
+  if(h>=5&&h<8)return{sky:"linear-gradient(180deg,#e9d3c4 0%,#e3b9ad 45%,#c9a3ae 100%)",r:["#b49aac","#8f7891","#6c5873"],text:"#fffaf5",sub:"rgba(255,250,245,0.85)",glow:"rgba(255,226,190,0.55)",orb:"#fff1dc",night:false};
+  if(h>=8&&h<17)return{sky:"linear-gradient(180deg,#dfe7e6 0%,#e9e6dc 55%,#efe2cf 100%)",r:["#cfc7b3","#aab09a","#7f8c73"],text:"#3d2a1a",sub:"rgba(61,42,26,0.66)",glow:"rgba(255,226,170,0.6)",orb:"#fff6e2",night:false};
+  if(h>=17&&h<20)return{sky:"linear-gradient(180deg,#d9a88a 0%,#c98f86 45%,#9a7790 100%)",r:["#8a6f86","#65506b","#45374f"],text:"#fffaf5",sub:"rgba(255,250,245,0.84)",glow:"rgba(255,200,160,0.5)",orb:"#ffe0c2",night:false};
+  return{sky:"linear-gradient(180deg,#1f1a33 0%,#2b2443 50%,#3d3354 100%)",r:["#3b3150","#2c243e","#1d182b"],text:"#f6f1ea",sub:"rgba(246,241,234,0.74)",glow:"rgba(243,234,216,0.35)",orb:"#f3ead8",night:true};}
+
+function SceneHeader({kicker,title,sub,height=270,children,footer}){
+  const P=scenePalette();
+  return(<div style={{position:"relative",height,borderRadius:26,overflow:"hidden",background:P.sky,boxShadow:"0 10px 30px rgba(61,42,26,0.10)",marginBottom:4}}>
+    <style>{`@keyframes mimSway{0%,100%{transform:rotate(-1.6deg)}50%{transform:rotate(1.6deg)}}@keyframes mimFly{0%,100%{transform:translate(0,0);opacity:.2}50%{transform:translate(10px,-14px);opacity:1}}@keyframes mimBloom{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}@keyframes mimBreath{0%,100%{transform:scale(.82);opacity:.55}50%{transform:scale(1.12);opacity:1}}@keyframes mimCloud{from{transform:translateX(-30%)}to{transform:translateX(130%)}}@keyframes mimTwinkle2{0%,100%{opacity:.25}50%{opacity:.95}}`}</style>
+    <div style={{position:"absolute",top:-40,right:-30,width:200,height:200,borderRadius:"50%",background:`radial-gradient(circle,${P.glow} 0%,transparent 65%)`}}/>
+    <div style={{position:"absolute",top:28,right:36,width:26,height:26,borderRadius:"50%",background:`radial-gradient(circle at 40% 38%,#fff,${P.orb} 70%)`}}/>
+    {P.night&&[...Array(12)].map((_,i)=>(<div key={i} style={{position:"absolute",width:2,height:2,borderRadius:"50%",background:"#fff",left:`${(i*41+9)%92}%`,top:`${(i*23+6)%38}%`,animation:`mimTwinkle2 ${3+(i%3)}s ease-in-out infinite`,animationDelay:`${i*0.4}s`}}/>))}
+    <svg viewBox="0 0 400 220" preserveAspectRatio="none" style={{position:"absolute",left:0,right:0,bottom:0,width:"100%",height:"52%"}}>
+      <path d="M0 92 C 50 70, 90 78, 130 64 S 210 40, 260 58 S 340 76, 400 54 L400 220 L0 220 Z" fill={P.r[0]} opacity="0.75"/>
+      <path d="M0 132 C 60 110, 110 124, 170 104 S 270 92, 320 112 S 380 118, 400 106 L400 220 L0 220 Z" fill={P.r[1]} opacity="0.9"/>
+      <path d="M0 172 C 70 152, 140 166, 210 150 S 330 156, 400 144 L400 220 L0 220 Z" fill={P.r[2]}/>
+    </svg>
+    {children&&children(P)}
+    <div style={{position:"relative",zIndex:2,padding:"24px 24px 0",maxWidth:"78%"}}>
+      {kicker&&<div style={{fontSize:11,letterSpacing:"2.2px",textTransform:"uppercase",color:P.sub,fontWeight:700,marginBottom:8}}>{kicker}</div>}
+      <h1 style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:30,lineHeight:1.15,color:P.text,margin:0}}>{title}</h1>
+      {sub&&<p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:15,lineHeight:1.5,color:P.sub,margin:"6px 0 0"}}>{sub}</p>}
+    </div>
+    {footer&&<div style={{position:"absolute",left:0,right:0,bottom:12,zIndex:3,textAlign:"center",fontSize:12,fontWeight:700,color:"rgba(255,252,246,0.95)",textShadow:"0 1px 6px rgba(0,0,0,0.25)"}}>{footer}</div>}
+  </div>);
+}
+
+// Trees that sway, fireflies at night, and a flower for every ritual finished today
+function GroveScene({bloomed=0}){
+  const trees=[{x:"6%",h:96,d:0},{x:"20%",h:72,d:1.2},{x:"74%",h:104,d:0.6},{x:"88%",h:78,d:1.8}];
+  const spots=[18,32,46,60,74];
+  return(<SceneHeader kicker="Check in" title="The Grove" sub="How are you feeling right now?" footer={bloomed>=5?"Your grove is in full bloom today 🌸":`${bloomed} of 5 rituals today · each one blooms a flower`}>
+    {(P)=>(<>
+      {trees.map((t,i)=>(<svg key={i} viewBox="0 0 60 110" style={{position:"absolute",left:t.x,bottom:36,width:t.h*0.55,height:t.h,transformOrigin:"50% 100%",animation:`mimSway ${5+t.d}s ease-in-out infinite`,animationDelay:`${t.d}s`,zIndex:1}}>
+        <path d="M30 110 L30 58" stroke={P.r[2]} strokeWidth="5" strokeLinecap="round"/>
+        <ellipse cx="30" cy="40" rx="24" ry="36" fill={P.r[1]}/><ellipse cx="22" cy="52" rx="14" ry="20" fill={P.r[2]} opacity="0.55"/><ellipse cx="38" cy="30" rx="10" ry="14" fill="#fff" opacity="0.08"/>
+      </svg>))}
+      {spots.map((left,i)=>i<bloomed?(<svg key={i} viewBox="0 0 20 34" style={{position:"absolute",left:`${left}%`,bottom:30,width:18,height:30,zIndex:2,transformOrigin:"50% 100%",animation:`mimBloom .7s ease-out both, mimSway ${4+i*0.3}s ease-in-out infinite`,animationDelay:`${i*0.12}s, 0.8s`}}><path d="M10 34 L10 14" stroke="#5f7a52" strokeWidth="2"/><ellipse cx="6" cy="22" rx="4" ry="2" fill="#7f9a6e"/><circle cx="10" cy="10" r="7" fill={["#f2b8c6","#f5d98a","#c8b6e8","#f4b88e","#b8dcc8"][i]}/><circle cx="10" cy="10" r="2.6" fill="#fff4cf"/></svg>):(<div key={i} style={{position:"absolute",left:`calc(${left}% + 6px)`,bottom:32,width:6,height:6,borderRadius:"50%",background:"rgba(255,252,246,0.35)",zIndex:2}}/>))}
+      {P.night&&[...Array(7)].map((_,i)=>(<div key={i} style={{position:"absolute",width:5,height:5,borderRadius:"50%",background:"#f5d98a",boxShadow:"0 0 10px 3px rgba(245,217,138,0.7)",left:`${12+i*12}%`,bottom:`${50+((i*37)%70)}px`,animation:`mimFly ${4+(i%3)}s ease-in-out infinite`,animationDelay:`${i*0.5}s`,zIndex:2}}/>))}
+    </>)}
+  </SceneHeader>);
+}
+
+// A slow glow to breathe with, and clouds drifting by
+function NestScene(){
+  return(<SceneHeader kicker="A soft place" title="Your Nest" sub="Pause here. Breathe here. Come back to yourself.">
+    {(P)=>(<>
+      <div style={{position:"absolute",right:"9%",bottom:"24%",width:104,height:104,zIndex:2,display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <div style={{position:"absolute",inset:0,borderRadius:"50%",background:P.night?"radial-gradient(circle,rgba(243,234,216,0.55) 0%,rgba(243,234,216,0.12) 60%,transparent 72%)":"radial-gradient(circle,rgba(255,236,214,0.95) 0%,rgba(248,196,160,0.45) 55%,transparent 72%)",border:`1.5px solid ${P.night?"rgba(243,234,216,0.35)":"rgba(255,255,255,0.75)"}`,animation:"mimBreath 8s ease-in-out infinite"}}/>
+        <span style={{position:"relative",fontSize:10,fontWeight:800,letterSpacing:"1.6px",textTransform:"uppercase",color:P.night?"#f6f1ea":"#6e4526",opacity:0.75}}>breathe</span>
+      </div>
+    </>)}
+  </SceneHeader>);
+}
+
+// Ritual categories as open/close sections, like the Account page
+const GROVE_CAT_ICONS={"Body Love":"🛁","Stillness & Peace":"🌙","Heart & Connection":"💛","Rest & Restore":"🛏️","Joy & Play":"🎈","Morning & Intention":"🌅"};
+function RitualSection({cat,acts,open,onToggle,todayCompletions,selected,onPick}){
+  const done=acts.filter(a=>todayCompletions.includes(a.key)).length;const picked=acts.filter(a=>selected.includes(a.key)).length;
+  return(<div style={{background:"rgba(255,252,246,0.93)",border:`1px solid ${open?"rgba(122,140,110,0.35)":"rgba(122,140,110,0.15)"}`,borderRadius:20,overflow:"hidden",transition:"border-color .3s"}}>
+    <button type="button" onClick={onToggle} aria-expanded={open} style={{width:"100%",background:"none",border:"none",padding:"16px 18px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",textAlign:"left",fontFamily:"'Nunito',sans-serif"}}>
+      <div style={{width:42,height:42,borderRadius:13,background:"rgba(122,140,110,0.12)",border:"1px solid rgba(122,140,110,0.22)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0}}>{GROVE_CAT_ICONS[cat]||"🌿"}</div>
+      <div style={{flex:1}}><div style={{fontWeight:700,color:"#3d2a1a",fontSize:15}}>{cat}</div><div style={{fontSize:12,color:"#8a7a60",marginTop:2}}>{acts.length} rituals{done?` · ${done} done today`:""}{picked?` · ${picked} picked`:""}</div></div>
+      <span style={{width:30,height:30,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:open?"rgba(122,140,110,0.18)":"rgba(122,140,110,0.08)",flexShrink:0}}><svg width="14" height="14" viewBox="0 0 14 14" style={{transition:"transform .3s",transform:open?"rotate(180deg)":"none"}}><path d="M3 5.5 L7 9.5 L11 5.5" stroke="#5f7a52" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+    </button>
+    <div style={{display:"grid",gridTemplateRows:open?"1fr":"0fr",transition:"grid-template-rows .32s ease"}}><div style={{overflow:"hidden",minHeight:0}}>
+      <div style={{display:"flex",flexDirection:"column",gap:6,padding:"0 14px 14px"}}>
+        {acts.map(a=>{const isDone=todayCompletions.includes(a.key);const isSel=selected.includes(a.key);return(
+          <div key={a.key} onClick={()=>!isDone&&onPick(a.key)} role="button" aria-pressed={isSel} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:14,cursor:isDone?"default":"pointer",background:isDone?"rgba(212,168,67,0.08)":isSel?"rgba(122,140,110,0.15)":"rgba(255,255,255,0.7)",border:`1px solid ${isDone?"rgba(212,168,67,0.22)":isSel?"#7a8c6e":"rgba(122,140,110,0.14)"}`,opacity:isDone?0.65:1,transition:"all .2s"}}>
+            <span style={{fontSize:22}}>{a.emoji}</span>
+            <div style={{flex:1}}><div style={{fontSize:14,fontWeight:600,color:"#3d2a1a"}}>{a.name}</div><div style={{fontSize:11.5,color:"#8a7a60",lineHeight:1.4}}>{a.desc}</div></div>
+            <div style={{width:22,height:22,borderRadius:"50%",border:"1px solid rgba(122,140,110,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,background:isDone?"#d4a843":isSel?"#7a8c6e":"transparent",color:"#fff",flexShrink:0}}>{isDone||isSel?"✓":""}</div>
+          </div>);})}
+      </div>
+    </div></div>
+  </div>);
+}
+
 function GroveTab({user}){
   const [entries,setEntries]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -1413,6 +1493,7 @@ function GroveTab({user}){
   const [selectedActivities,setSelectedActivities]=useState([]);
   const [completingActivities,setCompletingActivities]=useState(false);
   const [customizing,setCustomizing]=useState(false);
+  const [openCats,setOpenCats]=useState(null);
 
   useEffect(()=>{loadEntries();loadPrefs();loadTodayActivities();},[]);
 
@@ -1504,6 +1585,7 @@ function GroveTab({user}){
       });
     }
     setSelectedActivities([]);
+    await loadTodayActivities();
     spawnConfetti();
 
   }catch(e){
@@ -1530,7 +1612,7 @@ function GroveTab({user}){
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
-      <PageHeader kicker="Check in" title="The Grove" sub="How are you feeling right now?"/>
+      <GroveScene bloomed={todayCompletions.length}/>
 
       <div style={{background:"rgba(255,252,246,0.97)",border:"1px solid rgba(122,140,110,0.2)",borderRadius:20,padding:"20px"}}>
         <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",marginBottom:14}}>
@@ -1585,40 +1667,11 @@ function GroveTab({user}){
             <p style={{fontFamily:"'Lora',serif",fontStyle:"italic",color:"#5a6c4e",fontSize:15,lineHeight:1.7}}>You completed all 5 rituals today. Your grove is glowing. 🌿</p>
           </div>
         ):(
-          <div style={{display:"flex",flexDirection:"column",gap:16}}>
-            {GROVE_CATEGORIES.map(cat=>{
-              const catActs=enabledActivities.filter(a=>a.category===cat);
-              if(!catActs.length)return null;
-              return(
-                <div key={cat}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#7a8c6e",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>{cat}</div>
-                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                    {catActs.map(a=>{
-                      const isDone=todayCompletions.includes(a.key);
-                      const isSelected=selectedActivities.includes(a.key);
-                      return(
-                        <div key={a.key} onClick={()=>!isDone&&toggleSelectActivity(a.key)}
-                          style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:14,cursor:isDone?"default":"pointer",
-                            background:isDone?"rgba(212,168,67,0.08)":isSelected?"rgba(122,140,110,0.15)":"rgba(255,252,246,0.93)",
-                            border:`1px solid ${isDone?"rgba(212,168,67,0.2)":isSelected?"#7a8c6e":"rgba(122,140,110,0.15)"}`,opacity:isDone?0.6:1}}>
-                          <span style={{fontSize:22}}>{a.emoji}</span>
-                          <div style={{flex:1}}>
-                            <div style={{fontSize:14,fontWeight:600,color:"#5a2e0e"}}>{a.name}</div>
-                            <div style={{fontSize:11,color:"#b08060"}}>{a.desc}</div>
-                          </div>
-                          <div style={{width:22,height:22,borderRadius:"50%",border:"1px solid rgba(122,140,110,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,
-                            background:isDone?"#d4a843":isSelected?"#7a8c6e":"transparent",color:isDone||isSelected?"#fff":"transparent"}}>
-                            {isDone||isSelected?"✓":""}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {(()=>{const cats=GROVE_CATEGORIES.filter(cat=>enabledActivities.some(a=>a.category===cat));const open=openCats||new Set(cats.slice(0,1));return cats.map(cat=>(<RitualSection key={cat} cat={cat} acts={enabledActivities.filter(a=>a.category===cat)} open={open.has(cat)} onToggle={()=>{const n=new Set(open);n.has(cat)?n.delete(cat):n.add(cat);setOpenCats(n);}} todayCompletions={todayCompletions} selected={selectedActivities} onPick={toggleSelectActivity}/>));})()}
+            <p style={{fontSize:12,color:"#8a7a60",textAlign:"center",fontStyle:"italic",margin:"2px 0 0"}}>Pick up to {Math.max(0,5-todayCompletions.length-selectedActivities.length)} more today. Each one blooms a flower in your grove.</p>
             <button onClick={completeSelectedActivities} disabled={selectedActivities.length===0||completingActivities}
-              style={{...S.saveBtn,width:"100%",background:"linear-gradient(135deg,#d4a843,#c8895a)",opacity:selectedActivities.length===0||completingActivities?0.5:1}}>
+              style={{...S.saveBtn,width:"100%",position:"sticky",bottom:"calc(16px + env(safe-area-inset-bottom))",zIndex:5,background:"linear-gradient(135deg,#8ca07e,#5f7a52)",opacity:selectedActivities.length===0||completingActivities?0.5:1}}>
               {completingActivities?"Blooming...":`Complete ${selectedActivities.length||""} & Bloom 🌿`}
             </button>
           </div>
