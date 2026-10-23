@@ -30,6 +30,23 @@ const PUBLIC_WRITE = new Set(["set_it_down_submissions"]); // no sign-in needed
 
 function rows(body) { return Array.isArray(body) ? body : [body]; }
 
+// ── Community tiers ──
+// Communities have a min_tier; a member's plan decides which ones they can read and post in.
+// "premium" is the communities table's name for the Off the Record tier.
+const TIER_LEVEL = { free: 0, community: 1, premium: 2, offtherecord: 2 };
+
+// Ids of the communities this person's plan unlocks.
+async function allowedCommunityIds(me) {
+  const [u, cs] = await Promise.all([
+    sb(`users?email=eq.${encodeURIComponent(me)}&select=plan`),
+    sb("communities?select=id,min_tier"),
+  ]);
+  const plan = Array.isArray(u.data) && u.data[0] ? u.data[0].plan : "free";
+  const level = TIER_LEVEL[plan] ?? 0;
+  if (!Array.isArray(cs.data)) return [];
+  return cs.data.filter((c) => (TIER_LEVEL[c.min_tier] ?? 0) <= level).map((c) => String(c.id));
+}
+
 function buildQuery(params) {
   const s = params.toString();
   return s ? `?${s}` : "";
@@ -96,6 +113,11 @@ export default async function handler(req, res) {
 
     if (M === "GET") {
       if (table === "set_it_down_submissions" && !isAdmin) return res.status(403).json({ error: "forbidden" });
+      if (table === "community_posts" && !isAdmin) {
+        const allowed = await allowedCommunityIds(me);
+        if (!allowed.length) return res.status(200).json([]);
+        params.append("community_id", `in.(${allowed.join(",")})`);
+      }
       const r = await sb(`${table}${buildQuery(params)}`);
       let out = r.data;
       if (table === "community_posts" || table === "post_reactions") out = hideMember(out, "user_id", me, isAdmin);
@@ -107,6 +129,21 @@ export default async function handler(req, res) {
       if (table === "community_posts") list = list.map((r) => (r.is_anonymous === true && r.user_id === "anonymous" ? r : { ...r, user_id: me }));
       if (table === "post_reactions") list = list.map((r) => ({ ...r, user_id: me }));
       if (table === "reports") list = list.map((r) => ({ ...r, reporter_id: me }));
+      if (!isAdmin && (table === "community_posts" || table === "post_reactions")) {
+        const allowed = new Set(await allowedCommunityIds(me));
+        let communityIds = list.map((r) => r.community_id);
+        if (table === "post_reactions") {
+          // Reactions point at a post; look up which community each post is in
+          const postIds = [...new Set(list.map((r) => r.post_id).filter((x) => x !== undefined && x !== null))];
+          if (!postIds.length) return res.status(403).json({ error: "forbidden" });
+          const p = await sb(`community_posts?id=in.(${postIds.map(encodeURIComponent).join(",")})&select=id,community_id`);
+          const byPost = new Map((Array.isArray(p.data) ? p.data : []).map((x) => [String(x.id), x.community_id]));
+          communityIds = list.map((r) => byPost.get(String(r.post_id)));
+        }
+        if (communityIds.some((id) => id === undefined || id === null || !allowed.has(String(id)))) {
+          return res.status(403).json({ error: "tier_locked" });
+        }
+      }
       if (table === "set_it_down_submissions") list = list.map((r) => ({ word: String(r.word || "").trim().slice(0, ["app", "walk"].includes(r.event_tag) ? 140 : 40), event_tag: ["app", "walk"].includes(r.event_tag) ? r.event_tag : (r.event_tag || "set-it-down-saturday") }));
       const r = await sb(table, { method: "POST", body: Array.isArray(body) ? list : list[0], prefer });
       let out = r.data;
