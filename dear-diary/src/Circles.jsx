@@ -76,13 +76,63 @@ function timeAgo(d) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+export const PENDING_KEY = "mim_pending_circle";
+export function inviteLink(code) { return `https://myinnermind.halliewho.com/join/${code}`; }
+
 async function shareInvite(circle) {
-  const text = `Join my circle "${circle.name}" on My Inner Mind 🌿\n\nOpen the app, go to Communities, tap "Join a circle" and enter this code: ${circle.invite_code}`;
+  const text = `Join my circle "${circle.name}" on My Inner Mind 🌿\n\nTap to join: ${inviteLink(circle.invite_code)}\n\nOr open the app, go to Communities, tap "Join a circle" and enter this code: ${circle.invite_code}`;
   try {
     if (navigator.share) { await navigator.share({ text }); return; }
   } catch (e) { if (e?.name === "AbortError") return; }
   try { await navigator.clipboard.writeText(text); alert("Invite copied. Paste it in a text to your people. 💛"); }
   catch { alert(`Your invite code is ${circle.invite_code}`); }
+}
+
+// Join a circle from an invite link (after sign-in). Returns the circle or an error message.
+export async function joinFromLink(code) {
+  try { localStorage.removeItem(PENDING_KEY); } catch {}
+  const r = await circles("join", { code });
+  return r.ok ? { circle: r.circle } : { error: r.error || "Couldn't join that circle." };
+}
+
+// ── Landing page for someone who taps an invite link before signing in ──
+export function CircleInvitePage({ code, onStart, onSignIn }) {
+  const [info, setInfo] = useState(null);
+  useEffect(() => {
+    fetch("/api/circles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "preview", code }) })
+      .then((r) => (r.ok ? r.json() : { missing: true })).then(setInfo).catch(() => setInfo({ missing: true }));
+  }, [code]);
+  const page = { position: "fixed", inset: 0, overflowY: "auto", fontFamily: "'Nunito',sans-serif",
+    background: "radial-gradient(120% 60% at 50% 0%, #f4ead2 0%, rgba(244,234,210,0) 70%), linear-gradient(180deg, #efe4cc 0px, #f6eedd 260px, #fbf5ea 100%)" };
+  return (
+    <div style={page}>
+      <Branches />
+      <div style={{ position: "relative", maxWidth: 440, margin: "0 auto", padding: "120px 24px 40px", textAlign: "center" }}>
+        {!info ? (
+          <p style={{ color: C.muted, fontStyle: "italic" }}>Opening your invite...</p>
+        ) : info.missing ? (
+          <>
+            <h1 style={{ fontFamily: "'Lora',serif", fontSize: 26, color: C.brown, margin: "0 0 10px" }}>This invite isn't working</h1>
+            <p style={{ color: C.muted, fontSize: 15, lineHeight: 1.6, margin: "0 0 24px" }}>The code may have changed. Ask the person who invited you for a new link.</p>
+            <button style={btn(true)} onClick={onStart}>Explore My Inner Mind</button>
+          </>
+        ) : (
+          <>
+            <Nest emoji={info.emoji} />
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: C.muted, marginTop: 8 }}>You're invited to a private circle</div>
+            <h1 style={{ fontFamily: "'Lora',serif", fontSize: 32, color: C.brown, margin: "8px 0 6px", lineHeight: 1.2 }}>{info.name}</h1>
+            <p style={{ color: C.muted, fontSize: 14, margin: "0 0 22px" }}>{info.member_count} {info.member_count === 1 ? "person is" : "people are"} already here</p>
+            <div style={{ ...card, padding: "18px 20px", textAlign: "left", marginBottom: 24 }}>
+              <p style={{ fontFamily: "'Lora',serif", fontStyle: "italic", color: C.text, fontSize: 15, lineHeight: 1.65, margin: 0 }}>A small, private space on My Inner Mind for checking in on each other, a weekly card to answer together, and a little love sent back and forth. 🌿</p>
+            </div>
+            <button style={{ ...btn(true), width: "100%", padding: "14px", fontSize: 16 }} onClick={onStart}>Create a free account to join</button>
+            <button style={{ ...linkBtn, fontSize: 14, marginTop: 16, fontWeight: 700, color: C.accent }} onClick={onSignIn}>I already have an account</button>
+            <p style={{ fontSize: 12, color: C.muted, marginTop: 18 }}>You'll be added to the circle as soon as you're signed in.</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ── The "My Circles" section at the top of Communities ──
@@ -402,7 +452,8 @@ export function CircleView({ circle: start, isNew, onBack }) {
             <div style={{ textAlign: "center", paddingBottom: 14, marginBottom: 12, borderBottom: `1px solid ${C.line}` }}>
               <div style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, color: C.accent, marginBottom: 6 }}>Invite code</div>
               <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 6, color: C.brown, marginBottom: 10 }}>{circle.invite_code}</div>
-              <button style={btn(true)} onClick={() => shareInvite(circle)}>Send invite 💛</button>
+              <button style={btn(true)} onClick={() => shareInvite(circle)}>Send invite link 💛</button>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 8, wordBreak: "break-all" }}>{inviteLink(circle.invite_code)}</div>
               <div><button style={{ ...linkBtn, marginTop: 10 }} onClick={newCode}>Make a new code</button></div>
             </div>
           )}

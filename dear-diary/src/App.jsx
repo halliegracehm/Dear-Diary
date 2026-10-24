@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MyCircles, CircleView, ShareToCircle } from "./Circles.jsx";
+import { MyCircles, CircleView, ShareToCircle, CircleInvitePage, joinFromLink, PENDING_KEY } from "./Circles.jsx";
 import * as React from "react";
 
 const SUPABASE_URL = "https://xwhpyslvwnnbvyydimmg.supabase.co";
@@ -172,6 +172,8 @@ useEffect(()=>{
     setScreen("setitdown");
     return;
   }
+  const invite=window.location.pathname.match(/^\/join\/([a-z0-9]{6})\/?$/i);
+  if(invite){try{localStorage.setItem(PENDING_KEY,invite[1].toUpperCase());}catch{}window.history.replaceState({},"","/");if(!store.get("myinnerminduser")||!getToken()){setScreen("circleinvite");return;}}
   const shared=window.location.pathname.match(/^\/c\/([a-z0-9-]+)/i);
   if(shared){try{sessionStorage.setItem("mim_pending_challenge",shared[1]);}catch{}if(!store.get("myinnerminduser")||!getToken()){setScreen("challenge");return;}}
 
@@ -245,6 +247,7 @@ useEffect(()=>{
   if(screen==="splash")return <Splash/>;
   if(screen==="setitdown")return <SetItDownPage/>;
   if(screen==="challenge"){const id=(()=>{try{return sessionStorage.getItem("mim_pending_challenge");}catch{return null;}})();return <PublicChallengePage id={id} onStart={()=>{setAuthMode("register");setAuthError("");setScreen("auth");}} onSignIn={()=>{setAuthMode("login");setAuthError("");setScreen("auth");}}/>;}
+  if(screen==="circleinvite"){const code=(()=>{try{return localStorage.getItem(PENDING_KEY)||"";}catch{return "";}})();return <CircleInvitePage code={code} onStart={()=>{setAuthMode("register");setAuthError("");setScreen("auth");}} onSignIn={()=>{setAuthMode("login");setAuthError("");setScreen("auth");}}/>;}
   if(screen==="landing")return <LandingScreen onGetStarted={()=>{setAuthMode("register");setScreen("auth");}} onSignIn={()=>{setAuthMode("login");setScreen("auth");}}/>;
   if(screen==="onboarding")return <OnboardingScreen user={currentUser} onDone={()=>setScreen("app")}/>;
   if(screen==="auth")return <AuthScreen mode={authMode} form={authForm} error={authError} loading={authLoading} pwaPrompt={pwaPrompt} onChange={f=>setAuthForm(p=>({...p,...f}))} onSubmit={handleAuth} onToggle={()=>{setAuthMode(m=>m==="login"?"register":"login");setAuthError("");}}/>;
@@ -564,7 +567,7 @@ function ForgotPasswordScreen({onBack}){
 }
 
 function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
-  const [pendingChallenge]=useState(()=>{try{return sessionStorage.getItem("mim_pending_challenge");}catch{return null;}});const [tab,setTab]=useState(pendingChallenge?"challenges":"home");const [view,setView]=useState("list");const [entries,setEntries]=useState([]);const [selectedEntry,setSelectedEntry]=useState(null);const [searchQuery,setSearchQuery]=useState("");const [filterTag,setFilterTag]=useState(null);const [filterMood,setFilterMood]=useState(null);const [aiPrompt,setAiPrompt]=useState("");const [promptLoading,setPromptLoading]=useState(false);const [loading,setLoading]=useState(true);const [dbError,setDbError]=useState(false);const [form,setForm]=useState({id:null,date:getTodayStr(),title:"",content:"",mood:null,tags:[],shared:false,submitToFeature:false});const [editMode,setEditMode]=useState(false);const [insight,setInsight]=useState("");const [insightLoading,setInsightLoading]=useState(false);const [pwaDismissed,setPwaDismissed]=useState(false);const [showRecap,setShowRecap]=useState(false);const [sharePrompt,setSharePrompt]=useState(null);React.useEffect(()=>{window._setSharePrompt=setSharePrompt;return()=>{delete window._setSharePrompt;};},[]);const [theme,setTheme]=useState(()=>persist.get("theme_"+user.email)||"original");
+  const [pendingChallenge]=useState(()=>{try{return sessionStorage.getItem("mim_pending_challenge");}catch{return null;}});const [pendingCircle]=useState(()=>{try{return localStorage.getItem(PENDING_KEY);}catch{return null;}});const [tab,setTab]=useState(pendingCircle?"community":pendingChallenge?"challenges":"home");const [view,setView]=useState("list");const [entries,setEntries]=useState([]);const [selectedEntry,setSelectedEntry]=useState(null);const [searchQuery,setSearchQuery]=useState("");const [filterTag,setFilterTag]=useState(null);const [filterMood,setFilterMood]=useState(null);const [aiPrompt,setAiPrompt]=useState("");const [promptLoading,setPromptLoading]=useState(false);const [loading,setLoading]=useState(true);const [dbError,setDbError]=useState(false);const [form,setForm]=useState({id:null,date:getTodayStr(),title:"",content:"",mood:null,tags:[],shared:false,submitToFeature:false});const [editMode,setEditMode]=useState(false);const [insight,setInsight]=useState("");const [insightLoading,setInsightLoading]=useState(false);const [pwaDismissed,setPwaDismissed]=useState(false);const [showRecap,setShowRecap]=useState(false);const [sharePrompt,setSharePrompt]=useState(null);React.useEffect(()=>{window._setSharePrompt=setSharePrompt;return()=>{delete window._setSharePrompt;};},[]);const [theme,setTheme]=useState(()=>persist.get("theme_"+user.email)||"original");
   const T=THEMES[theme]||THEMES.original;
   const isPro=user.plan==="community"||user.plan==="offtherecord";
   const isOTR=user.plan==="offtherecord";
@@ -700,7 +703,7 @@ function JournalApp({user,onLogout,onUpgradePlan,pwaPrompt,onPwaInstalled}){
         {tab==="journey"&&<JourneyTab entries={entries} user={user}/>}
         {tab==="letters"&&<LettersTab user={user}/>}
         {tab==="challenges"&&<ChallengesTab openId={pendingChallenge} entries={entries} user={user} onWrite={(prefill)=>{handleTabChange("journal");startNew(prefill);}}/>}
-        {tab==="community"&&<CommunitiesTab user={user} userTier={user.plan} onUpgrade={()=>handleTabChange("upgrade")}/>}{tab==="grove"&&<GroveTab user={user}/>}
+        {tab==="community"&&<CommunitiesTab user={user} userTier={user.plan} joinCode={pendingCircle} onUpgrade={()=>handleTabChange("upgrade")}/>}{tab==="grove"&&<GroveTab user={user}/>}
         {tab==="home"&&<HomeTab user={user} onNavigate={(go)=>{if(go==="write"){handleTabChange("journal");startNew();}else if(go==="setitdown"){setSheet("setitdown");}else handleTabChange(go);}}/>}
       </main>
       {ambientPlaying&&(()=>{const s=AMBIENT_SOUNDS.find(x=>x.id===ambientPlaying);return(<div style={{position:"fixed",left:"50%",transform:"translateX(-50%)",bottom:"calc(16px + env(safe-area-inset-bottom))",zIndex:200,display:"flex",alignItems:"center",gap:10,padding:"8px 8px 8px 14px",background:"rgba(255,252,246,0.97)",border:"1px solid rgba(91,143,168,0.35)",borderRadius:30,boxShadow:"0 6px 24px rgba(90,46,14,0.15)",backdropFilter:"blur(10px)",fontFamily:"'Nunito',sans-serif"}}><button onClick={()=>handleTabChange("nest")} style={{background:"none",border:"none",display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:0}}><span style={{fontSize:18}}>{s?.icon||"🎵"}</span><span style={{fontSize:12,fontWeight:700,color:"#5b8fa8",whiteSpace:"nowrap"}}>{s?.name||"Ambient sound"}</span></button><button onClick={stopAmbient} aria-label="Stop sound" style={{width:30,height:30,borderRadius:"50%",border:"none",background:"rgba(91,143,168,0.15)",color:"#5b8fa8",fontSize:12,fontWeight:800,cursor:"pointer"}}>■</button></div>);})()}
@@ -864,11 +867,12 @@ function DeleteAccountSection({user,onDeleted}){
 }
 
 // ── COMMUNITIES ──
-function CommunitiesTab({user,userTier="free",onUpgrade}){
+function CommunitiesTab({user,userTier="free",onUpgrade,joinCode}){
   const [communities,setCommunities]=useState([]);const [activeCommunity,setActiveCommunity]=useState(null);const [posts,setPosts]=useState([]);const [newPost,setNewPost]=useState("");const [selectedMood,setSelectedMood]=useState(null);const [isPromptMode,setIsPromptMode]=useState(false);const [loading,setLoading]=useState(true);const [postsLoading,setPostsLoading]=useState(false);const [submitting,setSubmitting]=useState(false);const [reactions,setReactions]=useState({});const [myReactions,setMyReactions]=useState({});const [isMember,setIsMember]=useState({});const [view,setView]=useState("list");const [isAnon,setIsAnon]=useState(false);const [submitToMonth,setSubmitToMonth]=useState(false);const [communityView,setCommunityView]=useState("feed");
 const userTierLevel=COMMUNITY_TIER_ORDER[userTier]??0;const userKey=user?.email||null;
   const [blockedIds,setBlockedIds]=useState([]);
   const [openCircle,setOpenCircle]=useState(null);
+  useEffect(()=>{const code=(()=>{try{return localStorage.getItem(PENDING_KEY);}catch{return null;}})();if(!code)return;joinFromLink(code).then(r=>{if(r.circle)setOpenCircle({circle:r.circle,isNew:false});else alert(r.error);});},[]);
   useEffect(()=>{if(userKey)sbGet("blocked_users",`blocker_id=eq.${encodeURIComponent(userKey)}`).then(d=>{if(Array.isArray(d))setBlockedIds(d.map(b=>b.blocked_id));});},[userKey]);
   async function reportPost(postId,reportedUserId){if(!userKey)return;await sbInsert("reports",{reporter_id:userKey,reported_user_id:reportedUserId,post_id:postId,reason:"User reported"});alert("Thank you. We've received your report and will review it within 24 hours. 🌿");}
   async function blockUser(blockedUserId){if(!userKey||blockedUserId===userKey)return;await sbInsert("blocked_users",{blocker_id:userKey,blocked_id:blockedUserId});setBlockedIds(prev=>[...prev,blockedUserId]);setPosts(prev=>prev.filter(p=>p.user_id!==blockedUserId));alert("User blocked. Their posts won't appear for you anymore.");}
