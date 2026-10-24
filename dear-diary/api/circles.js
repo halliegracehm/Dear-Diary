@@ -61,6 +61,10 @@ const NOTE_MAX = 200;
 // Mood meter, lowest to highest
 export const MOODS = ["🌧️ Heavy", "🌥️ Low", "⛅ Okay", "🌤️ Good", "☀️ Great"];
 
+function chicagoDate(d) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}
+
 export function weekInfo(now = new Date()) {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
   const d = new Date(`${today}T00:00:00Z`);
@@ -203,7 +207,15 @@ export default async function handler(req, res) {
       ]);
       const blocked = new Set(list(blocks).map((b) => b.blocked_id));
       const isBlocked = (e) => e !== email && (blocked.has(e) || blocked.has(opaqueId(e)));
-      const posts = list(ps).filter((p) => !isBlocked(p.user_email));
+      const seenMood = new Set();
+      const posts = [...list(ps)].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).filter((p) => {
+        if (isBlocked(p.user_email)) return false;
+        if (p.kind !== "mood") return true;
+        const k = `${p.user_email}|${chicagoDate(new Date(p.created_at))}`;
+        if (seenMood.has(k)) return false;
+        seenMood.add(k);
+        return true;
+      });
       const reacts = posts.length ? list(await sb(`circle_reactions?post_id=in.(${posts.map((p) => p.id).join(",")})&select=post_id,user_email`)) : [];
       const members = list(ms);
       const memberEmails = new Set(members.map((m) => m.user_email));
@@ -273,6 +285,16 @@ export default async function handler(req, res) {
       const profile = await me(email);
       const kind = ["grove", "mood"].includes(body.kind) ? body.kind : "post";
       if (kind === "mood" && !MOODS.includes(content)) return fail(400, "Pick a mood.");
+      if (kind === "mood") {
+        // One mood per person per day: changing it updates today's instead of adding another line
+        const today = chicagoDate(new Date());
+        const recent = list(await sb(`circle_posts?circle_id=eq.${circleId}&user_email=eq.${enc(email)}&kind=eq.mood&order=created_at.desc&limit=5`));
+        const mine = recent.sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).find((p) => chicagoDate(new Date(p.created_at)) === today);
+        if (mine) {
+          await sb(`circle_posts?id=eq.${mine.id}`, { method: "PATCH", body: { content }, prefer: "return=minimal" });
+          return res.status(200).json({ post: { id: mine.id, name: mine.display_name, content, prompt: null, kind, created_at: mine.created_at, author: opaqueId(email), mine: true, hearts: 0, hearted: false, replaced: true } });
+        }
+      }
       const row = { circle_id: circleId, user_email: email, display_name: profile.name, content, prompt: body.answer ? weekInfo().question : null };
       if (kind !== "post") row.kind = kind; // plain posts work even before the kind column exists
       const r = await sb("circle_posts", { method: "POST", body: row });
