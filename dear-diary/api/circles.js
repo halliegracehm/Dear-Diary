@@ -109,6 +109,17 @@ function publicCircle(c, role, count) {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!config()) return res.status(503).json({ error: "not_configured" });
+  // Invite link preview: anyone with the code can see the circle's name before signing in
+  const pre = readBody(req);
+  if (pre.action === "preview") {
+    const code = String(pre.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (code.length !== 6) return res.status(404).json({ error: "not_found" });
+    const c = list(await sb(`circles?invite_code=eq.${code}&select=id,name,emoji`))[0];
+    if (!c) return res.status(404).json({ error: "not_found" });
+    const count = list(await sb(`circle_members?circle_id=eq.${c.id}&select=id`)).length;
+    return res.status(200).json({ name: c.name, emoji: c.emoji, member_count: count });
+  }
+
   const email = sessionEmail(req);
   if (!email) return res.status(401).json({ error: "signed_out" });
   const isAdmin = email === ADMIN_EMAIL;
