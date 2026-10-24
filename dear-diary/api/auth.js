@@ -171,6 +171,10 @@ export default async function handler(req, res) {
         del(`community_members?user_id=eq.${e}`),
         del(`post_reactions?user_id=eq.${e}`),
         del(`blocked_users?blocker_id=eq.${e}`),
+        del(`circles?owner_email=eq.${e}`),
+        del(`circle_members?user_email=eq.${e}`),
+        del(`circle_posts?user_email=eq.${e}`),
+        del(`circle_reactions?user_email=eq.${e}`),
       ]);
       await del(`users?email=eq.${e}`);
       return res.status(200).json({ ok: true });
