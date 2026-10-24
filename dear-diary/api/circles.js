@@ -16,6 +16,56 @@ const list = (r) => (Array.isArray(r.data) ? r.data : []);
 const clean = (s, max) => String(s || "").replace(/\s+/g, " ").trim().slice(0, max);
 const hasBanned = (s) => BANNED.some((w) => new RegExp(`\\b${w}`, "i").test(s));
 
+// ── This week's challenge and question ──
+// Everyone gets the same ones. They change every Sunday (Central time), so nobody has to set them.
+const CHALLENGES = [
+  "Take a 20-minute walk three times this week.",
+  "Put your phone away during one meal every day.",
+  "Text someone you've been missing and tell them why.",
+  "Drink a full glass of water before your coffee each morning.",
+  "Set it down: write one worry on paper, then throw the paper away.",
+  "Go to bed 30 minutes earlier on two nights this week.",
+  "Spend 10 minutes outside without your phone.",
+  "Write down three things you're grateful for before bed, three nights this week.",
+  "Do one kind thing for someone without telling them.",
+  "Clear one small space: a drawer, a counter, or your car.",
+  "Say no to one thing that drains you.",
+  "Stretch for 5 minutes every morning.",
+  "Eat one meal slowly, with no screens.",
+  "Try something new: a recipe, a trail, or a song.",
+  "Write a short letter to your younger self.",
+  "Give yourself one full hour of rest with no guilt.",
+];
+const QUESTIONS = [
+  "What's one thing you're putting down this week, and one thing you want to make room for?",
+  "What's something small that made you smile recently?",
+  "Who showed up for you when you needed it, and how?",
+  "What does rest actually look like for you?",
+  "What's a memory that still makes you laugh?",
+  "What's one thing you wish people asked you about?",
+  "What are you proud of that nobody sees?",
+  "When do you feel most like yourself?",
+  "What's something you're learning right now?",
+  "What would you tell yourself from a year ago?",
+  "What's a boundary you're working on?",
+  "What's been heavy lately?",
+  "What's a tradition you want to keep, or start?",
+  "What does a perfect ordinary day look like for you?",
+  "What are you looking forward to?",
+  "What's one thing you need from the people who love you?",
+];
+const NOTE_MAX = 200;
+
+export function weekInfo(now = new Date()) {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  const d = new Date(`${today}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay()); // back to Sunday
+  const key = d.toISOString().slice(0, 10);
+  const n = Math.round((d - new Date("2026-10-18T00:00:00Z")) / (7 * 864e5));
+  const pick = (arr) => arr[((n % arr.length) + arr.length) % arr.length];
+  return { key, challenge: pick(CHALLENGES), question: pick(QUESTIONS) };
+}
+
 function newCode() {
   const b = crypto.randomBytes(6);
   return Array.from(b, (x) => CODE_CHARS[x % CODE_CHARS.length]).join("");
@@ -64,15 +114,18 @@ export default async function handler(req, res) {
       const canCreate = isAdmin || profile.plan === "community" || profile.plan === "offtherecord";
       if (!mine.length) return res.status(200).json({ circles: [], can_create: canCreate });
       const ids = mine.map((m) => m.circle_id).join(",");
-      const [cs, ms] = await Promise.all([
+      const [cs, ms, ns] = await Promise.all([
         sb(`circles?id=in.(${ids})&order=created_at.asc`),
         sb(`circle_members?circle_id=in.(${ids})&select=circle_id`),
+        sb(`circle_notes?to_email=eq.${enc(email)}&seen=eq.false&select=circle_id`),
       ]);
       const counts = {};
       list(ms).forEach((m) => { counts[m.circle_id] = (counts[m.circle_id] || 0) + 1; });
+      const unread = {};
+      list(ns).forEach((n) => { unread[n.circle_id] = (unread[n.circle_id] || 0) + 1; });
       const roles = Object.fromEntries(mine.map((m) => [m.circle_id, m.role]));
       return res.status(200).json({
-        circles: list(cs).map((c) => publicCircle(c, roles[c.id], counts[c.id] || 1)),
+        circles: list(cs).map((c) => ({ ...publicCircle(c, roles[c.id], counts[c.id] || 1), new_notes: unread[c.id] || 0 })),
         can_create: canCreate,
       });
     }
@@ -124,31 +177,69 @@ export default async function handler(req, res) {
     if (!mem && !(isAdmin && action === "delete_post")) return fail(403, "not_a_member");
     const isOwner = mem?.role === "owner";
 
-    // ── Open a circle: details, members and posts ──
+    // ── Open a circle: details, members, this week, notes and posts ──
     if (action === "open") {
-      const [c, ms, ps, blocks] = await Promise.all([
+      const week = weekInfo();
+      const [c, ms, ps, blocks, cks, ns] = await Promise.all([
         sb(`circles?id=eq.${circleId}`),
         sb(`circle_members?circle_id=eq.${circleId}&order=joined_at.asc&select=user_email,display_name,role`),
         sb(`circle_posts?circle_id=eq.${circleId}&order=created_at.desc&limit=100`),
         sb(`blocked_users?blocker_id=eq.${enc(email)}&select=blocked_id`),
+        sb(`circle_checkins?circle_id=eq.${circleId}&week_key=eq.${week.key}&select=user_email`),
+        sb(`circle_notes?circle_id=eq.${circleId}&to_email=eq.${enc(email)}&order=created_at.desc&limit=30`),
       ]);
       const blocked = new Set(list(blocks).map((b) => b.blocked_id));
       const isBlocked = (e) => e !== email && (blocked.has(e) || blocked.has(opaqueId(e)));
       const posts = list(ps).filter((p) => !isBlocked(p.user_email));
       const reacts = posts.length ? list(await sb(`circle_reactions?post_id=in.(${posts.map((p) => p.id).join(",")})&select=post_id,user_email`)) : [];
       const members = list(ms);
+      const memberEmails = new Set(members.map((m) => m.user_email));
+      const done = new Set(list(cks).map((x) => x.user_email).filter((e) => memberEmails.has(e)));
+      const answered = new Set(list(ps).filter((p) => p.prompt === week.question && p.created_at >= week.key && memberEmails.has(p.user_email)).map((p) => p.user_email));
+      const notes = list(ns).filter((n) => !isBlocked(n.from_email));
+      const unseen = notes.filter((n) => !n.seen).map((n) => n.id);
+      if (unseen.length) await sb(`circle_notes?id=in.(${unseen.join(",")})`, { method: "PATCH", body: { seen: true }, prefer: "return=minimal" });
       return res.status(200).json({
         circle: publicCircle(list(c)[0] || {}, mem.role, members.length),
-        members: members.map((m) => ({ key: opaqueId(m.user_email), name: m.display_name, role: m.role, me: m.user_email === email })),
+        week: { challenge: week.challenge, question: week.question, i_did_it: done.has(email), answered: answered.has(email), answered_count: answered.size },
+        members: members.map((m) => ({ key: opaqueId(m.user_email), name: m.display_name, role: m.role, me: m.user_email === email, did_challenge: done.has(m.user_email), answered: answered.has(m.user_email) })),
+        notes: notes.map((n) => ({ id: n.id, from: n.from_name, message: n.message, created_at: n.created_at, new: !n.seen })),
         posts: posts.map((p) => {
           const rs = reacts.filter((r) => r.post_id === p.id);
           return {
-            id: p.id, name: p.display_name, content: p.content, prompt: p.prompt, created_at: p.created_at,
+            id: p.id, name: p.display_name, content: p.content, prompt: p.prompt, kind: p.kind || "post", created_at: p.created_at,
             author: opaqueId(p.user_email), mine: p.user_email === email,
             hearts: rs.length, hearted: rs.some((r) => r.user_email === email),
           };
         }),
       });
+    }
+
+    // ── This week's challenge: I did it (tap again to undo) ──
+    if (action === "checkin") {
+      const week = weekInfo();
+      const where = `circle_checkins?circle_id=eq.${circleId}&user_email=eq.${enc(email)}&week_key=eq.${week.key}`;
+      const existing = list(await sb(where));
+      if (existing.length) await sb(where, { method: "DELETE", prefer: "return=minimal" });
+      else {
+        const r = await sb("circle_checkins", { method: "POST", body: { circle_id: circleId, user_email: email, week_key: week.key }, prefer: "return=minimal" });
+        if (!r.ok) return fail(500, "Couldn't save that. Please try again.");
+      }
+      return res.status(200).json({ did_it: !existing.length });
+    }
+
+    // ── Send an affirmation to one person in the circle ──
+    if (action === "send_note") {
+      const message = clean(body.message, NOTE_MAX);
+      if (!message) return fail(400, "Write a note first.");
+      if (hasBanned(message)) return fail(400, "Please choose different wording.");
+      const ms = list(await sb(`circle_members?circle_id=eq.${circleId}&select=user_email`));
+      const to = ms.find((m) => opaqueId(m.user_email) === body.to);
+      if (!to || to.user_email === email) return fail(400, "Pick someone in your circle.");
+      const profile = await me(email);
+      const r = await sb("circle_notes", { method: "POST", body: { circle_id: circleId, from_email: email, from_name: profile.name, to_email: to.user_email, message }, prefer: "return=minimal" });
+      if (!r.ok) return fail(500, "Couldn't send that. Please try again.");
+      return res.status(200).json({ ok: true });
     }
 
     // ── Share something ──
@@ -157,10 +248,13 @@ export default async function handler(req, res) {
       if (!content) return fail(400, "Write something first.");
       if (hasBanned(content)) return fail(400, "Your post has language that isn't allowed here. Please revise and try again. 🌿");
       const profile = await me(email);
-      const r = await sb("circle_posts", { method: "POST", body: { circle_id: circleId, user_email: email, display_name: profile.name, content, prompt: clean(body.prompt, 280) || null } });
+      const kind = body.kind === "grove" ? "grove" : "post";
+      const row = { circle_id: circleId, user_email: email, display_name: profile.name, content, prompt: body.answer ? weekInfo().question : null };
+      if (kind !== "post") row.kind = kind; // plain posts work even before the kind column exists
+      const r = await sb("circle_posts", { method: "POST", body: row });
       const p = list(r)[0];
       if (!p) return fail(500, "Couldn't share that. Please try again.");
-      return res.status(200).json({ post: { id: p.id, name: p.display_name, content: p.content, prompt: p.prompt, created_at: p.created_at, author: opaqueId(email), mine: true, hearts: 0, hearted: false } });
+      return res.status(200).json({ post: { id: p.id, name: p.display_name, content: p.content, prompt: p.prompt, kind, created_at: p.created_at, author: opaqueId(email), mine: true, hearts: 0, hearted: false } });
     }
 
     if (action === "delete_post") {

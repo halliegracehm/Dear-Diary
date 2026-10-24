@@ -175,6 +175,9 @@ export default async function handler(req, res) {
         del(`circle_members?user_email=eq.${e}`),
         del(`circle_posts?user_email=eq.${e}`),
         del(`circle_reactions?user_email=eq.${e}`),
+        del(`circle_checkins?user_email=eq.${e}`),
+        del(`circle_notes?from_email=eq.${e}`),
+        del(`circle_notes?to_email=eq.${e}`),
       ]);
       await del(`users?email=eq.${e}`);
       return res.status(200).json({ ok: true });
