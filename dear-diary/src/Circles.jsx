@@ -334,7 +334,7 @@ export function CircleView({ circle: start, isNew, onBack }) {
   async function setMood(mood) {
     const r = await circles("post", { circle_id: circle.id, kind: "mood", content: mood });
     if (!r.ok) return alert(r.error || "Couldn't share that. Please try again.");
-    setPosts((p) => [r.post, ...(p || [])]);
+    setPosts((p) => (r.post.replaced ? (p || []).map((x) => (x.id === r.post.id ? { ...x, content: mood } : x)) : [r.post, ...(p || [])]));
     setMembers((ms) => ms.map((m) => (m.me ? { ...m, mood: { mood, at: r.post.created_at } } : m)));
   }
 
