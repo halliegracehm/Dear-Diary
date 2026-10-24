@@ -341,6 +341,13 @@ export function CircleView({ circle: start, isNew, onBack }) {
       )}
 
       {week && (
+        <div style={{ margin: "6px 20px 10px" }}>
+          <div style={{ fontFamily: "'Lora',serif", fontSize: 19, fontWeight: 600, color: C.brown }}>🗓️ Sunday Set Up</div>
+          <p style={{ fontSize: 13, color: C.muted, margin: "2px 0 0", fontStyle: "italic", fontFamily: "'Lora',serif" }}>Getting ready for the week, together. A new challenge and question every Sunday.</p>
+        </div>
+      )}
+
+      {week && (
         <div style={{ ...card, margin: "0 16px 12px", padding: "16px 18px" }}>
           <div style={{ ...label, color: "#5f7a52" }}>🌱 This week's challenge</div>
           <p style={{ fontFamily: "'Lora',serif", fontSize: 15.5, color: C.ink, lineHeight: 1.6, margin: "0 0 12px" }}>{week.challenge}</p>
