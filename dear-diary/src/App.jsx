@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MyCircles, CircleView } from "./Circles.jsx";
+import { MyCircles, CircleView, ShareToCircle } from "./Circles.jsx";
 import * as React from "react";
 
 const SUPABASE_URL = "https://xwhpyslvwnnbvyydimmg.supabase.co";
@@ -1679,6 +1679,7 @@ function GroveTab({user}){
             </button>
           </div>
         )}
+        {!customizing&&todayCompletions.length>0&&<ShareToCircle items={todayCompletions.map(k=>GROVE_ACTIVITIES.find(a=>a.key===k)).filter(Boolean).map(a=>`${a.emoji} ${a.name}`)}/>}
       </div>
 
       <div>

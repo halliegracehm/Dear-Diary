@@ -7,6 +7,18 @@ const C = {
   ink: "#3d2a1a", brown: "#5a2e0e", text: "#5a3a1a", muted: "#b08060", accent: "#c8895a",
   card: "rgba(255,252,246,0.95)", line: "rgba(200,137,90,0.15)", soft: "rgba(200,137,90,0.07)",
 };
+const AFFIRMATIONS = [
+  "Thinking of you today 💛",
+  "I'm proud of you.",
+  "You don't have to carry it all alone.",
+  "You're doing better than you think.",
+  "I'm really glad you're in my life.",
+  "Rest is allowed. Take it.",
+  "You make this circle better.",
+  "One step at a time is still progress.",
+  "I see how hard you're trying.",
+  "You are loved exactly as you are.",
+];
 const EMOJIS = ["🌿", "💛", "🌸", "🏡", "☀️", "🌙", "🥾", "☕", "🌊", "✨"];
 const card = { background: C.card, borderRadius: 18, border: `1px solid ${C.line}`, boxShadow: "0 2px 12px rgba(160,100,50,0.08)" };
 const btn = (solid) => ({
@@ -18,6 +30,7 @@ const input = {
   width: "100%", boxSizing: "border-box", padding: "12px 14px", border: "1.5px solid rgba(200,137,90,0.2)",
   borderRadius: 14, fontSize: 15, fontFamily: "'Nunito',sans-serif", color: C.ink, background: "white", outline: "none",
 };
+const label = { fontSize: 10, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, marginBottom: 8, color: C.accent };
 const linkBtn = { background: "none", border: "none", padding: 0, fontSize: 12, color: C.muted, cursor: "pointer", fontFamily: "'Nunito',sans-serif" };
 
 function getToken() { try { return localStorage.getItem("myinnermind_token") || ""; } catch { return ""; } }
@@ -36,6 +49,20 @@ async function circles(action, payload = {}) {
     return { ok: res.ok, ...data };
   } catch {
     return { ok: false, error: "No connection. Please try again." };
+  }
+}
+
+function confettiBurst() {
+  const em = ["🌱", "✨", "💛", "🌿", "🌸"];
+  for (let i = 0; i < 14; i++) {
+    setTimeout(() => {
+      const el = document.createElement("div");
+      el.textContent = em[i % em.length];
+      el.style.cssText = `position:fixed;pointer-events:none;z-index:9999;font-size:${16 + Math.random() * 14}px;left:${10 + Math.random() * 80}%;top:40%;transition:all 1.4s ease-out;opacity:1`;
+      document.body.appendChild(el);
+      requestAnimationFrame(() => { el.style.transform = `translateY(${-120 - Math.random() * 160}px)`; el.style.opacity = "0"; });
+      setTimeout(() => el.remove(), 1500);
+    }, i * 40);
   }
 }
 
@@ -109,6 +136,7 @@ export function MyCircles({ onOpen, onUpgrade }) {
                 <span style={{ display: "block", fontFamily: "'Lora',serif", fontWeight: 600, fontSize: 16, color: C.brown }}>{c.name}</span>
                 <span style={{ display: "block", fontSize: 12, color: C.muted }}>{c.member_count} {c.member_count === 1 ? "member" : "members"}{c.role === "owner" ? " · you started this" : ""}</span>
               </span>
+              {c.new_notes > 0 && <span style={{ background: C.accent, color: "white", borderRadius: 12, padding: "3px 9px", fontSize: 11, fontWeight: 800 }}>💛 {c.new_notes}</span>}
               <span style={{ color: C.accent, fontSize: 18 }}>›</span>
             </button>
           ))}
@@ -164,8 +192,12 @@ export function CircleView({ circle: start, isNew, onBack }) {
   const [answering, setAnswering] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showPeople, setShowPeople] = useState(!!isNew);
-  const [editPrompt, setEditPrompt] = useState(false);
-  const [promptDraft, setPromptDraft] = useState("");
+  const [week, setWeek] = useState(null);
+  const [notes, setNotes] = useState([]);
+  const [allNotes, setAllNotes] = useState(false);
+  const [noteTo, setNoteTo] = useState(null);
+  const [noteText, setNoteText] = useState("");
+  const [sending, setSending] = useState(false);
   const isOwner = circle.role === "owner";
 
   async function load() {
@@ -174,16 +206,23 @@ export function CircleView({ circle: start, isNew, onBack }) {
     setCircle((c) => ({ ...c, ...r.circle, invite_code: r.circle.invite_code || c.invite_code }));
     setMembers(r.members || []);
     setPosts(r.posts || []);
+    setWeek(r.week || null);
+    setNotes(r.notes || []);
   }
   useEffect(() => { load(); }, [start.id]);
 
   async function share() {
     if (!text.trim()) return;
     setBusy(true);
-    const r = await circles("post", { circle_id: circle.id, content: text, prompt: answering ? circle.prompt : null });
+    const r = await circles("post", { circle_id: circle.id, content: text, answer: answering });
     setBusy(false);
     if (!r.ok) return alert(r.error || "Couldn't share that. Please try again.");
-    setPosts((p) => [r.post, ...(p || [])]); setText(""); setAnswering(false);
+    setPosts((p) => [r.post, ...(p || [])]); setText("");
+    if (answering) {
+      setWeek((w) => (w.answered ? w : { ...w, answered: true, answered_count: w.answered_count + 1 }));
+      setMembers((ms) => ms.map((m) => (m.me ? { ...m, answered: true } : m)));
+      setAnswering(false);
+    }
   }
 
   async function heart(p) {
@@ -211,10 +250,23 @@ export function CircleView({ circle: start, isNew, onBack }) {
     alert("Blocked. Their posts won't appear for you anymore.");
   }
 
-  async function savePrompt() {
-    const r = await circles("set_prompt", { circle_id: circle.id, prompt: promptDraft });
-    if (!r.ok) return alert(r.error || "Couldn't save that.");
-    setCircle((c) => ({ ...c, prompt: r.prompt })); setEditPrompt(false);
+  async function toggleChallenge() {
+    const next = !week.i_did_it;
+    setWeek((w) => ({ ...w, i_did_it: next }));
+    setMembers((ms) => ms.map((m) => (m.me ? { ...m, did_challenge: next } : m)));
+    if (next) confettiBurst();
+    const r = await circles("checkin", { circle_id: circle.id });
+    if (!r.ok) { alert(r.error || "Couldn't save that. Please try again."); load(); }
+  }
+
+  async function sendNote() {
+    if (!noteText.trim() || !noteTo) return;
+    setSending(true);
+    const r = await circles("send_note", { circle_id: circle.id, to: noteTo.key, message: noteText });
+    setSending(false);
+    if (!r.ok) return alert(r.error || "Couldn't send that. Please try again.");
+    alert(`Sent to ${noteTo.name}. 💛`);
+    setNoteTo(null); setNoteText("");
   }
 
   async function newCode() {
@@ -275,35 +327,75 @@ export function CircleView({ circle: start, isNew, onBack }) {
         </div>
       )}
 
-      <div style={{ ...card, margin: "0 16px 12px", padding: "16px 18px" }}>
-        <div style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, marginBottom: 8, color: C.accent }}>✦ This week's prompt</div>
-        {editPrompt ? (
-          <>
-            <textarea value={promptDraft} onChange={(e) => setPromptDraft(e.target.value)} maxLength={280} rows={3} style={{ ...input, resize: "vertical" }} placeholder="What's one thing you're putting down this week, and one thing you want to make room for?" />
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-              <button style={btn(true)} onClick={savePrompt}>Save</button>
-              <button style={btn(false)} onClick={() => setEditPrompt(false)}>Cancel</button>
+      {notes.length > 0 && (
+        <div style={{ ...card, margin: "0 16px 12px", padding: "16px 18px", background: "linear-gradient(135deg,rgba(200,137,90,0.12),rgba(255,252,246,0.97))" }}>
+          <div style={label}>💛 Notes for you</div>
+          {(allNotes ? notes : notes.slice(0, 3)).map((n) => (
+            <div key={n.id} style={{ padding: "8px 0", borderTop: `1px solid ${C.line}` }}>
+              <p style={{ fontFamily: "'Lora',serif", fontStyle: "italic", fontSize: 15, color: C.text, margin: "0 0 2px", lineHeight: 1.5 }}>"{n.message}"</p>
+              <span style={{ fontSize: 12, color: C.muted }}>from {n.from} · {timeAgo(n.created_at)}{n.new ? " · new" : ""}</span>
             </div>
-          </>
-        ) : circle.prompt ? (
-          <>
-            <p style={{ fontFamily: "'Lora',serif", fontStyle: "italic", fontSize: 14, color: C.text, lineHeight: 1.7, margin: "0 0 12px" }}>"{circle.prompt}"</p>
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <button style={{ ...btn(false), padding: "6px 16px", fontSize: 12 }} onClick={() => { setAnswering(true); setText(""); }}>Answer this →</button>
-              {isOwner && <button style={linkBtn} onClick={() => { setPromptDraft(circle.prompt); setEditPrompt(true); }}>Change prompt</button>}
-            </div>
-          </>
-        ) : isOwner ? (
-          <button style={{ ...btn(false), padding: "6px 16px", fontSize: 12 }} onClick={() => { setPromptDraft(""); setEditPrompt(true); }}>+ Set a prompt for your circle</button>
-        ) : (
-          <p style={{ fontSize: 13, color: C.muted, fontStyle: "italic", margin: 0 }}>No prompt yet. Share whatever's on your mind.</p>
-        )}
-      </div>
+          ))}
+          {notes.length > 3 && <button style={{ ...linkBtn, marginTop: 6 }} onClick={() => setAllNotes((a) => !a)}>{allNotes ? "Show less" : `See all ${notes.length}`}</button>}
+        </div>
+      )}
 
-      <div style={{ ...card, margin: "0 16px 14px", padding: 16 }}>
+      {week && (
+        <div style={{ ...card, margin: "0 16px 12px", padding: "16px 18px" }}>
+          <div style={{ ...label, color: "#5f7a52" }}>🌱 This week's challenge</div>
+          <p style={{ fontFamily: "'Lora',serif", fontSize: 15.5, color: C.ink, lineHeight: 1.6, margin: "0 0 12px" }}>{week.challenge}</p>
+          <button onClick={toggleChallenge} style={{ ...btn(week.i_did_it), background: week.i_did_it ? "#6f8c62" : "transparent", borderColor: "#6f8c62", color: week.i_did_it ? "white" : "#5f7a52" }}>{week.i_did_it ? "✓ I did it!" : "I did it"}</button>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
+            {members.map((m) => (
+              <span key={m.key} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 14, background: m.did_challenge ? "rgba(111,140,98,0.14)" : "rgba(0,0,0,0.03)", color: m.did_challenge ? "#4f6a44" : C.muted, fontWeight: m.did_challenge ? 700 : 400 }}>{m.did_challenge ? "✓ " : ""}{m.me ? "You" : m.name}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {week && (
+        <div style={{ ...card, margin: "0 16px 12px", padding: "16px 18px" }}>
+          <div style={label}>✦ Question of the week</div>
+          <p style={{ fontFamily: "'Lora',serif", fontStyle: "italic", fontSize: 15, color: C.text, lineHeight: 1.7, margin: "0 0 10px" }}>"{week.question}"</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <button style={{ ...btn(!week.answered), padding: "6px 16px", fontSize: 12 }} onClick={() => { setAnswering(true); setText(""); document.getElementById("circle-compose")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>{week.answered ? "Add another answer" : "Answer →"}</button>
+            <span style={{ fontSize: 12, color: C.muted }}>{week.answered_count} of {members.length} answered{week.answered ? " · you ✓" : ""}</span>
+          </div>
+        </div>
+      )}
+
+      {members.filter((m) => !m.me).length > 0 && (
+        <div style={{ ...card, margin: "0 16px 12px", padding: "16px 18px" }}>
+          <div style={label}>💌 Send some love</div>
+          {!noteTo ? (
+            <>
+              <p style={{ fontSize: 13, color: C.muted, margin: "0 0 10px" }}>Send a private affirmation to someone in your circle. Only they will see it.</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {members.filter((m) => !m.me).map((m) => <button key={m.key} style={{ ...btn(false), padding: "6px 14px", fontSize: 13 }} onClick={() => { setNoteTo(m); setNoteText(""); }}>{m.name}</button>)}
+              </div>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: 13, color: C.text, margin: "0 0 8px" }}>To <b>{noteTo.name}</b>. Pick one or write your own:</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                {AFFIRMATIONS.map((a) => (
+                  <button key={a} onClick={() => setNoteText(a)} style={{ fontSize: 12.5, padding: "6px 11px", borderRadius: 14, cursor: "pointer", fontFamily: "'Nunito',sans-serif", textAlign: "left", border: noteText === a ? `1.5px solid ${C.accent}` : "1px solid rgba(200,137,90,0.22)", background: noteText === a ? C.soft : "white", color: C.text }}>{a}</button>
+                ))}
+              </div>
+              <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} maxLength={200} rows={2} style={{ ...input, resize: "vertical" }} placeholder="Or write your own..." />
+              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                <button style={btn(true)} disabled={sending || !noteText.trim()} onClick={sendNote}>{sending ? "Sending..." : "Send 💛"}</button>
+                <button style={btn(false)} onClick={() => setNoteTo(null)}>Cancel</button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      <div id="circle-compose" style={{ ...card, margin: "0 16px 14px", padding: 16 }}>
         {answering && (
           <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, marginBottom: 8, display: "flex", justifyContent: "space-between", background: C.soft, padding: "6px 10px", borderRadius: 8 }}>
-            ✦ Answering this week's prompt<button style={linkBtn} onClick={() => setAnswering(false)}>✕</button>
+            ✦ Answering the question of the week<button style={linkBtn} onClick={() => setAnswering(false)}>✕</button>
           </div>
         )}
         <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} rows={3} style={{ ...input, resize: "vertical" }} placeholder={answering ? "Your answer..." : "Share with your circle..."} />
@@ -326,6 +418,7 @@ export function CircleView({ circle: start, isNew, onBack }) {
               <span style={{ fontWeight: 700, color: C.brown, fontSize: 14 }}>{p.name}{p.mine ? " (you)" : ""}</span>
               <span style={{ fontSize: 11, color: C.muted }}>{timeAgo(p.created_at)}</span>
             </div>
+            {p.kind === "grove" && <div style={{ fontSize: 11, color: "#5f7a52", fontWeight: 700, marginBottom: 6 }}>🌿 Grove wins today</div>}
             {p.prompt && <div style={{ fontSize: 11, color: C.accent, fontStyle: "italic", marginBottom: 6 }}>✦ {p.prompt}</div>}
             <p style={{ fontFamily: "'Lora',serif", fontSize: 14.5, color: C.text, lineHeight: 1.7, margin: "0 0 10px", whiteSpace: "pre-wrap" }}>{p.content}</p>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -337,6 +430,49 @@ export function CircleView({ circle: start, isNew, onBack }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── "Share with my circle" button for the Grove tab ──
+export function ShareToCircle({ items, title = "Today's rituals" }) {
+  const [list, setList] = useState(null);
+  const [picking, setPicking] = useState(false);
+  const [sharedTo, setSharedTo] = useState([]);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { circles("mine").then((r) => setList(r.circles || [])); }, []);
+  if (!list || list.length === 0 || !items.length) return null;
+
+  async function shareTo(c) {
+    setBusy(true);
+    const r = await circles("post", { circle_id: c.id, kind: "grove", content: `${title}:\n${items.join("\n")}` });
+    setBusy(false);
+    if (!r.ok) return alert(r.error || "Couldn't share that. Please try again.");
+    setSharedTo((s) => [...s, c.id]); setPicking(false);
+    confettiBurst();
+  }
+
+  const green = { ...btn(false), borderColor: "#6f8c62", color: "#5f7a52" };
+  return (
+    <div style={{ marginTop: 12, textAlign: "center" }}>
+      {!picking ? (
+        <button style={green} disabled={busy} onClick={() => (list.length === 1 ? shareTo(list[0]) : setPicking(true))}>
+          {sharedTo.length ? "✓ Shared with your circle" : "Share today's wins with your circle 💛"}
+        </button>
+      ) : (
+        <div style={{ ...card, padding: 14, textAlign: "left" }}>
+          <div style={{ ...label, color: "#5f7a52" }}>Share with</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {list.map((c) => (
+              <button key={c.id} style={{ ...green, padding: "6px 14px", fontSize: 13, opacity: sharedTo.includes(c.id) ? 0.5 : 1 }} disabled={busy || sharedTo.includes(c.id)} onClick={() => shareTo(c)}>
+                {c.emoji} {c.name}{sharedTo.includes(c.id) ? " ✓" : ""}
+              </button>
+            ))}
+          </div>
+          <button style={{ ...linkBtn, marginTop: 10 }} onClick={() => setPicking(false)}>Done</button>
+        </div>
+      )}
     </div>
   );
 }
