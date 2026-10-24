@@ -16,7 +16,7 @@ const list = (r) => (Array.isArray(r.data) ? r.data : []);
 const clean = (s, max) => String(s || "").replace(/\s+/g, " ").trim().slice(0, max);
 const hasBanned = (s) => BANNED.some((w) => new RegExp(`\\b${w}`, "i").test(s));
 
-// ── This week's challenge and question ──
+// ── This week's challenge and Inner Circle Card ──
 // Everyone gets the same ones. They change every Sunday (Central time), so nobody has to set them.
 const CHALLENGES = [
   "Take a 20-minute walk three times this week.",
@@ -36,23 +36,26 @@ const CHALLENGES = [
   "Write a short letter to your younger self.",
   "Give yourself one full hour of rest with no guilt.",
 ];
-const QUESTIONS = [
-  "What's one thing you're putting down this week, and one thing you want to make room for?",
-  "What's something small that made you smile recently?",
-  "Who showed up for you when you needed it, and how?",
-  "What does rest actually look like for you?",
-  "What's a memory that still makes you laugh?",
-  "What's one thing you wish people asked you about?",
-  "What are you proud of that nobody sees?",
-  "When do you feel most like yourself?",
-  "What's something you're learning right now?",
-  "What would you tell yourself from a year ago?",
-  "What's a boundary you're working on?",
-  "What's been heavy lately?",
-  "What's a tradition you want to keep, or start?",
-  "What does a perfect ordinary day look like for you?",
-  "What are you looking forward to?",
-  "What's one thing you need from the people who love you?",
+// Inner Circle Cards: one card a week, everyone answers the same one.
+// Built on human development and family studies: growth, processing, introspection.
+// Answers stay hidden until you've answered too.
+const CARDS = [
+  { lens: "Family of Origin", title: "Where I Come From", prompt: "What's one thing the people who raised you taught you, out loud or without words, that still shapes you today?" },
+  { lens: "Attachment", title: "How I Reach for People", prompt: "When you're hurting, do you reach out or pull in? Where do you think you learned that?" },
+  { lens: "Identity", title: "Who I'm Becoming", prompt: "What part of who you are feels most yours right now, and what part are you still growing into?" },
+  { lens: "Emotional Regulation", title: "What Brings Me Back", prompt: "When a feeling gets big, what actually helps you come back to yourself?" },
+  { lens: "Life Transitions", title: "The Season I'm In", prompt: "What season of life are you in right now, and what is it asking of you?" },
+  { lens: "Generational Patterns", title: "Keep It or Change It", prompt: "From the people who raised you, what's one pattern you want to keep and one you want to change?" },
+  { lens: "Resilience", title: "How I Got Through", prompt: "Think of a hard season you made it through. What helped you get to the other side?" },
+  { lens: "Family Roles", title: "The Roles I Carry", prompt: "What roles do you tend to carry: the fixer, the peacekeeper, the strong one? Which one feels heavy right now?" },
+  { lens: "Boundaries", title: "Where I End and You Begin", prompt: "What's a boundary you're learning to hold, and what makes it hard?" },
+  { lens: "Belonging", title: "Where I Belong", prompt: "When do you feel like you truly belong, and when do you feel on the outside?" },
+  { lens: "Self-Talk", title: "The Voice in My Head", prompt: "Whose voice does your inner critic sound like? What would a kinder voice say instead?" },
+  { lens: "Unmet Needs", title: "What I Needed Then", prompt: "What did you need as a kid that you're learning to give yourself now?" },
+  { lens: "Connection", title: "How I Give and Receive Love", prompt: "How do you show love, and how do you most like to receive it? Are they the same?" },
+  { lens: "Rituals", title: "The Rituals That Hold Me", prompt: "What ritual or tradition makes you feel grounded or connected, and why does it matter to you?" },
+  { lens: "Growth", title: "Then and Now", prompt: "How have you grown in the last year in a way someone might not notice from the outside?" },
+  { lens: "Meaning", title: "What Matters to Me", prompt: "What do you want your life to be about, and what's one small way you're living that now?" },
 ];
 const NOTE_MAX = 200;
 
@@ -62,8 +65,9 @@ export function weekInfo(now = new Date()) {
   d.setUTCDate(d.getUTCDate() - d.getUTCDay()); // back to Sunday
   const key = d.toISOString().slice(0, 10);
   const n = Math.round((d - new Date("2026-10-18T00:00:00Z")) / (7 * 864e5));
-  const pick = (arr) => arr[((n % arr.length) + arr.length) % arr.length];
-  return { key, challenge: pick(CHALLENGES), question: pick(QUESTIONS) };
+  const idx = (len) => ((n % len) + len) % len;
+  const c = idx(CARDS.length);
+  return { key, challenge: CHALLENGES[idx(CHALLENGES.length)], card: { number: c + 1, ...CARDS[c] }, question: CARDS[c].prompt };
 }
 
 function newCode() {
@@ -168,13 +172,20 @@ export default async function handler(req, res) {
     // Everything below needs a circle (or a post in one) that this person belongs to
     let circleId = body.circle_id;
     let post = null;
-    if (["delete_post", "react", "report"].includes(action)) {
+    let reply = null;
+    if (["delete_reply", "report_reply"].includes(action)) {
+      if (!UUID.test(String(body.reply_id || ""))) return fail(404, "not_found");
+      reply = list(await sb(`circle_replies?id=eq.${body.reply_id}`))[0];
+      if (!reply) return fail(404, "not_found");
+      body.post_id = reply.post_id;
+    }
+    if (["delete_post", "react", "report", "reply", "delete_reply", "report_reply"].includes(action)) {
       post = await circleFor(body.post_id);
       if (!post) return fail(404, "not_found");
       circleId = post.circle_id;
     }
     const mem = await membership(circleId, email);
-    if (!mem && !(isAdmin && action === "delete_post")) return fail(403, "not_a_member");
+    if (!mem && !(isAdmin && (action === "delete_post" || action === "delete_reply"))) return fail(403, "not_a_member");
     const isOwner = mem?.role === "owner";
 
     // ── Open a circle: details, members, this week, notes and posts ──
@@ -196,20 +207,27 @@ export default async function handler(req, res) {
       const memberEmails = new Set(members.map((m) => m.user_email));
       const done = new Set(list(cks).map((x) => x.user_email).filter((e) => memberEmails.has(e)));
       const answered = new Set(list(ps).filter((p) => p.prompt === week.question && p.created_at >= week.key && memberEmails.has(p.user_email)).map((p) => p.user_email));
+      const iAnswered = answered.has(email);
+      const isCardAnswer = (p) => p.prompt === week.question && p.created_at >= week.key;
+      const ids = posts.map((p) => p.id);
+      const rp = ids.length ? list(await sb(`circle_replies?post_id=in.(${ids.join(",")})&order=created_at.asc`)) : [];
+      const replies = rp.filter((r) => !isBlocked(r.user_email));
       const notes = list(ns).filter((n) => !isBlocked(n.from_email));
       const unseen = notes.filter((n) => !n.seen).map((n) => n.id);
       if (unseen.length) await sb(`circle_notes?id=in.(${unseen.join(",")})`, { method: "PATCH", body: { seen: true }, prefer: "return=minimal" });
       return res.status(200).json({
         circle: publicCircle(list(c)[0] || {}, mem.role, members.length),
-        week: { challenge: week.challenge, question: week.question, i_did_it: done.has(email), answered: answered.has(email), answered_count: answered.size },
+        week: { challenge: week.challenge, card: week.card, question: week.question, i_did_it: done.has(email), answered: iAnswered, answered_count: answered.size },
         members: members.map((m) => ({ key: opaqueId(m.user_email), name: m.display_name, role: m.role, me: m.user_email === email, did_challenge: done.has(m.user_email), answered: answered.has(m.user_email) })),
         notes: notes.map((n) => ({ id: n.id, from: n.from_name, message: n.message, created_at: n.created_at, new: !n.seen })),
         posts: posts.map((p) => {
           const rs = reacts.filter((r) => r.post_id === p.id);
+          const locked = isCardAnswer(p) && !iAnswered && p.user_email !== email;
           return {
-            id: p.id, name: p.display_name, content: p.content, prompt: p.prompt, kind: p.kind || "post", created_at: p.created_at,
+            id: p.id, name: p.display_name, content: locked ? null : p.content, locked, prompt: p.prompt, kind: p.kind || "post", created_at: p.created_at,
             author: opaqueId(p.user_email), mine: p.user_email === email,
             hearts: rs.length, hearted: rs.some((r) => r.user_email === email),
+            replies: locked ? [] : replies.filter((r) => r.post_id === p.id).map((r) => ({ id: r.id, name: r.display_name, content: r.content, created_at: r.created_at, mine: r.user_email === email, author: opaqueId(r.user_email) })),
           };
         }),
       });
@@ -260,6 +278,41 @@ export default async function handler(req, res) {
     if (action === "delete_post") {
       if (!(post.user_email === email || isOwner || isAdmin)) return fail(403, "forbidden");
       await sb(`circle_posts?id=eq.${post.id}`, { method: "DELETE", prefer: "return=minimal" });
+      return res.status(200).json({ ok: true });
+    }
+
+    // ── Kind replies ──
+    if (action === "reply") {
+      const content = clean(body.content, 500);
+      if (!content) return fail(400, "Write something first.");
+      if (hasBanned(content)) return fail(400, "Please choose different wording. 🌿");
+      const week = weekInfo();
+      if (post.prompt === week.question && post.user_email !== email) {
+        const mine = list(await sb(`circle_posts?circle_id=eq.${circleId}&user_email=eq.${enc(email)}&select=prompt,created_at`));
+        if (!mine.some((p) => p.prompt === week.question && p.created_at >= week.key)) return fail(403, "Answer this week's card first. 💌");
+      }
+      const profile = await me(email);
+      const r = await sb("circle_replies", { method: "POST", body: { post_id: post.id, circle_id: circleId, user_email: email, display_name: profile.name, content } });
+      const x = list(r)[0];
+      if (!x) return fail(500, "Couldn't send that. Please try again.");
+      return res.status(200).json({ reply: { id: x.id, name: x.display_name, content: x.content, created_at: x.created_at, mine: true, author: opaqueId(email) } });
+    }
+
+    if (action === "delete_reply") {
+      if (!(reply.user_email === email || isOwner || isAdmin)) return fail(403, "forbidden");
+      await sb(`circle_replies?id=eq.${reply.id}`, { method: "DELETE", prefer: "return=minimal" });
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action === "report_reply") {
+      await sb("circle_reports", { method: "POST", body: { circle_id: circleId, post_id: post.id, reporter_email: email, reported_email: reply.user_email, content: `Reply: ${reply.content}`.slice(0, 1000) }, prefer: "return=minimal" });
+      if (process.env.RESEND_API_KEY) {
+        fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ from: "My Inner Mind <hello@halliewho.com>", to: ADMIN_EMAIL, subject: "A circle reply was reported", text: `Reported by ${email}\nWritten by ${reply.user_email}\n\n${reply.content}` }),
+        }).catch(() => null);
+      }
       return res.status(200).json({ ok: true });
     }
 

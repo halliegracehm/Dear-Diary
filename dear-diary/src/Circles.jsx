@@ -198,6 +198,8 @@ export function CircleView({ circle: start, isNew, onBack }) {
   const [noteTo, setNoteTo] = useState(null);
   const [noteText, setNoteText] = useState("");
   const [sending, setSending] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(null);
+  const [replyText, setReplyText] = useState("");
   const isOwner = circle.role === "owner";
 
   async function load() {
@@ -219,9 +221,8 @@ export function CircleView({ circle: start, isNew, onBack }) {
     if (!r.ok) return alert(r.error || "Couldn't share that. Please try again.");
     setPosts((p) => [r.post, ...(p || [])]); setText("");
     if (answering) {
-      setWeek((w) => (w.answered ? w : { ...w, answered: true, answered_count: w.answered_count + 1 }));
-      setMembers((ms) => ms.map((m) => (m.me ? { ...m, answered: true } : m)));
       setAnswering(false);
+      if (!week?.answered) { confettiBurst(); load(); } // answering unlocks everyone else's
     }
   }
 
@@ -248,6 +249,26 @@ export function CircleView({ circle: start, isNew, onBack }) {
     await fetch("/api/db", { method: "POST", headers: { "Content-Type": "application/json", ...(t ? { Authorization: `Bearer ${t}` } : {}) }, body: JSON.stringify({ path: "blocked_users", method: "POST", body: { blocked_id: p.author } }) }).catch(() => null);
     setPosts((ps) => ps.filter((x) => x.author !== p.author));
     alert("Blocked. Their posts won't appear for you anymore.");
+  }
+
+  async function sendReply(p) {
+    if (!replyText.trim()) return;
+    const r = await circles("reply", { post_id: p.id, content: replyText });
+    if (!r.ok) return alert(r.error || "Couldn't send that. Please try again.");
+    setPosts((ps) => ps.map((x) => (x.id === p.id ? { ...x, replies: [...(x.replies || []), r.reply] } : x)));
+    setReplyText(""); setReplyOpen(null);
+  }
+
+  async function deleteReply(p, rp) {
+    if (!window.confirm("Delete this reply?")) return;
+    const r = await circles("delete_reply", { reply_id: rp.id });
+    if (r.ok) setPosts((ps) => ps.map((x) => (x.id === p.id ? { ...x, replies: x.replies.filter((y) => y.id !== rp.id) } : x)));
+  }
+
+  async function reportReply(rp) {
+    if (!window.confirm("Report this reply to Hallie for review?")) return;
+    await circles("report_reply", { reply_id: rp.id });
+    alert("Thank you. We've received your report and will review it within 24 hours. 🌿");
   }
 
   async function toggleChallenge() {
@@ -362,10 +383,13 @@ export function CircleView({ circle: start, isNew, onBack }) {
 
       {week && (
         <div style={{ ...card, margin: "0 16px 12px", padding: "16px 18px" }}>
-          <div style={label}>✦ Question of the week</div>
-          <p style={{ fontFamily: "'Lora',serif", fontStyle: "italic", fontSize: 15, color: C.text, lineHeight: 1.7, margin: "0 0 10px" }}>"{week.question}"</p>
+          <div style={{ ...label, display: "flex", justifyContent: "space-between" }}><span>💌 Inner Circle Card</span><span>#{String(week.card?.number || 1).padStart(2, "0")}</span></div>
+          <div style={{ fontFamily: "'Lora',serif", fontSize: 19, fontWeight: 600, color: C.brown, lineHeight: 1.3, margin: "2px 0 4px" }}>{week.card?.title}</div>
+          {week.card?.lens && <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: "#7a4a1e", background: "rgba(122,74,30,0.07)", borderRadius: 10, padding: "2px 9px", marginBottom: 8 }}>{week.card.lens}</div>}
+          <p style={{ fontFamily: "'Lora',serif", fontStyle: "italic", fontSize: 15, color: C.text, lineHeight: 1.6, margin: "0 0 10px" }}>{week.question}</p>
+          {!week.answered && <p style={{ fontSize: 12, color: C.muted, margin: "0 0 10px" }}>🔒 Answers stay hidden until you share yours. Then leave a kind word on someone else's.</p>}
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <button style={{ ...btn(!week.answered), padding: "6px 16px", fontSize: 12 }} onClick={() => { setAnswering(true); setText(""); document.getElementById("circle-compose")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>{week.answered ? "Add another answer" : "Answer →"}</button>
+            <button style={{ ...btn(!week.answered), padding: "6px 16px", fontSize: 12 }} onClick={() => { setAnswering(true); setText(""); document.getElementById("circle-compose")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>{week.answered ? "Add to my answer" : "Answer the card →"}</button>
             <span style={{ fontSize: 12, color: C.muted }}>{week.answered_count} of {members.length} answered{week.answered ? " · you ✓" : ""}</span>
           </div>
         </div>
@@ -402,7 +426,7 @@ export function CircleView({ circle: start, isNew, onBack }) {
       <div id="circle-compose" style={{ ...card, margin: "0 16px 14px", padding: 16 }}>
         {answering && (
           <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, marginBottom: 8, display: "flex", justifyContent: "space-between", background: C.soft, padding: "6px 10px", borderRadius: 8 }}>
-            ✦ Answering the question of the week<button style={linkBtn} onClick={() => setAnswering(false)}>✕</button>
+            💌 Answering this week's card<button style={linkBtn} onClick={() => setAnswering(false)}>✕</button>
           </div>
         )}
         <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} rows={3} style={{ ...input, resize: "vertical" }} placeholder={answering ? "Your answer..." : "Share with your circle..."} />
@@ -427,13 +451,43 @@ export function CircleView({ circle: start, isNew, onBack }) {
             </div>
             {p.kind === "grove" && <div style={{ fontSize: 11, color: "#5f7a52", fontWeight: 700, marginBottom: 6 }}>🌿 Grove wins today</div>}
             {p.prompt && <div style={{ fontSize: 11, color: C.accent, fontStyle: "italic", marginBottom: 6 }}>✦ {p.prompt}</div>}
+            {p.locked ? (
+              <div style={{ background: C.soft, borderRadius: 12, padding: "14px 16px", margin: "0 0 4px", textAlign: "center" }}>
+                <div style={{ fontSize: 20, marginBottom: 4 }}>💌</div>
+                <div style={{ fontSize: 13, color: C.muted }}>{p.name} answered this week's card. Share yours to see it.</div>
+              </div>
+            ) : (
+            <>
             <p style={{ fontFamily: "'Lora',serif", fontSize: 14.5, color: C.text, lineHeight: 1.7, margin: "0 0 10px", whiteSpace: "pre-wrap" }}>{p.content}</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
               <button onClick={() => heart(p)} style={{ background: p.hearted ? C.soft : "transparent", border: `1px solid ${p.hearted ? C.accent : "rgba(200,137,90,0.25)"}`, borderRadius: 20, padding: "4px 12px", fontSize: 13, cursor: "pointer", color: C.brown }}>💛 {p.hearts || ""}</button>
               {(p.mine || isOwner) && <button style={linkBtn} onClick={() => remove(p)}>Delete</button>}
               {!p.mine && <button style={linkBtn} onClick={() => report(p)}>🚩 Report</button>}
               {!p.mine && <button style={linkBtn} onClick={() => block(p)}>Block</button>}
+              <button style={{ ...linkBtn, color: C.accent, fontWeight: 700 }} onClick={() => { setReplyOpen(replyOpen === p.id ? null : p.id); setReplyText(""); }}>Reply</button>
             </div>
+            {(p.replies || []).length > 0 && (
+              <div style={{ marginTop: 10, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
+                {p.replies.map((rp) => (
+                  <div key={rp.id} style={{ padding: "5px 0 5px 10px", borderLeft: "2px solid rgba(200,137,90,0.25)", marginBottom: 6 }}>
+                    <div style={{ fontSize: 13, color: C.text, lineHeight: 1.5 }}><b style={{ color: C.brown }}>{rp.mine ? "You" : rp.name}</b> {rp.content}</div>
+                    <div style={{ display: "flex", gap: 10, marginTop: 2 }}>
+                      <span style={{ fontSize: 11, color: C.muted }}>{timeAgo(rp.created_at)}</span>
+                      {(rp.mine || isOwner) && <button style={{ ...linkBtn, fontSize: 11 }} onClick={() => deleteReply(p, rp)}>Delete</button>}
+                      {!rp.mine && <button style={{ ...linkBtn, fontSize: 11 }} onClick={() => reportReply(rp)}>Report</button>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {replyOpen === p.id && (
+              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                <input value={replyText} onChange={(e) => setReplyText(e.target.value)} maxLength={500} placeholder={`Say something kind to ${p.mine ? "your circle" : p.name}...`} style={{ ...input, padding: "9px 12px", fontSize: 14 }} onKeyDown={(e) => { if (e.key === "Enter") sendReply(p); }} />
+                <button style={{ ...btn(true), padding: "8px 14px" }} disabled={!replyText.trim()} onClick={() => sendReply(p)}>Send</button>
+              </div>
+            )}
+            </>
+            )}
           </div>
         ))}
       </div>
