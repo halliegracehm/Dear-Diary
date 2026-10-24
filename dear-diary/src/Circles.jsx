@@ -184,6 +184,65 @@ export function MyCircles({ onOpen, onUpgrade }) {
   );
 }
 
+// ── Tree and nest artwork for the circle screen ──
+function Leaf({ x, y, r = 0, s = 1, c = "#8fae78" }) {
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${r}) scale(${s})`}>
+      <path d="M0 0 C 8 -10, 24 -10, 32 0 C 24 10, 8 10, 0 0 Z" fill={c} />
+      <path d="M2 0 L 28 0" stroke="rgba(60,80,40,0.25)" strokeWidth="1" />
+    </g>
+  );
+}
+
+function Branches() {
+  // A branch reaching in from each top corner, drawn behind everything
+  return (
+    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMin slice" aria-hidden="true"
+      style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 260, pointerEvents: "none" }}>
+      <path d="M-10 40 C 60 50, 110 80, 150 120" stroke="#7a5233" strokeWidth="7" fill="none" strokeLinecap="round" />
+      <path d="M60 52 C 70 30, 90 22, 108 20" stroke="#7a5233" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+      <path d="M110 92 C 104 110, 100 130, 102 150" stroke="#7a5233" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <Leaf x={18} y={38} r={-30} c="#7f9f6a" />
+      <Leaf x={40} y={46} r={40} s={0.9} c="#a3bf8c" />
+      <Leaf x={92} y={22} r={-20} s={0.85} c="#8fae78" />
+      <Leaf x={104} y={20} r={30} s={0.75} c="#6f8c5d" />
+      <Leaf x={130} y={104} r={50} s={0.9} c="#8fae78" />
+      <Leaf x={100} y={146} r={80} s={0.7} c="#a3bf8c" />
+      <Leaf x={75} y={64} r={70} s={0.8} c="#6f8c5d" />
+      <path d="M410 70 C 350 70, 300 92, 262 130" stroke="#7a5233" strokeWidth="6" fill="none" strokeLinecap="round" />
+      <path d="M330 78 C 324 56, 306 44, 288 40" stroke="#7a5233" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <Leaf x={380} y={66} r={200} c="#7f9f6a" />
+      <Leaf x={356} y={72} r={140} s={0.9} c="#a3bf8c" />
+      <Leaf x={300} y={44} r={200} s={0.8} c="#8fae78" />
+      <Leaf x={286} y={40} r={150} s={0.7} c="#6f8c5d" />
+      <Leaf x={276} y={118} r={120} s={0.85} c="#8fae78" />
+      <Leaf x={318} y={90} r={100} s={0.75} c="#6f8c5d" />
+      <circle cx="170" cy="40" r="2" fill="#e9c98f" opacity="0.7" />
+      <circle cx="240" cy="28" r="1.6" fill="#e9c98f" opacity="0.6" />
+      <circle cx="210" cy="64" r="1.4" fill="#e9c98f" opacity="0.6" />
+    </svg>
+  );
+}
+
+function Nest({ emoji }) {
+  // The circle's emoji resting in a woven nest
+  const twigs = [
+    "M8 30 C 40 50, 110 50, 142 30", "M12 36 C 45 54, 105 54, 138 36", "M18 42 C 50 58, 100 58, 132 42",
+    "M4 28 C 30 44, 70 46, 96 40", "M54 40 C 80 46, 120 44, 146 28", "M14 34 C 40 30, 60 46, 90 50",
+    "M60 50 C 90 46, 110 32, 136 34", "M22 46 C 60 40, 90 56, 128 46",
+  ];
+  return (
+    <div style={{ position: "relative", width: 150, height: 92, margin: "0 auto 4px" }}>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 4, textAlign: "center", fontSize: 44, lineHeight: 1 }}>{emoji}</div>
+      <svg viewBox="0 0 150 64" width="150" height="64" aria-hidden="true" style={{ position: "absolute", left: 0, bottom: 0 }}>
+        <path d="M6 28 C 20 60, 130 60, 144 28 C 120 40, 30 40, 6 28 Z" fill="#9a6a3c" />
+        {twigs.map((d, i) => <path key={i} d={d} stroke={["#6b4423", "#b58450", "#8a5a2e", "#c99a64"][i % 4]} strokeWidth={i % 3 === 0 ? 2.4 : 1.6} fill="none" strokeLinecap="round" />)}
+        <path d="M2 27 l 10 -4 M146 27 l -9 -5 M30 50 l -8 6 M120 50 l 9 5" stroke="#6b4423" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    </div>
+  );
+}
+
 // ── Inside one circle ──
 export function CircleView({ circle: start, isNew, onBack }) {
   const [circle, setCircle] = useState(start);
@@ -323,14 +382,16 @@ export function CircleView({ circle: start, isNew, onBack }) {
   }
 
   return (
-    <div style={{ fontFamily: "'Nunito',sans-serif", paddingBottom: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid rgba(200,137,90,0.12)" }}>
-        <button style={{ ...linkBtn, fontSize: 13, fontWeight: 600 }} onClick={onBack}>← Communities</button>
-        <button style={{ ...linkBtn, fontSize: 13, fontWeight: 700, color: C.accent }} onClick={() => setShowPeople((s) => !s)}>👥 {members.length || circle.member_count || 1}</button>
+    <div style={{ fontFamily: "'Nunito',sans-serif", paddingBottom: 24, position: "relative", overflow: "hidden", borderRadius: 20,
+      background: "radial-gradient(120% 60% at 50% 0%, #f4ead2 0%, rgba(244,234,210,0) 70%), linear-gradient(180deg, #efe4cc 0px, #f6eedd 260px, #fbf5ea 100%)" }}>
+      <Branches />
+      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px" }}>
+        <button style={{ ...linkBtn, fontSize: 13, fontWeight: 600, background: "rgba(255,252,246,0.8)", padding: "4px 10px", borderRadius: 14 }} onClick={onBack}>← Communities</button>
+        <button style={{ ...linkBtn, fontSize: 13, fontWeight: 700, color: C.accent, background: "rgba(255,252,246,0.8)", padding: "4px 10px", borderRadius: 14 }} onClick={() => setShowPeople((s) => !s)}>👥 {members.length || circle.member_count || 1}</button>
       </div>
 
-      <div style={{ textAlign: "center", padding: "20px 16px 14px" }}>
-        <div style={{ fontSize: 40, marginBottom: 4 }}>{circle.emoji}</div>
+      <div style={{ position: "relative", textAlign: "center", padding: "34px 16px 16px" }}>
+        <Nest emoji={circle.emoji} />
         <h2 style={{ fontFamily: "'Lora',serif", fontSize: 22, fontWeight: 600, color: C.brown, margin: "0 0 4px" }}>{circle.name}</h2>
         <p style={{ fontSize: 12, color: C.muted, margin: 0 }}>🔒 Private. Only members can see this.</p>
       </div>
