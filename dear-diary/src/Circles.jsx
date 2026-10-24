@@ -19,6 +19,7 @@ const AFFIRMATIONS = [
   "I see how hard you're trying.",
   "You are loved exactly as you are.",
 ];
+const MOODS = ["🌧️ Heavy", "🌥️ Low", "⛅ Okay", "🌤️ Good", "☀️ Great"];
 const EMOJIS = ["🌿", "💛", "🌸", "🏡", "☀️", "🌙", "🥾", "☕", "🌊", "✨"];
 const card = { background: C.card, borderRadius: 18, border: `1px solid ${C.line}`, boxShadow: "0 2px 12px rgba(160,100,50,0.08)" };
 const btn = (solid) => ({
@@ -183,6 +184,65 @@ export function MyCircles({ onOpen, onUpgrade }) {
   );
 }
 
+// ── Tree and nest artwork for the circle screen ──
+function Leaf({ x, y, r = 0, s = 1, c = "#8fae78" }) {
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${r}) scale(${s})`}>
+      <path d="M0 0 C 8 -10, 24 -10, 32 0 C 24 10, 8 10, 0 0 Z" fill={c} />
+      <path d="M2 0 L 28 0" stroke="rgba(60,80,40,0.25)" strokeWidth="1" />
+    </g>
+  );
+}
+
+function Branches() {
+  // A branch reaching in from each top corner, drawn behind everything
+  return (
+    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMin slice" aria-hidden="true"
+      style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 260, pointerEvents: "none" }}>
+      <path d="M-10 40 C 60 50, 110 80, 150 120" stroke="#7a5233" strokeWidth="7" fill="none" strokeLinecap="round" />
+      <path d="M60 52 C 70 30, 90 22, 108 20" stroke="#7a5233" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+      <path d="M110 92 C 104 110, 100 130, 102 150" stroke="#7a5233" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <Leaf x={18} y={38} r={-30} c="#7f9f6a" />
+      <Leaf x={40} y={46} r={40} s={0.9} c="#a3bf8c" />
+      <Leaf x={92} y={22} r={-20} s={0.85} c="#8fae78" />
+      <Leaf x={104} y={20} r={30} s={0.75} c="#6f8c5d" />
+      <Leaf x={130} y={104} r={50} s={0.9} c="#8fae78" />
+      <Leaf x={100} y={146} r={80} s={0.7} c="#a3bf8c" />
+      <Leaf x={75} y={64} r={70} s={0.8} c="#6f8c5d" />
+      <path d="M410 70 C 350 70, 300 92, 262 130" stroke="#7a5233" strokeWidth="6" fill="none" strokeLinecap="round" />
+      <path d="M330 78 C 324 56, 306 44, 288 40" stroke="#7a5233" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <Leaf x={380} y={66} r={200} c="#7f9f6a" />
+      <Leaf x={356} y={72} r={140} s={0.9} c="#a3bf8c" />
+      <Leaf x={300} y={44} r={200} s={0.8} c="#8fae78" />
+      <Leaf x={286} y={40} r={150} s={0.7} c="#6f8c5d" />
+      <Leaf x={276} y={118} r={120} s={0.85} c="#8fae78" />
+      <Leaf x={318} y={90} r={100} s={0.75} c="#6f8c5d" />
+      <circle cx="170" cy="40" r="2" fill="#e9c98f" opacity="0.7" />
+      <circle cx="240" cy="28" r="1.6" fill="#e9c98f" opacity="0.6" />
+      <circle cx="210" cy="64" r="1.4" fill="#e9c98f" opacity="0.6" />
+    </svg>
+  );
+}
+
+function Nest({ emoji }) {
+  // The circle's emoji resting in a woven nest
+  const twigs = [
+    "M8 30 C 40 50, 110 50, 142 30", "M12 36 C 45 54, 105 54, 138 36", "M18 42 C 50 58, 100 58, 132 42",
+    "M4 28 C 30 44, 70 46, 96 40", "M54 40 C 80 46, 120 44, 146 28", "M14 34 C 40 30, 60 46, 90 50",
+    "M60 50 C 90 46, 110 32, 136 34", "M22 46 C 60 40, 90 56, 128 46",
+  ];
+  return (
+    <div style={{ position: "relative", width: 150, height: 92, margin: "0 auto 4px" }}>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 4, textAlign: "center", fontSize: 44, lineHeight: 1 }}>{emoji}</div>
+      <svg viewBox="0 0 150 64" width="150" height="64" aria-hidden="true" style={{ position: "absolute", left: 0, bottom: 0 }}>
+        <path d="M6 28 C 20 60, 130 60, 144 28 C 120 40, 30 40, 6 28 Z" fill="#9a6a3c" />
+        {twigs.map((d, i) => <path key={i} d={d} stroke={["#6b4423", "#b58450", "#8a5a2e", "#c99a64"][i % 4]} strokeWidth={i % 3 === 0 ? 2.4 : 1.6} fill="none" strokeLinecap="round" />)}
+        <path d="M2 27 l 10 -4 M146 27 l -9 -5 M30 50 l -8 6 M120 50 l 9 5" stroke="#6b4423" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    </div>
+  );
+}
+
 // ── Inside one circle ──
 export function CircleView({ circle: start, isNew, onBack }) {
   const [circle, setCircle] = useState(start);
@@ -198,6 +258,8 @@ export function CircleView({ circle: start, isNew, onBack }) {
   const [noteTo, setNoteTo] = useState(null);
   const [noteText, setNoteText] = useState("");
   const [sending, setSending] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(null);
+  const [replyText, setReplyText] = useState("");
   const isOwner = circle.role === "owner";
 
   async function load() {
@@ -219,9 +281,8 @@ export function CircleView({ circle: start, isNew, onBack }) {
     if (!r.ok) return alert(r.error || "Couldn't share that. Please try again.");
     setPosts((p) => [r.post, ...(p || [])]); setText("");
     if (answering) {
-      setWeek((w) => (w.answered ? w : { ...w, answered: true, answered_count: w.answered_count + 1 }));
-      setMembers((ms) => ms.map((m) => (m.me ? { ...m, answered: true } : m)));
       setAnswering(false);
+      if (!week?.answered) { confettiBurst(); load(); } // answering unlocks everyone else's
     }
   }
 
@@ -248,6 +309,33 @@ export function CircleView({ circle: start, isNew, onBack }) {
     await fetch("/api/db", { method: "POST", headers: { "Content-Type": "application/json", ...(t ? { Authorization: `Bearer ${t}` } : {}) }, body: JSON.stringify({ path: "blocked_users", method: "POST", body: { blocked_id: p.author } }) }).catch(() => null);
     setPosts((ps) => ps.filter((x) => x.author !== p.author));
     alert("Blocked. Their posts won't appear for you anymore.");
+  }
+
+  async function sendReply(p) {
+    if (!replyText.trim()) return;
+    const r = await circles("reply", { post_id: p.id, content: replyText });
+    if (!r.ok) return alert(r.error || "Couldn't send that. Please try again.");
+    setPosts((ps) => ps.map((x) => (x.id === p.id ? { ...x, replies: [...(x.replies || []), r.reply] } : x)));
+    setReplyText(""); setReplyOpen(null);
+  }
+
+  async function deleteReply(p, rp) {
+    if (!window.confirm("Delete this reply?")) return;
+    const r = await circles("delete_reply", { reply_id: rp.id });
+    if (r.ok) setPosts((ps) => ps.map((x) => (x.id === p.id ? { ...x, replies: x.replies.filter((y) => y.id !== rp.id) } : x)));
+  }
+
+  async function reportReply(rp) {
+    if (!window.confirm("Report this reply to Hallie for review?")) return;
+    await circles("report_reply", { reply_id: rp.id });
+    alert("Thank you. We've received your report and will review it within 24 hours. 🌿");
+  }
+
+  async function setMood(mood) {
+    const r = await circles("post", { circle_id: circle.id, kind: "mood", content: mood });
+    if (!r.ok) return alert(r.error || "Couldn't share that. Please try again.");
+    setPosts((p) => [r.post, ...(p || [])]);
+    setMembers((ms) => ms.map((m) => (m.me ? { ...m, mood: { mood, at: r.post.created_at } } : m)));
   }
 
   async function toggleChallenge() {
@@ -294,14 +382,16 @@ export function CircleView({ circle: start, isNew, onBack }) {
   }
 
   return (
-    <div style={{ fontFamily: "'Nunito',sans-serif", paddingBottom: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid rgba(200,137,90,0.12)" }}>
-        <button style={{ ...linkBtn, fontSize: 13, fontWeight: 600 }} onClick={onBack}>← Communities</button>
-        <button style={{ ...linkBtn, fontSize: 13, fontWeight: 700, color: C.accent }} onClick={() => setShowPeople((s) => !s)}>👥 {members.length || circle.member_count || 1}</button>
+    <div style={{ fontFamily: "'Nunito',sans-serif", paddingBottom: 24, position: "relative", overflow: "hidden", borderRadius: 20,
+      background: "radial-gradient(120% 60% at 50% 0%, #f4ead2 0%, rgba(244,234,210,0) 70%), linear-gradient(180deg, #efe4cc 0px, #f6eedd 260px, #fbf5ea 100%)" }}>
+      <Branches />
+      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px" }}>
+        <button style={{ ...linkBtn, fontSize: 13, fontWeight: 600, background: "rgba(255,252,246,0.8)", padding: "4px 10px", borderRadius: 14 }} onClick={onBack}>← Communities</button>
+        <button style={{ ...linkBtn, fontSize: 13, fontWeight: 700, color: C.accent, background: "rgba(255,252,246,0.8)", padding: "4px 10px", borderRadius: 14 }} onClick={() => setShowPeople((s) => !s)}>👥 {members.length || circle.member_count || 1}</button>
       </div>
 
-      <div style={{ textAlign: "center", padding: "20px 16px 14px" }}>
-        <div style={{ fontSize: 40, marginBottom: 4 }}>{circle.emoji}</div>
+      <div style={{ position: "relative", textAlign: "center", padding: "34px 16px 16px" }}>
+        <Nest emoji={circle.emoji} />
         <h2 style={{ fontFamily: "'Lora',serif", fontSize: 22, fontWeight: 600, color: C.brown, margin: "0 0 4px" }}>{circle.name}</h2>
         <p style={{ fontSize: 12, color: C.muted, margin: 0 }}>🔒 Private. Only members can see this.</p>
       </div>
@@ -340,10 +430,44 @@ export function CircleView({ circle: start, isNew, onBack }) {
         </div>
       )}
 
+      {members.length > 0 && (
+        <div style={{ ...card, margin: "0 16px 12px", padding: "16px 18px" }}>
+          <div style={label}>🌡️ How's everyone doing?</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+            {members.map((m) => {
+              const lvl = m.mood ? MOODS.indexOf(m.mood.mood) : -1;
+              return (
+                <div key={m.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ width: 64, fontSize: 13, color: C.text, fontWeight: m.me ? 700 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.me ? "You" : m.name}</span>
+                  <div style={{ flex: 1, height: 8, borderRadius: 6, background: "rgba(200,137,90,0.1)", overflow: "hidden" }}>
+                    {lvl >= 0 && <div style={{ width: `${(lvl + 1) * 20}%`, height: "100%", borderRadius: 6, background: ["#8a9bb0", "#a8a4b8", "#d9b779", "#e3a564", "#f0a63a"][lvl] }} />}
+                  </div>
+                  <span style={{ width: 82, fontSize: 12, color: lvl >= 0 ? C.text : C.muted, textAlign: "right" }}>{lvl >= 0 ? m.mood.mood : "No check-in"}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>How are you today?</div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
+            {MOODS.map((md) => {
+              const [e, ...w] = md.split(" ");
+              const mine = members.find((m) => m.me)?.mood?.mood === md;
+              return (
+                <button key={md} onClick={() => setMood(md)} style={{ flex: 1, padding: "8px 2px", borderRadius: 12, cursor: "pointer", fontFamily: "'Nunito',sans-serif", border: mine ? `1.5px solid ${C.accent}` : "1px solid rgba(200,137,90,0.2)", background: mine ? C.soft : "white" }}>
+                  <div style={{ fontSize: 20 }}>{e}</div>
+                  <div style={{ fontSize: 10.5, color: C.text }}>{w.join(" ")}</div>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>Moods show for 24 hours.</div>
+        </div>
+      )}
+
       {week && (
         <div style={{ margin: "6px 20px 10px" }}>
           <div style={{ fontFamily: "'Lora',serif", fontSize: 19, fontWeight: 600, color: C.brown }}>🗓️ Sunday Set Up</div>
-          <p style={{ fontSize: 13, color: C.muted, margin: "2px 0 0", fontStyle: "italic", fontFamily: "'Lora',serif" }}>Getting ready for the week, together. A new challenge and question every Sunday.</p>
+          <p style={{ fontSize: 13, color: C.muted, margin: "2px 0 0", fontStyle: "italic", fontFamily: "'Lora',serif" }}>Getting ready for the week, together. A new challenge and card every Sunday.</p>
         </div>
       )}
 
@@ -362,10 +486,13 @@ export function CircleView({ circle: start, isNew, onBack }) {
 
       {week && (
         <div style={{ ...card, margin: "0 16px 12px", padding: "16px 18px" }}>
-          <div style={label}>✦ Question of the week</div>
-          <p style={{ fontFamily: "'Lora',serif", fontStyle: "italic", fontSize: 15, color: C.text, lineHeight: 1.7, margin: "0 0 10px" }}>"{week.question}"</p>
+          <div style={{ ...label, display: "flex", justifyContent: "space-between" }}><span>💌 Inner Circle Card</span><span>#{String(week.card?.number || 1).padStart(2, "0")}</span></div>
+          <div style={{ fontFamily: "'Lora',serif", fontSize: 19, fontWeight: 600, color: C.brown, lineHeight: 1.3, margin: "2px 0 4px" }}>{week.card?.title}</div>
+          {week.card?.lens && <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: "#7a4a1e", background: "rgba(122,74,30,0.07)", borderRadius: 10, padding: "2px 9px", marginBottom: 8 }}>{week.card.lens}</div>}
+          <p style={{ fontFamily: "'Lora',serif", fontStyle: "italic", fontSize: 15, color: C.text, lineHeight: 1.6, margin: "0 0 10px" }}>{week.question}</p>
+          {!week.answered && <p style={{ fontSize: 12, color: C.muted, margin: "0 0 10px" }}>🔒 Answers stay hidden until you share yours. Then leave a kind word on someone else's.</p>}
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <button style={{ ...btn(!week.answered), padding: "6px 16px", fontSize: 12 }} onClick={() => { setAnswering(true); setText(""); document.getElementById("circle-compose")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>{week.answered ? "Add another answer" : "Answer →"}</button>
+            <button style={{ ...btn(!week.answered), padding: "6px 16px", fontSize: 12 }} onClick={() => { setAnswering(true); setText(""); document.getElementById("circle-compose")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>{week.answered ? "Add to my answer" : "Answer the card →"}</button>
             <span style={{ fontSize: 12, color: C.muted }}>{week.answered_count} of {members.length} answered{week.answered ? " · you ✓" : ""}</span>
           </div>
         </div>
@@ -402,7 +529,7 @@ export function CircleView({ circle: start, isNew, onBack }) {
       <div id="circle-compose" style={{ ...card, margin: "0 16px 14px", padding: 16 }}>
         {answering && (
           <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, marginBottom: 8, display: "flex", justifyContent: "space-between", background: C.soft, padding: "6px 10px", borderRadius: 8 }}>
-            ✦ Answering the question of the week<button style={linkBtn} onClick={() => setAnswering(false)}>✕</button>
+            💌 Answering this week's card<button style={linkBtn} onClick={() => setAnswering(false)}>✕</button>
           </div>
         )}
         <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} rows={3} style={{ ...input, resize: "vertical" }} placeholder={answering ? "Your answer..." : "Share with your circle..."} />
@@ -419,7 +546,15 @@ export function CircleView({ circle: start, isNew, onBack }) {
             <div style={{ fontSize: 34, marginBottom: 8 }}>{circle.emoji}</div>
             <p style={{ fontFamily: "'Lora',serif", fontStyle: "italic", color: C.muted, fontSize: 14, lineHeight: 1.7 }}>{isOwner && members.length <= 1 ? "Send your invite code, then share the first thing." : "Nothing shared yet. Go first. 🌿"}</p>
           </div>
-        ) : posts.map((p) => (
+        ) : posts.map((p) => p.kind === "mood" ? (
+          <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 14px", marginBottom: 10, borderRadius: 14, background: C.soft, fontSize: 13, color: C.text }}>
+            <span><b style={{ color: C.brown }}>{p.mine ? "You" : p.name}</b> {p.mine ? "are" : "is"} feeling {p.content}</span>
+            <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <span style={{ fontSize: 11, color: C.muted }}>{timeAgo(p.created_at)}</span>
+              {!p.mine && <button style={{ ...linkBtn, fontSize: 12 }} onClick={() => heart(p)}>{p.hearted ? "💛" : "🤍"}{p.hearts ? ` ${p.hearts}` : ""}</button>}
+            </span>
+          </div>
+        ) : (
           <div key={p.id} style={{ ...card, padding: 16, marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
               <span style={{ fontWeight: 700, color: C.brown, fontSize: 14 }}>{p.name}{p.mine ? " (you)" : ""}</span>
@@ -427,13 +562,43 @@ export function CircleView({ circle: start, isNew, onBack }) {
             </div>
             {p.kind === "grove" && <div style={{ fontSize: 11, color: "#5f7a52", fontWeight: 700, marginBottom: 6 }}>🌿 Grove wins today</div>}
             {p.prompt && <div style={{ fontSize: 11, color: C.accent, fontStyle: "italic", marginBottom: 6 }}>✦ {p.prompt}</div>}
+            {p.locked ? (
+              <div style={{ background: C.soft, borderRadius: 12, padding: "14px 16px", margin: "0 0 4px", textAlign: "center" }}>
+                <div style={{ fontSize: 20, marginBottom: 4 }}>💌</div>
+                <div style={{ fontSize: 13, color: C.muted }}>{p.name} answered this week's card. Share yours to see it.</div>
+              </div>
+            ) : (
+            <>
             <p style={{ fontFamily: "'Lora',serif", fontSize: 14.5, color: C.text, lineHeight: 1.7, margin: "0 0 10px", whiteSpace: "pre-wrap" }}>{p.content}</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
               <button onClick={() => heart(p)} style={{ background: p.hearted ? C.soft : "transparent", border: `1px solid ${p.hearted ? C.accent : "rgba(200,137,90,0.25)"}`, borderRadius: 20, padding: "4px 12px", fontSize: 13, cursor: "pointer", color: C.brown }}>💛 {p.hearts || ""}</button>
               {(p.mine || isOwner) && <button style={linkBtn} onClick={() => remove(p)}>Delete</button>}
               {!p.mine && <button style={linkBtn} onClick={() => report(p)}>🚩 Report</button>}
               {!p.mine && <button style={linkBtn} onClick={() => block(p)}>Block</button>}
+              <button style={{ ...linkBtn, color: C.accent, fontWeight: 700 }} onClick={() => { setReplyOpen(replyOpen === p.id ? null : p.id); setReplyText(""); }}>Reply</button>
             </div>
+            {(p.replies || []).length > 0 && (
+              <div style={{ marginTop: 10, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
+                {p.replies.map((rp) => (
+                  <div key={rp.id} style={{ padding: "5px 0 5px 10px", borderLeft: "2px solid rgba(200,137,90,0.25)", marginBottom: 6 }}>
+                    <div style={{ fontSize: 13, color: C.text, lineHeight: 1.5 }}><b style={{ color: C.brown }}>{rp.mine ? "You" : rp.name}</b> {rp.content}</div>
+                    <div style={{ display: "flex", gap: 10, marginTop: 2 }}>
+                      <span style={{ fontSize: 11, color: C.muted }}>{timeAgo(rp.created_at)}</span>
+                      {(rp.mine || isOwner) && <button style={{ ...linkBtn, fontSize: 11 }} onClick={() => deleteReply(p, rp)}>Delete</button>}
+                      {!rp.mine && <button style={{ ...linkBtn, fontSize: 11 }} onClick={() => reportReply(rp)}>Report</button>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {replyOpen === p.id && (
+              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                <input value={replyText} onChange={(e) => setReplyText(e.target.value)} maxLength={500} placeholder={`Say something kind to ${p.mine ? "your circle" : p.name}...`} style={{ ...input, padding: "9px 12px", fontSize: 14 }} onKeyDown={(e) => { if (e.key === "Enter") sendReply(p); }} />
+                <button style={{ ...btn(true), padding: "8px 14px" }} disabled={!replyText.trim()} onClick={() => sendReply(p)}>Send</button>
+              </div>
+            )}
+            </>
+            )}
           </div>
         ))}
       </div>

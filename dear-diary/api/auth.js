@@ -176,6 +176,7 @@ export default async function handler(req, res) {
         del(`circle_posts?user_email=eq.${e}`),
         del(`circle_reactions?user_email=eq.${e}`),
         del(`circle_checkins?user_email=eq.${e}`),
+        del(`circle_replies?user_email=eq.${e}`),
         del(`circle_notes?from_email=eq.${e}`),
         del(`circle_notes?to_email=eq.${e}`),
       ]);
