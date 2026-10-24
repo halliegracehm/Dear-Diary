@@ -58,6 +58,8 @@ const CARDS = [
   { lens: "Meaning", title: "What Matters to Me", prompt: "What do you want your life to be about, and what's one small way you're living that now?" },
 ];
 const NOTE_MAX = 200;
+// Mood meter, lowest to highest
+export const MOODS = ["🌧️ Heavy", "🌥️ Low", "⛅ Okay", "🌤️ Good", "☀️ Great"];
 
 export function weekInfo(now = new Date()) {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
@@ -213,12 +215,15 @@ export default async function handler(req, res) {
       const rp = ids.length ? list(await sb(`circle_replies?post_id=in.(${ids.join(",")})&order=created_at.asc`)) : [];
       const replies = rp.filter((r) => !isBlocked(r.user_email));
       const notes = list(ns).filter((n) => !isBlocked(n.from_email));
+      const dayAgo = new Date(Date.now() - 864e5).toISOString();
+      const moodOf = {};
+      list(ps).forEach((p) => { if (p.kind === "mood" && p.created_at >= dayAgo && (!moodOf[p.user_email] || p.created_at > moodOf[p.user_email].at)) moodOf[p.user_email] = { mood: p.content, at: p.created_at }; });
       const unseen = notes.filter((n) => !n.seen).map((n) => n.id);
       if (unseen.length) await sb(`circle_notes?id=in.(${unseen.join(",")})`, { method: "PATCH", body: { seen: true }, prefer: "return=minimal" });
       return res.status(200).json({
         circle: publicCircle(list(c)[0] || {}, mem.role, members.length),
         week: { challenge: week.challenge, card: week.card, question: week.question, i_did_it: done.has(email), answered: iAnswered, answered_count: answered.size },
-        members: members.map((m) => ({ key: opaqueId(m.user_email), name: m.display_name, role: m.role, me: m.user_email === email, did_challenge: done.has(m.user_email), answered: answered.has(m.user_email) })),
+        members: members.map((m) => ({ key: opaqueId(m.user_email), name: m.display_name, role: m.role, me: m.user_email === email, did_challenge: done.has(m.user_email), answered: answered.has(m.user_email), mood: isBlocked(m.user_email) ? null : moodOf[m.user_email] || null })),
         notes: notes.map((n) => ({ id: n.id, from: n.from_name, message: n.message, created_at: n.created_at, new: !n.seen })),
         posts: posts.map((p) => {
           const rs = reacts.filter((r) => r.post_id === p.id);
@@ -266,7 +271,8 @@ export default async function handler(req, res) {
       if (!content) return fail(400, "Write something first.");
       if (hasBanned(content)) return fail(400, "Your post has language that isn't allowed here. Please revise and try again. 🌿");
       const profile = await me(email);
-      const kind = body.kind === "grove" ? "grove" : "post";
+      const kind = ["grove", "mood"].includes(body.kind) ? body.kind : "post";
+      if (kind === "mood" && !MOODS.includes(content)) return fail(400, "Pick a mood.");
       const row = { circle_id: circleId, user_email: email, display_name: profile.name, content, prompt: body.answer ? weekInfo().question : null };
       if (kind !== "post") row.kind = kind; // plain posts work even before the kind column exists
       const r = await sb("circle_posts", { method: "POST", body: row });

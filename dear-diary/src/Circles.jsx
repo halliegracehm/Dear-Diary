@@ -19,6 +19,7 @@ const AFFIRMATIONS = [
   "I see how hard you're trying.",
   "You are loved exactly as you are.",
 ];
+const MOODS = ["🌧️ Heavy", "🌥️ Low", "⛅ Okay", "🌤️ Good", "☀️ Great"];
 const EMOJIS = ["🌿", "💛", "🌸", "🏡", "☀️", "🌙", "🥾", "☕", "🌊", "✨"];
 const card = { background: C.card, borderRadius: 18, border: `1px solid ${C.line}`, boxShadow: "0 2px 12px rgba(160,100,50,0.08)" };
 const btn = (solid) => ({
@@ -271,6 +272,13 @@ export function CircleView({ circle: start, isNew, onBack }) {
     alert("Thank you. We've received your report and will review it within 24 hours. 🌿");
   }
 
+  async function setMood(mood) {
+    const r = await circles("post", { circle_id: circle.id, kind: "mood", content: mood });
+    if (!r.ok) return alert(r.error || "Couldn't share that. Please try again.");
+    setPosts((p) => [r.post, ...(p || [])]);
+    setMembers((ms) => ms.map((m) => (m.me ? { ...m, mood: { mood, at: r.post.created_at } } : m)));
+  }
+
   async function toggleChallenge() {
     const next = !week.i_did_it;
     setWeek((w) => ({ ...w, i_did_it: next }));
@@ -361,10 +369,44 @@ export function CircleView({ circle: start, isNew, onBack }) {
         </div>
       )}
 
+      {members.length > 0 && (
+        <div style={{ ...card, margin: "0 16px 12px", padding: "16px 18px" }}>
+          <div style={label}>🌡️ How's everyone doing?</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+            {members.map((m) => {
+              const lvl = m.mood ? MOODS.indexOf(m.mood.mood) : -1;
+              return (
+                <div key={m.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ width: 64, fontSize: 13, color: C.text, fontWeight: m.me ? 700 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.me ? "You" : m.name}</span>
+                  <div style={{ flex: 1, height: 8, borderRadius: 6, background: "rgba(200,137,90,0.1)", overflow: "hidden" }}>
+                    {lvl >= 0 && <div style={{ width: `${(lvl + 1) * 20}%`, height: "100%", borderRadius: 6, background: ["#8a9bb0", "#a8a4b8", "#d9b779", "#e3a564", "#f0a63a"][lvl] }} />}
+                  </div>
+                  <span style={{ width: 82, fontSize: 12, color: lvl >= 0 ? C.text : C.muted, textAlign: "right" }}>{lvl >= 0 ? m.mood.mood : "No check-in"}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>How are you today?</div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
+            {MOODS.map((md) => {
+              const [e, ...w] = md.split(" ");
+              const mine = members.find((m) => m.me)?.mood?.mood === md;
+              return (
+                <button key={md} onClick={() => setMood(md)} style={{ flex: 1, padding: "8px 2px", borderRadius: 12, cursor: "pointer", fontFamily: "'Nunito',sans-serif", border: mine ? `1.5px solid ${C.accent}` : "1px solid rgba(200,137,90,0.2)", background: mine ? C.soft : "white" }}>
+                  <div style={{ fontSize: 20 }}>{e}</div>
+                  <div style={{ fontSize: 10.5, color: C.text }}>{w.join(" ")}</div>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>Moods show for 24 hours.</div>
+        </div>
+      )}
+
       {week && (
         <div style={{ margin: "6px 20px 10px" }}>
           <div style={{ fontFamily: "'Lora',serif", fontSize: 19, fontWeight: 600, color: C.brown }}>🗓️ Sunday Set Up</div>
-          <p style={{ fontSize: 13, color: C.muted, margin: "2px 0 0", fontStyle: "italic", fontFamily: "'Lora',serif" }}>Getting ready for the week, together. A new challenge and question every Sunday.</p>
+          <p style={{ fontSize: 13, color: C.muted, margin: "2px 0 0", fontStyle: "italic", fontFamily: "'Lora',serif" }}>Getting ready for the week, together. A new challenge and card every Sunday.</p>
         </div>
       )}
 
@@ -443,7 +485,15 @@ export function CircleView({ circle: start, isNew, onBack }) {
             <div style={{ fontSize: 34, marginBottom: 8 }}>{circle.emoji}</div>
             <p style={{ fontFamily: "'Lora',serif", fontStyle: "italic", color: C.muted, fontSize: 14, lineHeight: 1.7 }}>{isOwner && members.length <= 1 ? "Send your invite code, then share the first thing." : "Nothing shared yet. Go first. 🌿"}</p>
           </div>
-        ) : posts.map((p) => (
+        ) : posts.map((p) => p.kind === "mood" ? (
+          <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 14px", marginBottom: 10, borderRadius: 14, background: C.soft, fontSize: 13, color: C.text }}>
+            <span><b style={{ color: C.brown }}>{p.mine ? "You" : p.name}</b> {p.mine ? "are" : "is"} feeling {p.content}</span>
+            <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <span style={{ fontSize: 11, color: C.muted }}>{timeAgo(p.created_at)}</span>
+              {!p.mine && <button style={{ ...linkBtn, fontSize: 12 }} onClick={() => heart(p)}>{p.hearted ? "💛" : "🤍"}{p.hearts ? ` ${p.hearts}` : ""}</button>}
+            </span>
+          </div>
+        ) : (
           <div key={p.id} style={{ ...card, padding: 16, marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
               <span style={{ fontWeight: 700, color: C.brown, fontSize: 14 }}>{p.name}{p.mine ? " (you)" : ""}</span>
