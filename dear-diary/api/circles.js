@@ -384,6 +384,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ prompt });
     }
 
+    if (action === "set_emoji") {
+      if (!isOwner) return fail(403, "owner_only");
+      const emoji = clean(body.emoji, 8);
+      if (!emoji) return fail(400, "Pick an icon.");
+      await sb(`circles?id=eq.${circleId}`, { method: "PATCH", body: { emoji }, prefer: "return=minimal" });
+      return res.status(200).json({ emoji });
+    }
+
     if (action === "new_code") {
       if (!isOwner) return fail(403, "owner_only");
       for (let i = 0; i < 5; i++) {
