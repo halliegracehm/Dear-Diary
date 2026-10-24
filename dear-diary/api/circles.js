@@ -66,7 +66,7 @@ export function weekInfo(now = new Date()) {
   const key = d.toISOString().slice(0, 10);
   const n = Math.round((d - new Date("2026-10-18T00:00:00Z")) / (7 * 864e5));
   const idx = (len) => ((n % len) + len) % len;
-  const c = idx(CARDS.length);
+  const c = (((n - 1) % CARDS.length) + CARDS.length) % CARDS.length; // Card #01 lands on Sunday Oct 25, 2026
   return { key, challenge: CHALLENGES[idx(CHALLENGES.length)], card: { number: c + 1, ...CARDS[c] }, question: CARDS[c].prompt };
 }
 
