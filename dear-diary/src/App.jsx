@@ -952,32 +952,44 @@ function NestCard({icon,title,subtitle,color,onOpen,open,children}){const lastCh
 const WEEKLY_BREATHWORK=[{id:"box",name:"Box Breathing",desc:"Calm your nervous system",inhale:4,hold1:4,exhale:4,hold2:4,cycles:4,color:"#7a8c6e"},{id:"478",name:"4-7-8 Breathing",desc:"For sleep & deep calm",inhale:4,hold1:7,exhale:8,hold2:0,cycles:3,color:"#9b7eb8"},{id:"belly",name:"Belly Breathing",desc:"Deep grounding breath",inhale:5,hold1:2,exhale:6,hold2:1,cycles:4,color:"#c8895a"},{id:"reset",name:"Quick Reset",desc:"1-minute instant calm",inhale:3,hold1:1,exhale:5,hold2:0,cycles:5,color:"#5b8fa8"}];
 const MEDITATIONS=[{id:"return",name:"Return to Calm",duration:"2 min",free:true,steps:["Find a comfortable position and gently close your eyes.","Take a slow breath in through your nose... and release it through your mouth.","Notice where your body is holding tension right now. Just notice. No need to fix anything.","With your next exhale, imagine that tension softening. Just a little.","You are safe in this moment. Nothing needs your attention right now.","Breathe in what you need... breathe out what you don't.","Rest here for a moment. You are allowed to simply be.","When you're ready, slowly open your eyes. Carry this calm with you."]},{id:"morning",name:"Morning Intention",duration:"2 min",free:false,steps:["Begin your day by arriving fully in your body.","Take three deep breaths before you do anything else.","Ask yourself: what do I want to feel today?","Not what you want to accomplish. How you want to feel.","Let that feeling settle into your chest like warmth.","You get to choose your energy today, even when things feel uncertain.","Set one gentle intention. Just one. Something that honors you.","Carry it like a quiet thread through your whole day."]},{id:"release",name:"Let It Go",duration:"2 min",free:false,steps:["Think of one thing you've been holding onto today.","It could be a worry, a conversation, a feeling, anything weighing on you.","Breathe it in fully. Really acknowledge it.","Now with your exhale, imagine placing it down. Not throwing it away. Just setting it down.","You don't have to carry everything all the time.","Some things aren't yours to solve tonight.","Breathe in peace. Breathe out weight.","You are lighter than you think. Rest now."]}];
 
+// Breathwork cue clips in the same voice as the meditations: src/breathwork/<name>.mp3
+const BREATH_AUDIO=(()=>{const files=import.meta.glob("./breathwork/*.mp3",{eager:true,as:"url"});const out={};for(const [path,url] of Object.entries(files)){const m=path.match(/breathwork\/([^/]+)\.mp3$/);if(m)out[m[1]]=url;}return out;})();
 function BreathworkPlayer({exercise}){
   const ttsSupported=typeof window!=="undefined"&&"speechSynthesis" in window&&typeof window.SpeechSynthesisUtterance!=="undefined";
-  const [phase,setPhase]=useState("ready");const [count,setCount]=useState(0);const [cycle,setCycle]=useState(0);const [running,setRunning]=useState(false);const [size,setSize]=useState(120);
-  const [voiceOn,setVoiceOn]=useState(()=>ttsSupported&&persist.get("breath_voice")!==false);const voiceOnRef=useRef(voiceOn);const voiceRef=useRef(null);
-  useEffect(()=>{voiceOnRef.current=voiceOn;persist.set("breath_voice",voiceOn);if(!voiceOn&&ttsSupported)window.speechSynthesis.cancel();},[voiceOn]);
+  const [phase,setPhase]=useState("ready");const [count,setCount]=useState(0);const [cycle,setCycle]=useState(0);const [running,setRunning]=useState(false);const [size,setSize]=useState(120);const [starting,setStarting]=useState(false);
+  const hasClips=Object.keys(BREATH_AUDIO).length>0;const voiceAvail=hasClips||ttsSupported;const audioRef=useRef(null);
+  const [voiceOn,setVoiceOn]=useState(()=>voiceAvail&&persist.get("breath_voice")!==false);const voiceOnRef=useRef(voiceOn);const voiceRef=useRef(null);
+  useEffect(()=>{voiceOnRef.current=voiceOn;persist.set("breath_voice",voiceOn);if(!voiceOn){if(ttsSupported)window.speechSynthesis.cancel();audioRef.current?.pause();}},[voiceOn]);
   useEffect(()=>{if(!ttsSupported)return;const load=()=>{voiceRef.current=pickCalmVoice();};load();window.speechSynthesis.addEventListener?.("voiceschanged",load);return()=>{window.speechSynthesis.removeEventListener?.("voiceschanged",load);window.speechSynthesis.cancel();};},[]);
-  function say(text,force){if(!ttsSupported||(!force&&!voiceOnRef.current))return;try{window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);if(voiceRef.current)u.voice=voiceRef.current;u.rate=0.82;u.pitch=1;u.volume=1;window.speechSynthesis.speak(u);}catch(e){}}
-  const CUE={"Breathe in":"Breathe in","Hold":"Hold","Breathe out":"Breathe out"};
+  useEffect(()=>()=>{if(audioRef.current){audioRef.current.onended=null;audioRef.current.pause();}},[]);
+  function say(text,clipName,onDone){const done=()=>{if(onDone){const f=onDone;onDone=null;f();}};if(!voiceOnRef.current){done();return;}
+    const clip=BREATH_AUDIO[clipName];
+    if(clip){const a=audioRef.current||(audioRef.current=new Audio());a.onended=null;a.onerror=null;a.pause();a.src=clip;a.onended=done;a.onerror=done;a.play().catch(done);if(onDone)setTimeout(done,7000);return;}
+    if(!ttsSupported){done();return;}
+    try{window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);if(voiceRef.current)u.voice=voiceRef.current;u.rate=0.82;u.pitch=1;u.volume=1;u.onend=done;u.onerror=done;window.speechSynthesis.speak(u);if(onDone)setTimeout(done,7000);}catch(e){done();}}
+  const CUE={"Breathe in":"in","Hold":"hold","Breathe out":"out"};
   useEffect(()=>{if(!running)return;
     const phases=[{name:"Breathe in",duration:exercise.inhale,size:180},...(exercise.hold1?[{name:"Hold",duration:exercise.hold1,size:180}]:[]),{name:"Breathe out",duration:exercise.exhale,size:120},...(exercise.hold2?[{name:"Hold",duration:exercise.hold2,size:120}]:[])];
     let phaseIdx=0,elapsed=0,cyc=0,interval=null;
-    const enter=(idx)=>{setPhase(phases[idx].name);setSize(phases[idx].size);setCount(phases[idx].duration);say(CUE[phases[idx].name]);};
+    const enter=(idx)=>{setPhase(phases[idx].name);setSize(phases[idx].size);setCount(phases[idx].duration);say(phases[idx].name,CUE[phases[idx].name]);};
     // short spoken intro, then the first cue
-    const startDelay=setTimeout(()=>{enter(0);interval=setInterval(()=>{elapsed++;setCount(phases[phaseIdx].duration-elapsed);if(elapsed>=phases[phaseIdx].duration){elapsed=0;phaseIdx=(phaseIdx+1)%phases.length;if(phaseIdx===0){cyc++;if(cyc>=exercise.cycles){clearInterval(interval);setRunning(false);setPhase("done");setCycle(0);say("Well done. Take a moment to notice how you feel.");playSoftChime();return;}setCycle(cyc);}enter(phaseIdx);}},1000);},voiceOnRef.current&&ttsSupported?2600:0);
-    return()=>{clearTimeout(startDelay);clearInterval(interval);};
+    let cancelled=false;const start=()=>{if(cancelled)return;enter(0);interval=setInterval(()=>{elapsed++;setCount(phases[phaseIdx].duration-elapsed);if(elapsed>=phases[phaseIdx].duration){elapsed=0;phaseIdx=(phaseIdx+1)%phases.length;if(phaseIdx===0){cyc++;if(cyc>=exercise.cycles){clearInterval(interval);setRunning(false);setPhase("done");setCycle(0);say("Well done. Take a moment to notice how you feel.","done");playSoftChime();return;}setCycle(cyc);}enter(phaseIdx);}},1000);};
+    start();
+    return()=>{cancelled=true;clearInterval(interval);};
   },[running,exercise]);
-  function begin(){setCycle(0);setPhase("Get comfortable");setSize(120);setCount(0);say(`${exercise.name}. Get comfortable, and follow my voice.`);setRunning(true);}
-  function stop(){setRunning(false);setPhase("ready");setCycle(0);if(ttsSupported)window.speechSynthesis.cancel();}
+  const sessionRef=useRef(0);
+  function begin(){const sid=++sessionRef.current;setCycle(0);setPhase("Get comfortable");setSize(120);setCount(0);setStarting(true);
+    // intro plays straight from the tap so phones allow the audio, then the breathing starts
+    say(`${exercise.name}. Get comfortable, and follow my voice.`,`intro-${exercise.id}`,()=>setTimeout(()=>{if(sid!==sessionRef.current)return;setStarting(false);setRunning(true);},500));}
+  function stop(){sessionRef.current++;setStarting(false);setRunning(false);setPhase("ready");setCycle(0);if(ttsSupported)window.speechSynthesis.cancel();if(audioRef.current){audioRef.current.onended=null;audioRef.current.pause();}}
   return(<div style={{textAlign:"center",padding:"16px 0"}}>
-    {ttsSupported&&<div style={{display:"flex",justifyContent:"center",marginBottom:6}}><button type="button" onClick={()=>setVoiceOn(v=>!v)} aria-pressed={voiceOn} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:20,border:`1px solid ${voiceOn?exercise.color+"66":"rgba(200,137,90,0.2)"}`,background:voiceOn?`${exercise.color}18`:"transparent",color:voiceOn?exercise.color:"#b08060",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>{voiceOn?"🎧 Voice guide on":"🔇 Voice guide off"}</button></div>}
+    {voiceAvail&&<div style={{display:"flex",justifyContent:"center",marginBottom:6}}><button type="button" onClick={()=>setVoiceOn(v=>!v)} aria-pressed={voiceOn} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:20,border:`1px solid ${voiceOn?exercise.color+"66":"rgba(200,137,90,0.2)"}`,background:voiceOn?`${exercise.color}18`:"transparent",color:voiceOn?exercise.color:"#b08060",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>{voiceOn?"🎧 Voice guide on":"🔇 Voice guide off"}</button></div>}
     <div style={{position:"relative",width:200,height:200,margin:"0 auto 20px"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:size,height:size,borderRadius:"50%",background:`${exercise.color}22`,border:`3px solid ${exercise.color}`,transition:"all 1s ease-in-out",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column"}}><div style={{fontSize:13,fontWeight:700,color:exercise.color,textAlign:"center",lineHeight:1.3}}>{phase==="done"?"Done ✓":phase==="ready"?"Tap to begin":phase}</div>{running&&count>0&&<div style={{fontSize:24,fontWeight:800,color:exercise.color}}>{count}</div>}</div></div></div>
     <div style={{fontSize:12,color:"#b08060",marginBottom:14}}>Cycle {cycle+1} of {exercise.cycles}</div>
-    {!running&&phase!=="done"&&<button onClick={begin} style={{...S.saveBtn,padding:"10px 28px"}}>Begin →</button>}
-    {running&&<button onClick={stop} style={S.ghostBtn}>Stop</button>}
+    {!running&&!starting&&phase!=="done"&&<button onClick={begin} style={{...S.saveBtn,padding:"10px 28px"}}>Begin →</button>}
+    {(running||starting)&&<button onClick={stop} style={S.ghostBtn}>Stop</button>}
     {phase==="done"&&<><div style={{fontSize:16,color:"#7a4a1e",fontFamily:"'Lora',serif",fontStyle:"italic",marginBottom:12}}>Well done 🌿 Take a moment to notice how you feel.</div><button onClick={()=>{setPhase("ready");}} style={S.ghostBtn}>Go again</button></>}
-    {voiceOn&&!running&&phase==="ready"&&<p style={{fontSize:11,color:"#b08060",fontStyle:"italic",marginTop:12}}>Turn your volume up and silent mode off.</p>}
+    {voiceOn&&!running&&!starting&&phase==="ready"&&<p style={{fontSize:11,color:"#b08060",fontStyle:"italic",marginTop:12}}>Turn your volume up and silent mode off.</p>}
   </div>);
 }
 
